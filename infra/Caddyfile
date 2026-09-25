@@ -1,0 +1,24 @@
+# Caddy gets a free HTTPS certificate for {$DOMAIN} automatically.
+{$DOMAIN} {
+	encode gzip
+
+	handle /api/* {
+		reverse_proxy backend:8080
+	}
+
+	handle /ws* {
+		reverse_proxy backend:8080
+	}
+
+	handle /actuator/health* {
+		reverse_proxy backend:8080
+	}
+
+	handle /ai/* {
+		reverse_proxy ai-service:8000
+	}
+
+	handle {
+		respond "cuy-monitor API" 200
+	}
+}
