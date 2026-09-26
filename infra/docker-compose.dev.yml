@@ -1,4 +1,4 @@
-# Local development: only Postgres, with ports open to your machine.
+# Local development: only Postgres, with its port open to your machine.
 # Run the backend itself from the IDE or with ./mvnw spring-boot:run
 # Start:  docker compose -f infra/docker-compose.dev.yml up -d
 name: cuy-monitor-dev

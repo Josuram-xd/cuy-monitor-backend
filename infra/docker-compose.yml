@@ -1,5 +1,5 @@
 # Production stack for the EC2 instance.
-# Run from this folder:  docker compose up -d --build
+# Run from this folder:  docker compose up -d --build --remove-orphans
 name: cuy-monitor
 
 services:
@@ -14,7 +14,6 @@ services:
       # Postgres 18 images store data under /var/lib/postgresql/18/docker,
       # so the volume goes on /var/lib/postgresql (NOT .../data like in older versions)
       - pgdata:/var/lib/postgresql
-    # No ports published: Postgres is only reachable inside the Docker network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -31,15 +30,16 @@ services:
         condition: service_healthy
     environment:
       DB_HOST: postgres
-      DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB}
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       APP_API_KEY: ${API_KEY}
       JAVA_OPTS: "-Xms256m -Xmx384m"
+    # No ports published: only reachable through Caddy
 
   # Starts only with:  docker compose --profile ai up -d --build
   # Needs cuy-monitor-ai-service cloned next to cuy-monitor-backend.
+  # Sends its results to the backend over the internal Docker network.
   ai-service:
     profiles: ["ai"]
     build:
@@ -49,7 +49,6 @@ services:
     depends_on:
       - backend
     environment:
-      # Events are sent to POST /api/ingestion/events inside the Docker network
       BACKEND_URL: http://backend:8080
       API_KEY: ${API_KEY}
 

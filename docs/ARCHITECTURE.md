@@ -1,7 +1,7 @@
 # Architecture — cuy-monitor-backend
 
 > Java 25 LTS · Spring Boot 4.1 · PostgreSQL 18 · Caddy 2.11 · Docker Compose on AWS EC2
-> Last reviewed: 2026-09-26 (v2: Kafka removed, ingestion over HTTP — see ADR-007)
+> Last reviewed: 2026-09-26
 
 This repo is the core of the system. It receives events over HTTP, runs them through the six design patterns, stores everything in PostgreSQL and exposes a REST API and a WebSocket to the dashboard. It also owns the deployment (`infra/`) and the cross-repo contracts (`docs/contracts/`).
 
@@ -251,7 +251,7 @@ baseline_profile  (guinea_pig_id, avg_still_seconds, avg_feeder_visits, avg_grou
 | postgres | `postgres:18` (volume on `/var/lib/postgresql`) | no | ~150 MB |
 | ai-service | built from `../../cuy-monitor-ai-service`, profile `ai` | no (only via Caddy `/ai/*`) | +0.6–1 GB |
 
-- Host: EC2 **t3.small** (2 GB + swap). Without Kafka the base stack uses ~0.7 GB, so the ai-service may fit too; measure before deciding to move to **c7i-flex.large** (4 GB).
+- Host: EC2 **t3.small** (2 GB + swap). The base stack uses ~0.7 GB, so the ai-service may fit too; measure before deciding to move to **c7i-flex.large** (4 GB).
 - Elastic IP + DuckDNS `cuymonitor.duckdns.org`. Caddy gets the certificate automatically.
 - Security group: 80/443 open, 22 only for the team's IPs. Postgres is never published.
 - All services use `restart: unless-stopped`.
@@ -299,30 +299,29 @@ Local development: `infra/docker-compose.dev.yml` starts only Postgres with its 
 |---|---|
 | ADR-001 | Multi-repo (4 repos); contracts live in this repo |
 | ADR-002 | ML in a separate Python service; the backend only knows events |
-| ADR-003 | ~~Kafka only inside Docker~~ → superseded by ADR-007 |
+| ADR-003 | Direct HTTP ingestion: every producer `POST`s the event envelope to the backend; only Caddy is public |
 | ADR-004 | Single EC2 with Docker Compose (single point of failure accepted for a pilot) |
 | ADR-005 | AI in the cloud first; may move to the laptop after measuring bandwidth and fps (October) |
 | ADR-006 | New LTS versions, no betas, pinned Docker tags (never `:latest`) |
-| ADR-007 | **No message broker.** All producers `POST` the event envelope to the backend |
 
-### ADR-007: Remove Kafka, ingest over HTTP
+### ADR-003: Direct HTTP ingestion
 
-**Status:** Accepted (2026-09-26)
+**Status:** Accepted
 
-**Context:** One pilot cage produces ~8 behavior events per minute, a few audio events and one weight reading every 10 s. Kafka was using ~400 MB of the 2 GB EC2 and added operational complexity (KRaft config, topics, consumer groups) for a load that a single HTTP endpoint handles easily.
+**Context:** One pilot cage produces ~8 behavior events per minute, a few audio events and one weight reading every 10 s. The EC2 has 2 GB of RAM.
 
-| | HTTP ingestion (chosen) | Kafka |
+| | Direct HTTP (chosen) | Message queue in the middle |
 |---|---|---|
-| Complexity | Low: one endpoint | Broker, topics, producers, consumers |
-| Memory | 0 extra | ~400 MB |
-| Decoupling | Producer must retry if the backend is down | Broker buffers events |
+| Complexity | Low: one endpoint | Extra service, configuration, consumers |
+| Memory | 0 extra | Hundreds of MB |
+| If the backend is down | The producer retries | The queue buffers events |
 | Enough for 1–few cages | Yes | Yes (overkill) |
 
 **Consequences:**
-- Producers must retry with backoff on network errors / 5xx and keep a small bounded buffer.
-- `eventId` becomes the idempotency key.
-- The Factory Method + Adapter design is unchanged: it now starts at `IngestionController` instead of a Kafka listener.
-- If the system grows to many cages, a broker can be reintroduced behind the same envelope (Kafka, RabbitMQ or Amazon SQS) without touching the health core.
+- Producers retry with backoff on network errors / 5xx and keep a small bounded buffer.
+- `eventId` is the idempotency key, so retries don't create duplicates.
+- The ai-service calls the backend inside the Docker network; the laptop (serial bridge) calls it over HTTPS through Caddy with the API key. Postgres and the backend port are never exposed.
+- If the system grows to many cages, a queue (e.g. Amazon SQS) can be put in front of the backend with the same envelope, without touching the health core.
 
 ---
 
@@ -336,6 +335,6 @@ Local development: `infra/docker-compose.dev.yml` starts only Postgres with its 
 ## 11. Future evolution
 
 - Several cages: `cageId` is already in every event; one edge device per cage.
-- Many cages: put a broker (SQS or Kafka) between producers and the backend, keeping the same envelope.
+- Many cages: put a queue (e.g. Amazon SQS) between producers and the backend, keeping the same envelope.
 - Mobile notifications: add a `PushAlertObserver` without touching the rest.
 - CI/CD: GitHub Actions → GHCR → `docker compose pull` on the EC2.

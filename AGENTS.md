@@ -54,9 +54,9 @@ En Windows usar `mvnw.cmd`. No uses un `mvn` global: siempre el Maven Wrapper.
 - **Nunca edites una migración que ya existe** (`V1__...`). Para cualquier cambio crea `V{n+1}__descripcion.sql`.
 - `guinea_pig_id` es `NULL` en eventos y alertas de audio y peso (son de jaula).
 
-## Ingesta (sin Kafka)
+## Ingesta
 
-- **El proyecto ya no usa Kafka** (ver ADR-007 en `docs/ARCHITECTURE.md`). No agregues Kafka, RabbitMQ ni otro broker sin que el usuario lo pida.
+- La ingesta es **HTTP directo** (ver ADR-003 en `docs/ARCHITECTURE.md`). No agregues colas ni brokers de mensajes sin que el usuario lo pida.
 - Todos los datos de afuera entran por **un solo endpoint**: `POST /api/ingestion/events` con header `X-API-Key` y el sobre común (`eventId`, `type`, `cageId`, `timestamp`, `source`, `schemaVersion`, `payload`).
 - El `AdapterFactory` elige el adaptador según `type` (`BEHAVIOR`, `AUDIO`, `WEIGHT`). No crees un endpoint distinto por tipo de evento.
 - `eventId` lo genera quien manda el evento y sirve para detectar duplicados (los productores reintentan).

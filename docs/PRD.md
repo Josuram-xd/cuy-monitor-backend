@@ -109,7 +109,6 @@ El sistema **no diagnostica** enfermedades. Da una **alerta temprana**: "este cu
 - ✅ EC2 con Elastic IP, dominio `cuymonitor.duckdns.org`, HTTPS con Caddy.
 - ✅ Postgres 18 y backend Spring Boot 4.1 corriendo en Docker Compose.
 - ✅ Endpoint de ingesta `POST /api/ingestion/events` recibiendo eventos (por ahora solo los registra).
-- 🔁 26 sept: se quitó Kafka; la carga de una jaula no lo justifica (ADR-007).
 - ✅ Endpoints de prueba: `/actuator/health`, `/api/system/status`.
 - ⏳ Patrones, API del dashboard, WebSocket, dashboard, ai-service mock.
 
