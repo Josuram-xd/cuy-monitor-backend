@@ -71,7 +71,7 @@ This repository is the **heart of the system**. It:
 |---|---|
 | Multi-repo (backend, AI service, dashboard, Arduino) | Independent deliverables; contracts live in this repo as the single source of truth |
 | AI in a separate Python service | Training/inference tooling is native to Python; the backend only knows about events |
-| HTTP ingestion, no message broker | One pilot cage produces a few events per minute; a single endpoint handles it and saves ~400 MB of RAM (ADR-007) |
+| HTTP ingestion, no message broker | One pilot cage produces a few events per minute; a single endpoint handles it and saves ~400 MB of RAM (ADR-003) |
 | Only Caddy is public | External clients reach the system through HTTPS + API key; Postgres is never exposed |
 | Single EC2 + Docker Compose | Low cost and complexity for a pilot cage; a broker can be added behind the same envelope if it grows to many cages |
 
@@ -371,7 +371,7 @@ docker compose up -d --build backend
 
 - [x] Spring Boot 4.1 + Java 25 project skeleton
 - [ ] Initial schema migration
-- [x] Remove Kafka: HTTP ingestion endpoint (ADR-007)
+- [x] Direct HTTP ingestion endpoint (ADR-003)
 - [ ] Deployment on AWS (EC2 + Docker Compose + Caddy HTTPS)
 - [ ] Ingestion layer: Factory Method + Adapters
 - [ ] Health core: Chain of Responsibility, State, Composite
