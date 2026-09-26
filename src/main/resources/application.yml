@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: cuy-monitor-backend
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:cuymonitor}
+    username: ${DB_USER:cuymonitor}
+    password: ${DB_PASSWORD:cuymonitor}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+
+server:
+  port: 8080
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  api-key: ${APP_API_KEY:dev-key}
