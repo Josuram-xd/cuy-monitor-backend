@@ -1,4 +1,4 @@
-package com.cuymonitor.backend.api;
+package com.cuymonitor.backend.adapter.in.web;
 
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;

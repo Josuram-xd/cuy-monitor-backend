@@ -1,9 +1,9 @@
 # Architecture — cuy-monitor-backend
 
 > Java 25 LTS · Spring Boot 4.1 · PostgreSQL 18 · Caddy 2.11 · Docker Compose on AWS EC2
-> Last reviewed: 2026-09-26
+> Last reviewed: 2026-09-27 · Internal style: pragmatic hexagonal (ADR-007)
 
-This repo is the core of the system. It receives events over HTTP, runs them through the six design patterns, stores everything in PostgreSQL and exposes a REST API and a WebSocket to the dashboard. It also owns the deployment (`infra/`) and the cross-repo contracts (`docs/contracts/`).
+This repo is the core of the system. It receives events over HTTP, runs them through the six design patterns inside a hexagonal core, stores everything in PostgreSQL and exposes a REST API and a WebSocket to the dashboard. It also owns the deployment (`infra/`) and the cross-repo contracts (`docs/contracts/`).
 
 ---
 
@@ -53,56 +53,114 @@ All producers send the **same event envelope** to the **same endpoint**. The bac
 
 ---
 
-## 3. Event pipeline and design patterns
+## 3. Internal architecture: pragmatic hexagonal (ports and adapters)
+
+The backend is organized as a **hexagon**: a core with the business rules and the six design patterns, surrounded by adapters that connect it to the outside world (HTTP, PostgreSQL, WebSocket, logs). The core talks to the outside only through **ports** (Java interfaces). See ADR-007.
 
 ```
-POST /api/ingestion/events ──► IngestionController (API key + validation)
-                                  │  IngestionEvent (envelope)
-                                  ▼
-                           AdapterFactory ──────────── FACTORY METHOD (picks the adapter by event type)
-                                  │
-                                  ▼
-                         EventSourceAdapter ────────── ADAPTER (external payload → HealthEvent)
-                                  │  HealthEvent  ◄─── boundary between the two owners
-                                  ▼
-   ValidationHandler → IdentificationHandler → BehaviorThresholdHandler → SustainedAnomalyHandler
-                                  │                                 CHAIN OF RESPONSIBILITY
-                                  ▼
-                      GuineaPigHealthContext ───────── STATE (NORMAL ⇄ OBSERVED ⇄ ALERT ⇄ CRITICAL)
-                                  │
-                                  ▼
-                             CageHealth ────────────── COMPOSITE (guinea pigs + audio + weight)
-                                  │
-                                  ▼
-                           AlertPublisher ──────────── OBSERVER
-                             ├── WebSocketAlertObserver  → /topic/cages/{id}
-                             ├── DatabaseAlertObserver   → alert table
-                             └── LogAlertObserver        → application log (audit)
+          DRIVING SIDE (input)                     CORE                               DRIVEN SIDE (output)
+   ┌──────────────────────────────┐  ┌──────────────────────────────────────────┐  ┌──────────────────────────────┐
+   │ adapter.in.web               │  │ domain.port.in   (use case interfaces)   │  │ adapter.out.persistence      │
+   │  IngestionController         │─►│        ▲                                 │  │  JPA entities + Spring Data  │
+   │  CageController …            │  │        │ implemented by                  │  │  + mappers ─────► PostgreSQL │
+   │                              │  │ application  (use case services)         │  │        ▲                     │
+   │ adapter.in.ingestion         │  │        │ orchestrates                    │  │        │ implements          │
+   │  FACTORY METHOD + ADAPTER    │  │        ▼                                 │  │ domain.port.out              │
+   │  envelope ─► HealthEvent     │  │ domain.health   CHAIN · STATE · COMPOSITE│─►│  repositories (interfaces)   │
+   └──────────────────────────────┘  │ domain.notification  OBSERVER subject    │─►│  AlertObserver (interface)   │
+                                     │ domain.model   entities, HealthEvent     │  │        ▲ implements          │
+                                     └──────────────────────────────────────────┘  │ adapter.out.notification     │
+                                                                                   │  WebSocket · Database · Log  │
+                                                                                   └──────────────────────────────┘
+                    Dependencies always point INTO the core. The core never imports an adapter.
 ```
+
+### 3.1 Event flow through the hexagon
+
+```
+POST /api/ingestion/events
+  └► IngestionController                       adapter.in.web        (API key, validation)
+       └► AdapterFactory                        adapter.in.ingestion  FACTORY METHOD: picks the adapter by type
+            └► EventSourceAdapter               adapter.in.ingestion  ADAPTER: envelope payload → HealthEvent
+                 └► ProcessEventUseCase         domain.port.in        ◄── boundary between the two owners
+                      └► EventProcessingService application
+                           ├► EventHandler chain                  domain.health.chain      CHAIN OF RESPONSIBILITY
+                           │    (uses GuineaPigRepository, BaselineProfileRepository, EventRepository — ports out)
+                           ├► GuineaPigHealthContext              domain.health.state      STATE
+                           │    (saves via StateTransitionRepository — port out)
+                           ├► CageHealth                          domain.health.composite  COMPOSITE
+                           └► AlertPublisher                      domain.notification      OBSERVER (subject)
+                                └► AlertObserver (port out)
+                                     ├── WebSocketAlertObserver   adapter.out.notification → /topic/cages/{id}
+                                     ├── DatabaseAlertObserver    adapter.out.notification → alert table
+                                     └── LogAlertObserver         adapter.out.notification → application log
+```
+
+Read endpoints follow the same shape: `CageController` → `GetCageHealthUseCase` → `CageQueryService` → repository ports → persistence adapter.
 
 Processing is synchronous inside the HTTP request. The load is tiny (a few events per minute per cage), so no queue is needed. The endpoint answers `202 Accepted` once the event went through the pipeline.
 
-| Pattern | Package | Key types | Owner |
-|---|---|---|---|
-| Factory Method | `ingestion.factory` | `AdapterFactory` (abstract creator), `CameraAdapterFactory`, `AudioAdapterFactory`, `WeightAdapterFactory` | Teammate |
-| Adapter | `ingestion.adapter` | `EventSourceAdapter` (target), `CameraBehaviorAdapter`, `AudioClassificationAdapter`, `WeightReadingAdapter` | Teammate |
-| Chain of Responsibility | `health.chain` | `EventHandler` (abstract), 4 handlers, `HandlerChainBuilder` | Josuram |
-| State | `health.state` | `HealthState` (interface), `NormalState`, `ObservedState`, `AlertState`, `CriticalState`, `GuineaPigHealthContext` | Josuram |
-| Composite | `health.composite` | `HealthComponent`, `GuineaPigHealth` / `CageAudioHealth` / `CageWeightHealth` (leaves), `CageHealth` (composite) | Josuram |
-| Observer | `notification` | `AlertObserver` (interface), `AlertPublisher` (subject), 3 observers | Teammate |
+### 3.2 Where each design pattern lives
 
-### Chain handlers
+| Pattern | Package | Key types | Hexagonal role | Owner |
+|---|---|---|---|---|
+| Factory Method | `adapter.in.ingestion.factory` | `AdapterFactory` (abstract creator), `CameraAdapterFactory`, `AudioAdapterFactory`, `WeightAdapterFactory` | Input adapter | Teammate |
+| Adapter | `adapter.in.ingestion.adapter` | `EventSourceAdapter` (target), `CameraBehaviorAdapter`, `AudioClassificationAdapter`, `WeightReadingAdapter` | Input adapter (translates the external format into `HealthEvent`) | Teammate |
+| Chain of Responsibility | `domain.health.chain` | `EventHandler` (abstract), 4 handlers, `HandlerChainBuilder` | Core | Josuram |
+| State | `domain.health.state` | `HealthState` (interface), `NormalState`, `ObservedState`, `AlertState`, `CriticalState`, `GuineaPigHealthContext` | Core | Josuram |
+| Composite | `domain.health.composite` | `HealthComponent`, `GuineaPigHealth` / `CageAudioHealth` / `CageWeightHealth` (leaves), `CageHealth` (composite) | Core | Josuram |
+| Observer | `domain.notification` + `domain.port.out` + `adapter.out.notification` | `AlertPublisher` (subject, core), `AlertObserver` (output port), 3 concrete observers (output adapters) | Core + output port + output adapters | Teammate |
 
-| Handler | Responsibility |
+The Adapter pattern and the Observer are also the clearest examples of the hexagonal idea: the first converts the outside format into the core's language, the second lets the core notify the outside world through a port without knowing who listens.
+
+### 3.3 Ports
+
+| Port | Kind | Implemented by |
+|---|---|---|
+| `ProcessEventUseCase` | in | `EventProcessingService` |
+| `GetCageHealthUseCase` | in | `CageQueryService` |
+| `ListGuineaPigsUseCase`, `RegisterGuineaPigUseCase`, `GetGuineaPigHistoryUseCase` | in | `GuineaPigService` |
+| `ListAlertsUseCase`, `ReviewAlertUseCase` | in | `AlertService` |
+| `GetWeightHistoryUseCase` | in | `CageQueryService` |
+| `CageRepository`, `GuineaPigRepository`, `EventRepository`, `StateTransitionRepository`, `AlertRepository`, `WeightReadingRepository`, `BaselineProfileRepository` | out | `*PersistenceAdapter` classes in `adapter.out.persistence` |
+| `AlertObserver` | out | `WebSocketAlertObserver`, `DatabaseAlertObserver`, `LogAlertObserver` |
+
+Port names describe the business need, not the technology (`GuineaPigRepository`, not `GuineaPigJpaRepository`).
+
+### 3.4 Dependency rules
+
+| Package | May depend on | Must NOT depend on |
+|---|---|---|
+| `domain..` | `java.*` only | Spring, JPA (`jakarta.persistence`), Jackson, `application`, `adapter`, `config` |
+| `application..` | `domain..` | `adapter..` |
+| `adapter.in..` | `domain.port.in`, `domain.model` | `adapter.out..`, persistence classes |
+| `adapter.out..` | `domain.port.out`, `domain.model` | `adapter.in..`, `application..` |
+| `config..` | everything (it wires the beans) | — |
+
+These rules are checked by an ArchUnit test (`src/test/java/.../architecture/HexagonalArchitectureTest.java`).
+
+### 3.5 What makes it "pragmatic"
+
+| Decision | Why |
 |---|---|
-| `ValidationHandler` | Drop malformed, stale or low-confidence events |
-| `IdentificationHandler` | Map `(cageId, MarkColor)` to a registered `GuineaPig` |
-| `BehaviorThresholdHandler` | Compare the window against the guinea pig's `BaselineProfile` |
-| `SustainedAnomalyHandler` | Only pass anomalies seen in N consecutive windows |
+| Spring annotations allowed in `application` (`@Service`, `@Transactional`) and in adapters; **never** in `domain` | Keeps the core pure without writing manual wiring for everything |
+| Domain objects without annotations (chain, states, publisher) are created as beans in `config/DomainConfig` | The core stays framework-free and Spring still injects everything |
+| JPA entities are separate classes (`GuineaPigJpaEntity`) with a small mapper to the domain model | Only 7 tables; the domain model doesn't depend on Hibernate |
+| No command/query objects unless needed: use cases receive domain types or small records | Less boilerplate for a 2-person team |
+| `SystemController` uses `JdbcTemplate` directly | Temporary smoke-test endpoint; removed in Task 17.1 |
+
+### 3.6 Chain handlers
+
+| Handler | Responsibility | Ports used |
+|---|---|---|
+| `ValidationHandler` | Drop malformed, stale or low-confidence events | — |
+| `IdentificationHandler` | Map `(cageId, MarkColor)` to a registered `GuineaPig` | `GuineaPigRepository` |
+| `BehaviorThresholdHandler` | Compare the window against the guinea pig's `BaselineProfile` | `BaselineProfileRepository` |
+| `SustainedAnomalyHandler` | Only pass anomalies seen in N consecutive windows | `EventRepository` |
 
 Audio and weight events skip `IdentificationHandler` (they are cage-level, `guineaPigId = null`).
 
-### State transitions
+### 3.7 State transitions
 
 ```
 NORMAL ──anomaly confirmed──► OBSERVED ──persists──► ALERT ──persists/worsens──► CRITICAL
@@ -110,14 +168,15 @@ NORMAL ──anomaly confirmed──► OBSERVED ──persists──► ALERT �
    └──────── recovered ──────────┴──── recovered ──────┴──────── recovered ─────────┘
 ```
 
-Every transition is stored in `state_transition` and, if it goes up to `ALERT` or `CRITICAL`, it produces an `Alert` through `AlertPublisher`. Exact thresholds and N are tuned in phase 2 with real data.
+Every transition is stored through `StateTransitionRepository` and, if it goes up to `ALERT` or `CRITICAL`, it produces an `Alert` through `AlertPublisher`. Exact thresholds and N are tuned in phase 2 with real data.
 
-### Design rules
+### 3.8 Design rules
 
-- Observer is implemented **by hand** (interface + list of observers), not with Spring's `ApplicationEventPublisher`, so the pattern is explicit.
+- Observer is implemented **by hand** (`AlertObserver` port + list in `AlertPublisher`), not with Spring's `ApplicationEventPublisher`, so the pattern is explicit.
 - DTOs, payloads and `HealthEvent` are Java `record`s. Lombok only on JPA entities.
 - `AdapterFactory` may use a `switch` with pattern matching on `EventType`.
-- `HealthEvent` and `AlertObserver` are the contract between the two owners: change them only with both in agreement.
+- Controllers only call input ports. They never touch repositories or JPA.
+- `HealthEvent`, `ProcessEventUseCase` and `AlertObserver` are the contract between the two owners: change them only with both in agreement.
 
 ---
 
@@ -126,20 +185,39 @@ Every transition is stored in `state_transition` and, if it goes up to `ALERT` o
 ```
 src/main/java/com/cuymonitor/backend/
 ├── BackendApplication.java
-├── config/            WebSocketConfig, CorsConfig
-├── domain/
-│   ├── model/         EventType ✅, Cage, GuineaPig, MarkColor, HealthStatus, HealthEvent, Alert, WeightReading, BaselineProfile
-│   └── repository/    Spring Data JPA interfaces
-├── ingestion/
-│   ├── dto/           IngestionEvent ✅ (envelope) + payload records
-│   ├── factory/       FACTORY METHOD
-│   └── adapter/       ADAPTER
-├── health/
-│   ├── chain/         CHAIN OF RESPONSIBILITY
-│   ├── state/         STATE
-│   └── composite/     COMPOSITE
-├── notification/      OBSERVER
-└── api/               SystemController ✅, IngestionController ✅ (logs only for now), CageController, GuineaPigController, AlertController, dto/
+├── domain/                               ← pure Java: no Spring, no JPA, no Jackson
+│   ├── model/                            EventType ✅, MarkColor, HealthStatus, AlertStatus, Cage, GuineaPig,
+│   │                                     HealthEvent, Alert, WeightReading, BaselineProfile, StateTransition
+│   ├── health/
+│   │   ├── chain/                        CHAIN OF RESPONSIBILITY
+│   │   ├── state/                        STATE
+│   │   └── composite/                    COMPOSITE
+│   ├── notification/                     AlertPublisher (OBSERVER subject)
+│   └── port/
+│       ├── in/                           ProcessEventUseCase, GetCageHealthUseCase, ListGuineaPigsUseCase,
+│       │                                 RegisterGuineaPigUseCase, GetGuineaPigHistoryUseCase,
+│       │                                 ListAlertsUseCase, ReviewAlertUseCase, GetWeightHistoryUseCase
+│       └── out/                          CageRepository, GuineaPigRepository, EventRepository,
+│                                         StateTransitionRepository, AlertRepository,
+│                                         WeightReadingRepository, BaselineProfileRepository, AlertObserver
+├── application/                          EventProcessingService, CageQueryService, GuineaPigService, AlertService
+├── adapter/
+│   ├── in/
+│   │   ├── web/                          IngestionController ✅, SystemController ✅ (temporary),
+│   │   │   │                             CageController, GuineaPigController, AlertController
+│   │   │   └── dto/                      request/response records for the REST API
+│   │   └── ingestion/
+│   │       ├── dto/                      IngestionEvent ✅ (envelope) + payload records
+│   │       ├── factory/                  FACTORY METHOD
+│   │       └── adapter/                  ADAPTER
+│   └── out/
+│       ├── persistence/
+│       │   ├── entity/                   *JpaEntity classes
+│       │   ├── repository/               Spring Data interfaces
+│       │   ├── mapper/                   JPA entity ↔ domain model
+│       │   └── *PersistenceAdapter.java  implement domain.port.out repositories
+│       └── notification/                 WebSocketAlertObserver, DatabaseAlertObserver, LogAlertObserver
+└── config/                               DomainConfig, WebSocketConfig, CorsConfig
 ```
 
 ✅ = exists today. Everything else is planned.
@@ -286,9 +364,12 @@ Local development: `infra/docker-compose.dev.yml` starts only Postgres with its 
 
 | Level | What | Tool |
 |---|---|---|
-| Unit | Each state transition, each chain handler alone, composite aggregation, each adapter and factory | JUnit 5 |
-| Web | `IngestionController`: 202 / 400 / 401 | `@WebMvcTest` |
-| Integration | HTTP event → pipeline → Postgres end to end | Testcontainers (Postgres) |
+| Domain unit | Each state transition, each chain handler alone, composite aggregation, `AlertPublisher` | Plain JUnit 5 — **no Spring context, no database** |
+| Application | Use case services with in-memory fakes of the output ports | JUnit 5 |
+| Input adapters | Each factory and adapter (envelope → `HealthEvent`); controllers 202 / 400 / 401 | JUnit 5, `@WebMvcTest` |
+| Output adapters | Persistence adapters and mappers against a real Postgres | `@DataJpaTest` + Testcontainers |
+| Architecture | Dependency rules of section 3.4 | ArchUnit |
+| Integration | HTTP event → pipeline → Postgres end to end | `@SpringBootTest` + Testcontainers |
 | Smoke (deployed) | `/actuator/health`, `/api/system/status`, `POST /api/ingestion/events` | curl / Postman |
 
 ---
@@ -303,6 +384,7 @@ Local development: `infra/docker-compose.dev.yml` starts only Postgres with its 
 | ADR-004 | Single EC2 with Docker Compose (single point of failure accepted for a pilot) |
 | ADR-005 | AI in the cloud first; may move to the laptop after measuring bandwidth and fps (October) |
 | ADR-006 | New LTS versions, no betas, pinned Docker tags (never `:latest`) |
+| ADR-007 | Pragmatic hexagonal architecture (ports and adapters) inside the backend |
 
 ### ADR-003: Direct HTTP ingestion
 
@@ -322,6 +404,25 @@ Local development: `infra/docker-compose.dev.yml` starts only Postgres with its 
 - `eventId` is the idempotency key, so retries don't create duplicates.
 - The ai-service calls the backend inside the Docker network; the laptop (serial bridge) calls it over HTTPS through Caddy with the API key. Postgres and the backend port are never exposed.
 - If the system grows to many cages, a queue (e.g. Amazon SQS) can be put in front of the backend with the same envelope, without touching the health core.
+
+### ADR-007: Pragmatic hexagonal architecture inside the backend
+
+**Status:** Accepted (2026-09-27)
+
+**Context:** The backend hosts the six design patterns of the course. The health rules (Chain, State, Composite) must be easy to test and to explain, and two people work on different halves (data input vs. health core). Almost no code existed yet, so changing the structure was cheap.
+
+| | Layered (previous) | Strict hexagonal | Pragmatic hexagonal (chosen) |
+|---|---|---|---|
+| Core testable without Spring/DB | Partly | Yes | Yes |
+| Boilerplate | Low | High (commands, manual wiring, no framework anywhere near the core) | Medium (ports + JPA mappers) |
+| Fit with the course patterns | Neutral | Good | Good: Adapter = input adapter, Observer = output port + adapters |
+| Team split | By layer | By port | By port: input side (teammate) / core (Josuram) |
+
+**Consequences:**
+- `domain` is pure Java; an ArchUnit test fails the build if it imports Spring, JPA or an adapter.
+- ~15 extra interfaces (ports) and one mapper per table.
+- Controllers depend on use case interfaces, so they can be tested with fakes.
+- Replacing a technology (e.g. Postgres, WebSocket, adding a push-notification observer) means writing a new adapter, not touching the core.
 
 ---
 

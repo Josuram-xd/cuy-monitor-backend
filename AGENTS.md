@@ -4,7 +4,7 @@ Instrucciones para cualquier agente de IA (Claude Code, Copilot, Cursor, Codex�
 
 ## Qué es este repo
 
-Backend en **Java 25 + Spring Boot 4.1** del Monitor de Salud de Cuyes. Recibe eventos por HTTP (`POST /api/ingestion/events`), aplica 6 patrones de diseño, guarda en PostgreSQL y expone REST + WebSocket al dashboard. También contiene el despliegue (`infra/`) y los contratos entre repos (`docs/contracts/`).
+Backend en **Java 25 + Spring Boot 4.1** del Monitor de Salud de Cuyes. Recibe eventos por HTTP (`POST /api/ingestion/events`), aplica 6 patrones de diseño dentro de un núcleo hexagonal, guarda en PostgreSQL y expone REST + WebSocket al dashboard. También contiene el despliegue (`infra/`) y los contratos entre repos (`docs/contracts/`).
 
 Es un proyecto universitario de **Patrones de Diseño**: que cada patrón se vea claro y explicable importa más que ahorrar líneas.
 
@@ -31,13 +31,34 @@ En Windows usar `mvnw.cmd`. No uses un `mvn` global: siempre el Maven Wrapper.
 - Usa el glosario: cuy = `GuineaPig`, jaula = `Cage`, marca de color = `MarkColor`, evento de salud = `HealthEvent`, perfil normal = `BaselineProfile`, comedero/bebedero = `feeder`/`waterer`.
 - La documentación del equipo (PRD, este archivo) puede estar en español.
 
+## Arquitectura hexagonal (no la rompas)
+
+El backend es una **hexagonal pragmática** (ver sección 3 y ADR-007 de `docs/ARCHITECTURE.md`):
+
+```
+domain/        núcleo: modelo, patrones de salud, puertos        ← Java puro
+application/   servicios que implementan los puertos de entrada
+adapter/in/    web (controllers) e ingestion (Factory Method + Adapter)
+adapter/out/   persistence (JPA) y notification (observers)
+config/        arma los beans
+```
+
+1. **`domain/` es Java puro.** Nada de `org.springframework`, `jakarta.persistence`, `jakarta.validation` ni Jackson dentro de `domain/`. Ni anotaciones de Spring ni de JPA.
+2. Las dependencias siempre apuntan **hacia adentro**: `adapter → application → domain`. `domain` nunca importa `application`, `adapter` ni `config`.
+3. **Los controllers solo llaman puertos de entrada** (`domain/port/in/*UseCase`). Nunca repositorios, ni JPA, ni `EntityManager`.
+4. El núcleo habla con la base de datos y con el exterior **solo por puertos de salida** (`domain/port/out`). Las implementaciones van en `adapter/out/`.
+5. Las entidades JPA (`*JpaEntity`) viven en `adapter/out/persistence/entity/` y se convierten al modelo del dominio con un mapper. **No pongas `@Entity` en `domain/model`.**
+6. Los objetos del dominio que necesitan ser beans (cadena, `AlertPublisher`, observers) se crean en `config/DomainConfig`, no con `@Component` en el dominio.
+7. Un puerto nuevo = una interfaz en `domain/port/in` u `out` + su implementación en `application/` o `adapter/out/`. No crees puertos "por si acaso".
+8. El test `architecture/HexagonalArchitectureTest` (ArchUnit) tiene que pasar siempre. Si falla, el código está mal ubicado: muévelo, no cambies la regla.
+
 ## Reglas de los patrones (no las rompas)
 
-1. Cada patrón vive en su paquete: `ingestion/factory`, `ingestion/adapter`, `health/chain`, `health/state`, `health/composite`, `notification`. No mezcles lógica de un patrón en otro paquete.
-2. **Observer se implementa a mano** (interfaz `AlertObserver` + lista en `AlertPublisher`). No lo reemplaces por `ApplicationEventPublisher` ni `@EventListener` de Spring.
+1. Cada patrón vive en su paquete: `adapter/in/ingestion/factory` (Factory Method), `adapter/in/ingestion/adapter` (Adapter), `domain/health/chain`, `domain/health/state`, `domain/health/composite`, y el Observer repartido en `domain/notification` (sujeto), `domain/port/out/AlertObserver` (puerto) y `adapter/out/notification` (observers concretos). No mezcles lógica de un patrón en otro paquete.
+2. **Observer se implementa a mano** (puerto `AlertObserver` + lista en `AlertPublisher`). No lo reemplaces por `ApplicationEventPublisher` ni `@EventListener` de Spring.
 3. **State**: cada estado es una clase que decide su propia transición. No conviertas el State en un `switch` gigante sobre `HealthStatus`.
 4. **Chain**: cada handler hace una sola cosa y llama al siguiente. El orden se arma solo en `HandlerChainBuilder`.
-5. **`HealthEvent` y `AlertObserver` son el contrato entre los dos integrantes.** No cambies su forma sin que el usuario lo pida explícitamente.
+5. **`HealthEvent`, `ProcessEventUseCase` y `AlertObserver` son el contrato entre los dos integrantes.** No cambies su forma sin que el usuario lo pida explícitamente.
 6. DTOs, payloads y `HealthEvent` son `record`. Lombok solo en entidades JPA.
 7. No agregues lógica de IA (detección, tracking, modelos) aquí: eso es del `cuy-monitor-ai-service`.
 
@@ -77,7 +98,8 @@ Si un cambio afecta el formato de eventos, un endpoint o un enum compartido (`Ma
 
 ## Tests
 
-- Cada cambio en `health/` o `ingestion/` va con su test unitario.
+- Cada cambio en `domain/health/` o `adapter/in/ingestion/` va con su test unitario.
+- Los tests de `domain/` son **JUnit puro**: sin `@SpringBootTest`, sin base de datos. Si necesitas un repositorio, usa un fake en memoria que implemente el puerto.
 - Transiciones de estado: un test por transición, incluidas las de regreso a `NORMAL`.
 - Handlers: cada uno probado solo, sin armar la cadena completa.
 - Integración con Testcontainers en `src/test/java/.../integration/`.
@@ -102,9 +124,9 @@ Si un cambio afecta el formato de eventos, un endpoint o un enum compartido (`Ma
 
 | Parte | Dueño |
 |---|---|
-| `health/` (State, Chain, Composite), `domain/`, migraciones, `api/`, WebSocket, `infra/` | Josuram |
-| `ingestion/` (Factory Method, Adapter), `notification/` (Observer), `IngestionController` | Compañero |
-| `docs/contracts/`, `HealthEvent`, `AlertObserver` | Los dos |
+| `domain/model`, `domain/health/` (State, Chain, Composite), `domain/port/` (menos `AlertObserver`), `application/`, `adapter/out/persistence`, `adapter/in/web` (menos `IngestionController`), migraciones, `config/`, `infra/` | Josuram |
+| `adapter/in/ingestion/` (Factory Method, Adapter), `IngestionController`, `domain/notification/` + `adapter/out/notification/` (Observer), WebSocket | Compañero |
+| `docs/contracts/`, `HealthEvent`, `ProcessEventUseCase`, `AlertObserver` | Los dos |
 
 ## Herramientas que puede usar el agente
 

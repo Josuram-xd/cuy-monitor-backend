@@ -1,4 +1,4 @@
-package com.cuymonitor.backend.ingestion.dto;
+package com.cuymonitor.backend.adapter.in.ingestion.dto;
 
 import com.cuymonitor.backend.domain.model.EventType;
 import jakarta.validation.constraints.NotBlank;

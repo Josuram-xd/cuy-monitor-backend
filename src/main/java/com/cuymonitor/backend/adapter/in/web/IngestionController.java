@@ -1,6 +1,6 @@
-package com.cuymonitor.backend.api;
+package com.cuymonitor.backend.adapter.in.web;
 
-import com.cuymonitor.backend.ingestion.dto.IngestionEvent;
+import com.cuymonitor.backend.adapter.in.ingestion.dto.IngestionEvent;
 import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -44,7 +44,7 @@ public class IngestionController {
         log.info("Received event id={} type={} cage={} source={}",
                 event.eventId(), event.type(), event.cageId(), event.source());
 
-        // TODO: AdapterFactory -> EventSourceAdapter -> HealthEvent -> EventHandler chain
+        // TODO (Task 5.5): AdapterFactory -> EventSourceAdapter -> HealthEvent -> ProcessEventUseCase
 
         return ResponseEntity.accepted().body(Map.of("eventId", event.eventId(), "status", "ACCEPTED"));
     }
