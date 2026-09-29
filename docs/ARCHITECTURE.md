@@ -80,7 +80,7 @@ The backend is organized as a **hexagon**: a core with the business rules and th
 ```
 POST /api/ingestion/events
   └► IngestionController                       adapter.in.web        (API key, validation)
-       └► AdapterFactory                        adapter.in.ingestion  FACTORY METHOD: picks the adapter by type
+       └► AdapterFactory                        adapter.in.ingestion  FACTORY METHOD: each concrete factory creates its adapter
             └► EventSourceAdapter               adapter.in.ingestion  ADAPTER: envelope payload → HealthEvent
                  └► ProcessEventUseCase         domain.port.in        ◄── boundary between the two owners
                       └► EventProcessingService application
@@ -174,7 +174,8 @@ Every transition is stored through `StateTransitionRepository` and, if it goes u
 
 - Observer is implemented **by hand** (`AlertObserver` port + list in `AlertPublisher`), not with Spring's `ApplicationEventPublisher`, so the pattern is explicit.
 - DTOs, payloads and `HealthEvent` are Java `record`s. Lombok only on JPA entities.
-- `AdapterFactory` may use a `switch` with pattern matching on `EventType`.
+- Factory Method is a real Factory Method, not a Simple Factory: `AdapterFactory` is an abstract creator with an abstract `createAdapter()` method, and each concrete factory (`CameraAdapterFactory`, `AudioAdapterFactory`, `WeightAdapterFactory`) overrides it to create its own adapter. The only `switch` on `EventType` allowed is the one that picks **which factory** to use; it never creates adapters directly.
+- Patterns are written **by hand** and stay visible in the code. Spring only wires the objects (constructor injection, beans in `config/DomainConfig`); it never implements a pattern. Not allowed: `@EventListener` / `ApplicationEventPublisher` for Observer, `@Order` or injected lists to order the Chain (`HandlerChainBuilder` links each handler with `setNext`), Spring State Machine for State.
 - Controllers only call input ports. They never touch repositories or JPA.
 - `HealthEvent`, `ProcessEventUseCase` and `AlertObserver` are the contract between the two owners: change them only with both in agreement.
 
