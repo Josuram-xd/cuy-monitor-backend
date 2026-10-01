@@ -30,7 +30,7 @@
 - [x] **Task 1.5** — *(sin commit)* EC2 t3.small + Elastic IP + DuckDNS + `docker compose up`
   Verificado: `/actuator/health` responde `UP` por HTTPS.
 
-### Task 2 — Estructura hexagonal e ingesta por HTTP 👤 Josuram
+### Task 2 — Estructura hexagonal e ingesta por HTTP 👤 Juan
 
 - [x] **Task 2.1** — `refactor(ingestion): remove Kafka classes and dependencies`
   Borrar `KafkaConfigTopics.java`, `ingestion/kafka/`, dependencias con `kafka` en el `pom.xml`, sección `spring.kafka` del `application.yml`.
@@ -41,7 +41,7 @@
 - [x] **Task 2.4** — `feat(web): add IngestionController with API key check`
   `adapter/in/web/IngestionController`: `POST /api/ingestion/events` → `202` / `400` / `401`. Por ahora solo registra en el log.
 - [x] **Task 2.5** — `chore(infra): remove broker service from compose files`
-- [ ] **Task 2.6** — *(sin commit)* desplegar con `docker compose up -d --build --remove-orphans` y probar el `POST` desde Postman
+- [x] **Task 2.6** — *(sin commit)* desplegar con `docker compose up -d --build --remove-orphans` y probar el `POST` desde Postman
 
 🔓 **Desbloquea:** `cuy-monitor-ai-service` Task 3 · `cuy-monitor-arduino` Task 5
 
@@ -205,3 +205,79 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 - [ ] **Task 17.1** — `refactor(web): remove SystemController smoke endpoint`
 - [ ] **Task 17.2** — *(sin commit)* medir RAM con el ai-service y decidir si subir la EC2 a c7i-flex.large
 - [ ] **Task 17.3** — `ci: add GitHub Actions build and test on pull requests` *(opcional)*
+
+---
+
+## 🔐 Autenticación
+
+### Task 18 — Login con JWT y OTP por correo 👤 Juan
+
+Rama: `feature/task-18-auth-jwt-otp`. Un solo usuario normal (sin roles ni admin), creado al arrancar desde variables de entorno.
+
+**Flujo**
+
+1. `POST /api/auth/login` `{ username, password }` → `200 { challengeId, expiresAt }` y se envía un código de 6 dígitos al correo del usuario.
+2. `POST /api/auth/otp/verify` `{ challengeId, code }` → `200 { accessToken, tokenType: "Bearer", expiresAt }`.
+3. El resto de `/api/**` pide `Authorization: Bearer <jwt>`. `/api/ingestion/**` sigue con `X-API-Key`; `/api/auth/**` y `/actuator/health` son públicos.
+
+**Buenas prácticas que se aplican**
+
+- Contraseña guardada con **BCrypt**; el código OTP también se guarda **hasheado**, nunca en texto plano.
+- OTP de un solo uso, expira en 5 min, máximo 5 intentos; al pedir un login nuevo se invalidan los retos anteriores.
+- JWT firmado **HS256** con secreto de ≥ 32 bytes desde `APP_JWT_SECRET`, expira en 30 min, claims `sub`, `iat`, `exp`, `iss`.
+- Respuestas genéricas (`401 invalid credentials`) para no revelar si el usuario existe; se hashea igual aunque el usuario no exista.
+- API sin sesión (`STATELESS`), CSRF desactivado por ser API con Bearer.
+- Ningún secreto en el código ni en `application.yml`: todo por variables de entorno.
+
+**Arquitectura**
+
+```
+domain/model/auth/          User, OtpChallenge, AuthToken, LoginChallenge, excepciones   (Java puro)
+domain/port/in/             LoginUseCase, VerifyOtpUseCase
+domain/port/out/            UserRepository, OtpChallengeRepository, PasswordHasher, OtpSender, TokenIssuer
+application/                AuthenticationService
+adapter/in/web/             AuthController, AuthExceptionHandler, dto/
+adapter/out/persistence/    UserJpaEntity, OtpChallengeJpaEntity, repos, mappers, adaptadores
+adapter/out/security/       BCryptPasswordHasher, JwtTokenIssuer
+adapter/out/mail/           EmailOtpSender, LogOtpSender (perfil dev)
+config/                     SecurityConfig, JwtConfig, AuthProperties, AuthConfig, UserBootstrap
+```
+
+**Subtareas**
+
+- [ ] **Task 18.1** — `docs(tasks): add Task 18 for JWT login with email OTP`
+- [ ] **Task 18.2** — `build: add spring security, oauth2 resource server and mail starters`
+  Dependencias del BOM, sin versión a mano: starter de Security, starter de OAuth2 Resource Server (Nimbus para firmar/validar JWT), starter de Mail y el starter de test de Security.
+- [ ] **Task 18.3** — `feat(domain): add User, OtpChallenge and auth models`
+  `domain/model/auth/`: `User`, `OtpChallenge` (decide si expiró, si quedan intentos y si ya se usó), `LoginChallenge`, `AuthToken` y excepciones `InvalidCredentialsException`, `InvalidOtpException`.
+- [ ] **Task 18.4** — `test(domain): cover OtpChallenge rules`
+  JUnit puro: expira, agota intentos, un solo uso.
+- [ ] **Task 18.5** — `feat(domain): add auth input and output ports`
+  `LoginUseCase`, `VerifyOtpUseCase`, `UserRepository`, `OtpChallengeRepository`, `PasswordHasher`, `OtpSender`, `TokenIssuer`.
+- [ ] **Task 18.6** — `feat(application): add AuthenticationService for login and OTP verification`
+  Genera el código con `SecureRandom`, lo hashea, invalida retos anteriores, envía el correo y al verificar emite el token. Usa `java.time.Clock` inyectado.
+- [ ] **Task 18.7** — `test(application): cover AuthenticationService with in-memory fakes`
+  Login correcto, contraseña incorrecta, usuario inexistente, código correcto, incorrecto, expirado, intentos agotados, reutilizado.
+- [ ] **Task 18.8** — `feat(db): add V2 migration for app_user and otp_challenge`
+  ⚠️ Usa `V2`; la Task 4.4 tendrá que pasar a `V3` si se mergea después.
+- [ ] **Task 18.9** — `feat(persistence): add user and otp challenge JPA adapters`
+  Entidades, Spring Data, mappers y adaptadores que implementan los puertos.
+- [ ] **Task 18.10** — `feat(security): add BCrypt password hasher and JWT token issuer`
+  `adapter/out/security/`.
+- [ ] **Task 18.11** — `test(security): cover password hasher and JWT issuer`
+  Hash/verify, y que el JWT emitido se valida con el decoder y trae `sub`, `iss` y `exp`.
+- [ ] **Task 18.12** — `feat(mail): add email and log OTP senders`
+  `EmailOtpSender` con `JavaMailSender`; `LogOtpSender` para el perfil `dev` (escribe el código en el log).
+- [ ] **Task 18.13** — `feat(config): add security filter chain, JWT config and user bootstrap`
+  `SecurityConfig`, `JwtConfig`, `AuthProperties` (`app.auth.*`), `AuthConfig` (arma el servicio), `UserBootstrap` (crea el único usuario desde `APP_AUTH_USERNAME`, `APP_AUTH_EMAIL`, `APP_AUTH_PASSWORD` si no existe).
+- [ ] **Task 18.14** — `feat(web): add AuthController with login and OTP verification endpoints`
+  DTOs `record` con `@Valid`; `AuthExceptionHandler` → `400` / `401`.
+- [ ] **Task 18.15** — `test(web): cover auth endpoints and protected routes`
+  `@WebMvcTest` con casos de uso falsos + prueba de que una ruta protegida da `401` sin token, `200` con token, y que la ingesta sigue entrando con `X-API-Key`.
+- [ ] **Task 18.16** — `chore(infra): add auth, JWT and SMTP env vars`
+  `application.yml` (solo referencias `${...}`), `infra/.env.example`, `infra/docker-compose.yml`.
+- [ ] **Task 18.17** — `docs(contracts): add auth API contract`
+  `docs/contracts/auth-api.md`. ⚠️ Avisar a `cuy-monitor-dashboard`: necesita pantalla de login + OTP y mandar el Bearer.
+- [ ] **Task 18.18** — *(sin commit)* `./mvnw test` en verde y prueba manual del flujo en Postman
+
+🔓 **Desbloquea:** login en `cuy-monitor-dashboard`
