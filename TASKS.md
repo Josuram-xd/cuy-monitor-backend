@@ -276,7 +276,7 @@ config/                     SecurityConfig, JwtConfig, AuthProperties, AuthConfi
   JUnit puro: OTP expira, agota intentos, un solo uso; usuario se activa; política de contraseña.
 - [x] **Task 18.6** — `feat(domain): add auth ports`
   `RegisterUserUseCase`, `LoginUseCase`, `VerifyOtpUseCase`, `UserRepository`, `OtpChallengeRepository`, `PasswordHasher`, `OtpSender`, `TokenIssuer`.
-- [ ] **Task 18.7** — `feat(application): add AuthenticationService for register, login and OTP`
+- [x] **Task 18.7** — `feat(application): add AuthenticationService for register, login and OTP`
   Genera el código con `SecureRandom`, lo hashea, invalida retos anteriores, envía el correo; al verificar activa la cuenta si hace falta y emite el token. Usa `java.time.Clock` inyectado.
 - [ ] **Task 18.8** — `test(application): cover AuthenticationService with in-memory fakes`
   Registro correcto, usuario o correo repetido, login correcto, contraseña incorrecta, usuario inexistente, cuenta `DISABLED`, código correcto (y activa la cuenta), incorrecto, expirado, intentos agotados, reutilizado.
