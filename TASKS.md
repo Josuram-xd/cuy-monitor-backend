@@ -288,7 +288,7 @@ config/                     SecurityConfig, JwtConfig, AuthProperties, AuthConfi
   `adapter/out/security/`.
 - [x] **Task 18.12** — `test(security): cover password hasher and JWT issuer`
   Hash/verify, y que el JWT emitido se valida con el decoder y trae `sub`, `iss` y `exp`.
-- [ ] **Task 18.13** — `feat(mail): add email and log OTP senders`
+- [x] **Task 18.13** — `feat(mail): add email and log OTP senders`
   `EmailOtpSender` con `JavaMailSender`; `LogOtpSender` para el perfil `dev` (escribe el código en el log).
 - [ ] **Task 18.14** — `feat(config): add security filter chain and auth wiring`
   `SecurityConfig`, `JwtConfig`, `AuthProperties` (`app.auth.*`), `AuthConfig` (arma el servicio).
