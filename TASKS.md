@@ -278,7 +278,7 @@ config/                     SecurityConfig, JwtConfig, AuthProperties, AuthConfi
   `RegisterUserUseCase`, `LoginUseCase`, `VerifyOtpUseCase`, `UserRepository`, `OtpChallengeRepository`, `PasswordHasher`, `OtpSender`, `TokenIssuer`.
 - [x] **Task 18.7** — `feat(application): add AuthenticationService for register, login and OTP`
   Genera el código con `SecureRandom`, lo hashea, invalida retos anteriores, envía el correo; al verificar activa la cuenta si hace falta y emite el token. Usa `java.time.Clock` inyectado.
-- [ ] **Task 18.8** — `test(application): cover AuthenticationService with in-memory fakes`
+- [x] **Task 18.8** — `test(application): cover AuthenticationService with in-memory fakes`
   Registro correcto, usuario o correo repetido, login correcto, contraseña incorrecta, usuario inexistente, cuenta `DISABLED`, código correcto (y activa la cuenta), incorrecto, expirado, intentos agotados, reutilizado.
 - [x] **Task 18.9** — `feat(db): add V2 migration for app_user and otp_challenge`
   ⚠️ Usa `V2`; la Task 4.4 tendrá que pasar a `V3` si se mergea después.
