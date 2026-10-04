@@ -300,7 +300,7 @@ config/                     SecurityConfig, JwtConfig, AuthProperties, AuthConfi
   `application.yml` (solo referencias `${...}`), `infra/.env.example`, `infra/docker-compose.yml`.
 - [x] **Task 18.18** — `docs(contracts): add auth API contract`
   `docs/contracts/auth-api.md`. ⚠️ Avisar a `cuy-monitor-dashboard`: necesita pantallas de registro y login + OTP, mandar el Bearer y borrar el token al cerrar sesión.
-- [ ] **Task 18.19** — *(sin commit)* `./mvnw test` en verde, prueba manual en Postman y PR a `main`
+- [x] **Task 18.19** — *(sin commit)* `./mvnw test` en verde, prueba manual en Postman y PR a `main`
 
 🔓 **Desbloquea:** registro y login en `cuy-monitor-dashboard` · Task 19
 
