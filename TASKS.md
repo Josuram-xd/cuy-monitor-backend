@@ -284,7 +284,7 @@ config/                     SecurityConfig, JwtConfig, AuthProperties, AuthConfi
   ⚠️ Usa `V2`; la Task 4.4 tendrá que pasar a `V3` si se mergea después.
 - [x] **Task 18.10** — `feat(persistence): add user and otp challenge JPA adapters`
   Entidades, Spring Data, mappers y adaptadores que implementan los puertos.
-- [ ] **Task 18.11** — `feat(security): add BCrypt password hasher and JWT token issuer`
+- [x] **Task 18.11** — `feat(security): add BCrypt password hasher and JWT token issuer`
   `adapter/out/security/`.
 - [ ] **Task 18.12** — `test(security): cover password hasher and JWT issuer`
   Hash/verify, y que el JWT emitido se valida con el decoder y trae `sub`, `iss` y `exp`.
