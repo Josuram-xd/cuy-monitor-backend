@@ -286,7 +286,7 @@ config/                     SecurityConfig, JwtConfig, AuthProperties, AuthConfi
   Entidades, Spring Data, mappers y adaptadores que implementan los puertos.
 - [x] **Task 18.11** — `feat(security): add BCrypt password hasher and JWT token issuer`
   `adapter/out/security/`.
-- [ ] **Task 18.12** — `test(security): cover password hasher and JWT issuer`
+- [x] **Task 18.12** — `test(security): cover password hasher and JWT issuer`
   Hash/verify, y que el JWT emitido se valida con el decoder y trae `sub`, `iss` y `exp`.
 - [ ] **Task 18.13** — `feat(mail): add email and log OTP senders`
   `EmailOtpSender` con `JavaMailSender`; `LogOtpSender` para el perfil `dev` (escribe el código en el log).
