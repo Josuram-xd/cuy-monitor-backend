@@ -338,7 +338,7 @@ adapter/in/web/             UserAccountController, dto/
 - [x] **Task 19.6** — `feat(web): add UserAccountController for /api/users/me`
 - [x] **Task 19.7** — `test(web): cover user account endpoints`
   `401` sin token, `200` con token, `401` con contraseña actual incorrecta, `204` al desactivar.
-- [ ] **Task 19.8** — `docs(contracts): add user account endpoints to auth API contract`
+- [x] **Task 19.8** — `docs(contracts): add user account endpoints to auth API contract`
   ⚠️ Avisar a `cuy-monitor-dashboard`: pantalla "mi cuenta".
 - [ ] **Task 19.9** — *(sin commit)* `./mvnw test` en verde, prueba manual en Postman y PR a `main`
 

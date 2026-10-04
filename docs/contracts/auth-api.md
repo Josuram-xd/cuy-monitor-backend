@@ -81,6 +81,54 @@ Every error has the shape `{ "error": "<message>" }`. Validation errors also inc
 - Token: JWT signed with HS256, valid for **30 minutes**. Claims: `sub` (user id, UUID), `iss` (`cuy-monitor-backend`), `iat`, `exp`. There is no refresh token: when it expires the user logs in again.
 - Logout: the API is stateless. The dashboard just deletes the token; it stops working on its own when it expires.
 
+## Account (`/api/users/me`)
+
+All these routes need `Authorization: Bearer <accessToken>`. The account is always the one in the token `sub`; there is no id in the URL and no way to list or touch other users. Every request loads the account again, so a `DISABLED` account gets `401` even if its token has not expired yet.
+
+### `GET /api/users/me`
+
+`200 OK`
+
+```json
+{
+  "id": "3f2a…", "username": "juan", "fullName": "Juan Perez", "email": "juan@mail.com",
+  "status": "ACTIVE", "createdAt": "2026-10-01T10:00:00Z", "updatedAt": "2026-10-01T10:00:00Z"
+}
+```
+
+The password hash is never returned.
+
+### `PUT /api/users/me`
+
+```json
+{ "fullName": "Juan Carlos Perez" }
+```
+
+`200 OK`: the updated account (same body as `GET`). `fullName` is required, max 150. Username and email cannot be changed.
+
+### `PUT /api/users/me/password`
+
+```json
+{ "currentPassword": "secret-pass", "newPassword": "new-secret-pass" }
+```
+
+`204 No Content`. The new password follows the same 8–72 bytes rule. Tokens already issued keep working until they expire.
+
+### `DELETE /api/users/me`
+
+```json
+{ "currentPassword": "secret-pass" }
+```
+
+`204 No Content`. Soft delete: the account becomes `DISABLED` and can no longer log in. The dashboard should delete its token right after.
+
+### Account errors
+
+| Status | When |
+|---|---|
+| `400` | Invalid body or new password outside 8–72 bytes |
+| `401` | No token, invalid or expired token, wrong `currentPassword` (`invalid credentials`), or disabled account (`account is disabled`) |
+
 ## Which routes need what
 
 | Route | Auth |
