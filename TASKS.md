@@ -294,7 +294,7 @@ config/                     SecurityConfig, JwtConfig, AuthProperties, AuthConfi
   `SecurityConfig`, `JwtConfig`, `AuthProperties` (`app.auth.*`), `AuthConfig` (arma el servicio).
 - [x] **Task 18.15** — `feat(web): add AuthController with register, login and OTP endpoints`
   DTOs `record` con `@Valid`; `AuthExceptionHandler` → `400` / `401` / `409`.
-- [ ] **Task 18.16** — `test(web): cover auth endpoints and protected routes`
+- [x] **Task 18.16** — `test(web): cover auth endpoints and protected routes`
   `@WebMvcTest` con casos de uso falsos + prueba de que una ruta protegida da `401` sin token, `200` con token, y que la ingesta sigue entrando con `X-API-Key`.
 - [ ] **Task 18.17** — `chore(infra): add JWT and SMTP env vars`
   `application.yml` (solo referencias `${...}`), `infra/.env.example`, `infra/docker-compose.yml`.
