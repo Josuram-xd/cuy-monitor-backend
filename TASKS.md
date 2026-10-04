@@ -269,20 +269,20 @@ config/                     SecurityConfig, JwtConfig, AuthProperties, AuthConfi
 - [x] **Task 18.1** — `docs(tasks): add Task 18 for JWT login with email OTP`
 - [x] **Task 18.2** — `build: add spring security, oauth2 resource server and mail starters`
   Dependencias del BOM, sin versión a mano: starter de Security, starter de OAuth2 Resource Server (Nimbus para firmar/validar JWT), starter de Mail y el starter de test de Security.
-- [ ] **Task 18.3** — `docs(tasks): split auth into registration/login and account CRUD tasks`
-- [ ] **Task 18.4** — `feat(domain): add User, OtpChallenge and auth models`
+- [x] **Task 18.3** — `docs(tasks): split auth into registration/login and account CRUD tasks`
+- [x] **Task 18.4** — `feat(domain): add User, OtpChallenge and auth models`
   `User` (crear pendiente, activar, saber si puede iniciar sesión), `UserStatus`, `PasswordPolicy`, `OtpChallenge`, `LoginChallenge`, `AuthToken` y excepciones del dominio.
 - [ ] **Task 18.5** — `test(domain): cover User and OtpChallenge rules`
   JUnit puro: OTP expira, agota intentos, un solo uso; usuario se activa; política de contraseña.
-- [ ] **Task 18.6** — `feat(domain): add auth ports`
+- [x] **Task 18.6** — `feat(domain): add auth ports`
   `RegisterUserUseCase`, `LoginUseCase`, `VerifyOtpUseCase`, `UserRepository`, `OtpChallengeRepository`, `PasswordHasher`, `OtpSender`, `TokenIssuer`.
 - [ ] **Task 18.7** — `feat(application): add AuthenticationService for register, login and OTP`
   Genera el código con `SecureRandom`, lo hashea, invalida retos anteriores, envía el correo; al verificar activa la cuenta si hace falta y emite el token. Usa `java.time.Clock` inyectado.
 - [ ] **Task 18.8** — `test(application): cover AuthenticationService with in-memory fakes`
   Registro correcto, usuario o correo repetido, login correcto, contraseña incorrecta, usuario inexistente, cuenta `DISABLED`, código correcto (y activa la cuenta), incorrecto, expirado, intentos agotados, reutilizado.
-- [ ] **Task 18.9** — `feat(db): add V2 migration for app_user and otp_challenge`
+- [x] **Task 18.9** — `feat(db): add V2 migration for app_user and otp_challenge`
   ⚠️ Usa `V2`; la Task 4.4 tendrá que pasar a `V3` si se mergea después.
-- [ ] **Task 18.10** — `feat(persistence): add user and otp challenge JPA adapters`
+- [x] **Task 18.10** — `feat(persistence): add user and otp challenge JPA adapters`
   Entidades, Spring Data, mappers y adaptadores que implementan los puertos.
 - [ ] **Task 18.11** — `feat(security): add BCrypt password hasher and JWT token issuer`
   `adapter/out/security/`.
