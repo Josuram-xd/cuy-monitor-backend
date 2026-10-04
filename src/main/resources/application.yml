@@ -36,5 +36,13 @@ management:
 
 app:
   api-key: ${APP_API_KEY:dev-key}
+  auth:
+    jwt:
+      secret: ${APP_JWT_SECRET}
+      issuer: cuy-monitor-backend
+      ttl: 30m
+    otp:
+      ttl: 5m
+      max-attempts: 5
   mail:
     from: ${MAIL_FROM:no-reply@cuymonitor.local}

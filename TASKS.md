@@ -290,7 +290,7 @@ config/                     SecurityConfig, JwtConfig, AuthProperties, AuthConfi
   Hash/verify, y que el JWT emitido se valida con el decoder y trae `sub`, `iss` y `exp`.
 - [x] **Task 18.13** — `feat(mail): add email and log OTP senders`
   `EmailOtpSender` con `JavaMailSender`; `LogOtpSender` para el perfil `dev` (escribe el código en el log).
-- [ ] **Task 18.14** — `feat(config): add security filter chain and auth wiring`
+- [x] **Task 18.14** — `feat(config): add security filter chain and auth wiring`
   `SecurityConfig`, `JwtConfig`, `AuthProperties` (`app.auth.*`), `AuthConfig` (arma el servicio).
 - [ ] **Task 18.15** — `feat(web): add AuthController with register, login and OTP endpoints`
   DTOs `record` con `@Valid`; `AuthExceptionHandler` → `400` / `401` / `409`.
