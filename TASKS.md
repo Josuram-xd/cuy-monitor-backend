@@ -340,6 +340,6 @@ adapter/in/web/             UserAccountController, dto/
   `401` sin token, `200` con token, `401` con contraseña actual incorrecta, `204` al desactivar.
 - [x] **Task 19.8** — `docs(contracts): add user account endpoints to auth API contract`
   ⚠️ Avisar a `cuy-monitor-dashboard`: pantalla "mi cuenta".
-- [ ] **Task 19.9** — *(sin commit)* `./mvnw test` en verde, prueba manual en Postman y PR a `main`
+- [x] **Task 19.9** — *(sin commit)* `./mvnw test` en verde, prueba manual en Postman y PR a `main`
 
 🔓 **Desbloquea:** pantalla "mi cuenta" en `cuy-monitor-dashboard`
