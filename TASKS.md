@@ -272,7 +272,7 @@ config/                     SecurityConfig, JwtConfig, AuthProperties, AuthConfi
 - [x] **Task 18.3** — `docs(tasks): split auth into registration/login and account CRUD tasks`
 - [x] **Task 18.4** — `feat(domain): add User, OtpChallenge and auth models`
   `User` (crear pendiente, activar, saber si puede iniciar sesión), `UserStatus`, `PasswordPolicy`, `OtpChallenge`, `LoginChallenge`, `AuthToken` y excepciones del dominio.
-- [ ] **Task 18.5** — `test(domain): cover User and OtpChallenge rules`
+- [x] **Task 18.5** — `test(domain): cover User and OtpChallenge rules`
   JUnit puro: OTP expira, agota intentos, un solo uso; usuario se activa; política de contraseña.
 - [x] **Task 18.6** — `feat(domain): add auth ports`
   `RegisterUserUseCase`, `LoginUseCase`, `VerifyOtpUseCase`, `UserRepository`, `OtpChallengeRepository`, `PasswordHasher`, `OtpSender`, `TokenIssuer`.
