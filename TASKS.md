@@ -331,7 +331,7 @@ adapter/in/web/             UserAccountController, dto/
 - [x] **Task 19.1** — `feat(domain): add profile, password and deactivation rules to User`
 - [x] **Task 19.2** — `test(domain): cover User account rules`
   Cambia perfil y contraseña, se desactiva, no cambia nada si está `DISABLED`.
-- [ ] **Task 19.3** — `feat(domain): add user account ports`
+- [x] **Task 19.3** — `feat(domain): add user account ports`
 - [ ] **Task 19.4** — `feat(application): add UserAccountService for the account CRUD`
 - [ ] **Task 19.5** — `test(application): cover UserAccountService with in-memory fakes`
   Ver perfil, actualizar, cambiar contraseña (actual correcta e incorrecta), desactivar (contraseña correcta e incorrecta), operar sobre una cuenta `DISABLED`.
