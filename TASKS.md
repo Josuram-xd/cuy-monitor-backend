@@ -328,7 +328,7 @@ adapter/in/web/             UserAccountController, dto/
 
 **Subtareas**
 
-- [ ] **Task 19.1** — `feat(domain): add profile, password and deactivation rules to User`
+- [x] **Task 19.1** — `feat(domain): add profile, password and deactivation rules to User`
 - [ ] **Task 19.2** — `test(domain): cover User account rules`
   Cambia perfil y contraseña, se desactiva, no cambia nada si está `DISABLED`.
 - [ ] **Task 19.3** — `feat(domain): add user account ports`

@@ -1,5 +1,7 @@
 package com.cuymonitor.backend.domain.model.user;
 
+import com.cuymonitor.backend.domain.exception.AccountDisabledException;
+
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Objects;
@@ -9,9 +11,9 @@ public class User {
 
     private final UUID id;
     private final String username;
-    private final String fullName;
+    private String fullName;
     private final String email;
-    private final String passwordHash;
+    private String passwordHash;
     private UserStatus status;
     private final Instant createdAt;
     private Instant updatedAt;
@@ -50,6 +52,30 @@ public class User {
 
     public boolean canLogIn() {
         return status != UserStatus.DISABLED;
+    }
+
+    public void updateProfile(String newFullName, Instant now) {
+        ensureNotDisabled();
+        fullName = requireText(newFullName, "fullName").trim();
+        updatedAt = Objects.requireNonNull(now, "now");
+    }
+
+    public void changePassword(String newPasswordHash, Instant now) {
+        ensureNotDisabled();
+        passwordHash = requireText(newPasswordHash, "passwordHash");
+        updatedAt = Objects.requireNonNull(now, "now");
+    }
+
+    public void deactivate(Instant now) {
+        ensureNotDisabled();
+        status = UserStatus.DISABLED;
+        updatedAt = Objects.requireNonNull(now, "now");
+    }
+
+    private void ensureNotDisabled() {
+        if (status == UserStatus.DISABLED) {
+            throw new AccountDisabledException();
+        }
     }
 
     public UUID getId() {
