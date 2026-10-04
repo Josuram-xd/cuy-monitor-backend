@@ -292,7 +292,7 @@ config/                     SecurityConfig, JwtConfig, AuthProperties, AuthConfi
   `EmailOtpSender` con `JavaMailSender`; `LogOtpSender` para el perfil `dev` (escribe el código en el log).
 - [x] **Task 18.14** — `feat(config): add security filter chain and auth wiring`
   `SecurityConfig`, `JwtConfig`, `AuthProperties` (`app.auth.*`), `AuthConfig` (arma el servicio).
-- [ ] **Task 18.15** — `feat(web): add AuthController with register, login and OTP endpoints`
+- [x] **Task 18.15** — `feat(web): add AuthController with register, login and OTP endpoints`
   DTOs `record` con `@Valid`; `AuthExceptionHandler` → `400` / `401` / `409`.
 - [ ] **Task 18.16** — `test(web): cover auth endpoints and protected routes`
   `@WebMvcTest` con casos de uso falsos + prueba de que una ruta protegida da `401` sin token, `200` con token, y que la ingesta sigue entrando con `X-API-Key`.
