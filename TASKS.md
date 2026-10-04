@@ -51,9 +51,9 @@
 ### Task 3 — Contratos y documentación
 
 - [x] **Task 3.1** — `docs: add PRD, ARCHITECTURE, AGENTS and TASKS`
-- [ ] **Task 3.2** — `docs(contracts): add events envelope and payloads`
+- [x] **Task 3.2** — `docs(contracts): add events envelope and payloads`
   `docs/contracts/events.md`: sobre común, `BEHAVIOR`, `AUDIO`, `WEIGHT`, enums compartidos.
-- [ ] **Task 3.3** — `docs(contracts): add REST API and WebSocket messages`
+- [x] **Task 3.3** — `docs(contracts): add REST API and WebSocket messages`
   `docs/contracts/rest-api.md`: endpoints del dashboard, ingesta y formato de los mensajes STOMP.
 - [ ] **Task 3.4** — `docs(contracts): add example JSON per event type`
   `docs/contracts/examples/behavior.json`, `audio.json`, `weight.json`.
