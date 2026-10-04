@@ -344,8 +344,10 @@ baseline_profile  (guinea_pig_id, avg_still_seconds, avg_feeder_visits, avg_grou
 | `DOMAIN` | Caddy |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | postgres, and mapped to backend `DB_NAME`, `DB_USER`, `DB_PASSWORD` |
 | `API_KEY` | mapped to backend `APP_API_KEY` and ai-service `API_KEY` |
+| `JWT_SECRET` | mapped to backend `APP_JWT_SECRET` (HS256 key, at least 32 bytes) |
+| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM` | backend, to send the OTP emails (Gmail SMTP with an app password) |
 
-Backend env vars (set in Compose): `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `APP_API_KEY`, `JAVA_OPTS`. Defaults in `application.yml` point to `localhost` for local development.
+Backend env vars (set in Compose): `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `APP_API_KEY`, `APP_JWT_SECRET`, `MAIL_*`, `JAVA_OPTS`. Defaults in `application.yml` point to `localhost` for local development.
 
 ### Commands
 
@@ -357,7 +359,7 @@ docker compose logs -f backend
 git pull && docker compose up -d --build          # update
 ```
 
-Local development: `infra/docker-compose.dev.yml` starts only Postgres with its port on localhost; the backend runs from the IDE.
+Local development: `infra/docker-compose.dev.yml` starts only Postgres with its port on localhost; the backend runs from the IDE. Set `APP_JWT_SECRET` and run with the `dev` profile (`--spring.profiles.active=dev`) so OTP codes are written to the log instead of emailed.
 
 ---
 

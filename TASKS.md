@@ -296,7 +296,7 @@ config/                     SecurityConfig, JwtConfig, AuthProperties, AuthConfi
   DTOs `record` con `@Valid`; `AuthExceptionHandler` → `400` / `401` / `409`.
 - [x] **Task 18.16** — `test(web): cover auth endpoints and protected routes`
   `@WebMvcTest` con casos de uso falsos + prueba de que una ruta protegida da `401` sin token, `200` con token, y que la ingesta sigue entrando con `X-API-Key`.
-- [ ] **Task 18.17** — `chore(infra): add JWT and SMTP env vars`
+- [x] **Task 18.17** — `chore(infra): add JWT and SMTP env vars`
   `application.yml` (solo referencias `${...}`), `infra/.env.example`, `infra/docker-compose.yml`.
 - [ ] **Task 18.18** — `docs(contracts): add auth API contract`
   `docs/contracts/auth-api.md`. ⚠️ Avisar a `cuy-monitor-dashboard`: necesita pantallas de registro y login + OTP, mandar el Bearer y borrar el token al cerrar sesión.
