@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.adapter.in.web;
 
+import com.cuymonitor.backend.domain.exception.AccountDisabledException;
 import com.cuymonitor.backend.domain.exception.InvalidCredentialsException;
 import com.cuymonitor.backend.domain.exception.InvalidOtpException;
 import com.cuymonitor.backend.domain.exception.UserAlreadyExistsException;
@@ -37,7 +38,7 @@ public class AuthExceptionHandler {
         return error(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
-    @ExceptionHandler({InvalidCredentialsException.class, InvalidOtpException.class})
+    @ExceptionHandler({InvalidCredentialsException.class, InvalidOtpException.class, AccountDisabledException.class})
     public ResponseEntity<Map<String, Object>> handleUnauthorized(RuntimeException ex) {
         return error(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }

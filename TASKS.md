@@ -335,7 +335,7 @@ adapter/in/web/             UserAccountController, dto/
 - [x] **Task 19.4** — `feat(application): add UserAccountService for the account CRUD`
 - [x] **Task 19.5** — `test(application): cover UserAccountService with in-memory fakes`
   Ver perfil, actualizar, cambiar contraseña (actual correcta e incorrecta), desactivar (contraseña correcta e incorrecta), operar sobre una cuenta `DISABLED`.
-- [ ] **Task 19.6** — `feat(web): add UserAccountController for /api/users/me`
+- [x] **Task 19.6** — `feat(web): add UserAccountController for /api/users/me`
 - [ ] **Task 19.7** — `test(web): cover user account endpoints`
   `401` sin token, `200` con token, `401` con contraseña actual incorrecta, `204` al desactivar.
 - [ ] **Task 19.8** — `docs(contracts): add user account endpoints to auth API contract`
