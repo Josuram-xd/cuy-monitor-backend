@@ -69,6 +69,7 @@ class AuthControllerTest {
                         {"username":"","fullName":"Juan","email":"not-an-email","password":"secret-pass"}
                         """))
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("bad_request"))
                 .andExpect(jsonPath("$.fields.username").exists())
                 .andExpect(jsonPath("$.fields.email").exists());
         verifyNoInteractions(registerUserUseCase);
@@ -82,7 +83,8 @@ class AuthControllerTest {
                         {"username":"juan","fullName":"Juan","email":"juan@mail.com","password":"short"}
                         """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("password too short"));
+                .andExpect(jsonPath("$.error").value("bad_request"))
+                .andExpect(jsonPath("$.message").value("password too short"));
     }
 
     @Test
@@ -92,7 +94,8 @@ class AuthControllerTest {
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
                         {"username":"juan","fullName":"Juan","email":"juan@mail.com","password":"secret-pass"}
                         """))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("conflict"));
     }
 
     @Test
@@ -114,7 +117,8 @@ class AuthControllerTest {
                         {"username":"juan","password":"wrong-pass"}
                         """))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error").value("invalid credentials"));
+                .andExpect(jsonPath("$.error").value("unauthorized"))
+                .andExpect(jsonPath("$.message").value("invalid credentials"));
     }
 
     @Test
