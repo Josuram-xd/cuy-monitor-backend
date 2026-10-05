@@ -16,10 +16,10 @@ This repo is the core of the system. It receives events over HTTP, runs them thr
 │   video + audio over WiFi           │          │    ├── /api/*, /ws*, /actuator/health* ─► backend
 │            ▼                        │  HTTPS   │    └── /ai/*                           ─► ai-service
 │  Celeron laptop                     │ +API key │                                               │
-│   ├─ edge_agent ────────────────────┼─────────►│  ai-service ──POST /api/ingestion/events──┐   │
+│   ├─ edge_agent ────────────────────┼─────────►│  ai-service ──POST /api/v1/ingestion/events──┐   │
 │   │   (repo: ai-service)  /ai/...   │          │             (internal: http://backend:8080) │ │
 │   └─ serial_bridge ─────────────────┼─────────►│                                           ▼   │
-│          ▲ (repo: arduino)          │ /api/ingestion/events          backend (Java :8080)    │
+│          ▲ (repo: arduino)          │ /api/v1/ingestion/events          backend (Java :8080)    │
 │          │ USB serial               │          │                         └──► PostgreSQL 18    │
 │  Arduino Uno + HX711 + load cell    │          └───────────────────────────────────────────────┘
 └─────────────────────────────────────┘                      ▲ REST + WebSocket (HTTPS)
@@ -31,9 +31,9 @@ This repo is the core of the system. It receives events over HTTP, runs them thr
 
 | Repo | Role | Talks to the backend through |
 |---|---|---|
-| `cuy-monitor-ai-service` | Vision + audio ML (Python) | `POST /api/ingestion/events` over the internal Docker network |
-| `cuy-monitor-arduino` | Weight sensor + serial bridge | `POST /api/ingestion/events` over HTTPS (through Caddy) |
-| `cuy-monitor-dashboard` | Farmer UI (React + TS) | REST `/api/**` + STOMP over `/ws` |
+| `cuy-monitor-ai-service` | Vision + audio ML (Python) | `POST /api/v1/ingestion/events` over the internal Docker network |
+| `cuy-monitor-arduino` | Weight sensor + serial bridge | `POST /api/v1/ingestion/events` over HTTPS (through Caddy) |
+| `cuy-monitor-dashboard` | Farmer UI (React + TS) | REST `/api/v1/**` + STOMP over `/ws` |
 
 All producers send the **same event envelope** to the **same endpoint**. The backend decides what to do by the event `type`.
 
@@ -42,7 +42,7 @@ All producers send the **same event envelope** to the **same endpoint**. The bac
 ## 2. Responsibilities
 
 **In scope:**
-- Receive events on `POST /api/ingestion/events` and normalize them into a single internal `HealthEvent`.
+- Receive events on `POST /api/v1/ingestion/events` and normalize them into a single internal `HealthEvent`.
 - Decide health: per guinea pig state machine + cage-level aggregation.
 - Persist events, state transitions, alerts, weight readings and baselines.
 - Notify: WebSocket push, database, application log.
@@ -78,7 +78,7 @@ The backend is organized as a **hexagon**: a core with the business rules and th
 ### 3.1 Event flow through the hexagon
 
 ```
-POST /api/ingestion/events
+POST /api/v1/ingestion/events
   └► IngestionController                       adapter.in.web        (API key, validation)
        └► AdapterFactory                        adapter.in.ingestion  FACTORY METHOD: each concrete factory creates its adapter
             └► EventSourceAdapter               adapter.in.ingestion  ADAPTER: envelope payload → HealthEvent
@@ -232,7 +232,7 @@ Source of truth: `docs/contracts/` in this repo. Other repos copy from here.
 ### Ingestion endpoint
 
 ```http
-POST /api/ingestion/events
+POST /api/v1/ingestion/events
 X-API-Key: <API_KEY>
 Content-Type: application/json
 ```
@@ -284,15 +284,15 @@ Producers: `ai-service` (`BEHAVIOR`, `AUDIO`) calls `http://backend:8080` inside
 | Method and path | Client | Status |
 |---|---|---|
 | `GET /actuator/health` | Caddy, everyone | ✅ |
-| `GET /api/system/status` | smoke test (counts cages) | ✅ |
-| `POST /api/ingestion/events` (`X-API-Key`) | ai-service, serial_bridge | ✅ (receives and logs; pipeline pending) |
-| `GET /api/cages/{id}/health` | dashboard | planned |
-| `GET /api/cages/{id}/guinea-pigs` | dashboard | planned |
-| `POST /api/cages/{id}/guinea-pigs` | dashboard | planned |
-| `GET /api/guinea-pigs/{id}/history?from=&to=` | dashboard | planned |
-| `GET /api/alerts?status=OPEN` | dashboard | planned |
-| `PATCH /api/alerts/{id}` | dashboard | planned |
-| `GET /api/cages/{id}/weight?from=&to=` | dashboard | planned |
+| `GET /api/v1/system/status` | smoke test (counts cages) | ✅ |
+| `POST /api/v1/ingestion/events` (`X-API-Key`) | ai-service, serial_bridge | ✅ (receives and logs; pipeline pending) |
+| `GET /api/v1/cages/{id}/health` | dashboard | planned |
+| `GET /api/v1/cages/{id}/guinea-pigs` | dashboard | planned |
+| `POST /api/v1/cages/{id}/guinea-pigs` | dashboard | planned |
+| `GET /api/v1/guinea-pigs/{id}/history?from=&to=` | dashboard | planned |
+| `GET /api/v1/alerts?status=OPEN` | dashboard | planned |
+| `PATCH /api/v1/alerts/{id}` | dashboard | planned |
+| `GET /api/v1/cages/{id}/weight?from=&to=` | dashboard | planned |
 | `WS /ws` → STOMP `/topic/cages/{id}` | dashboard | planned |
 
 Conventions: paths in `kebab-case` and plural, JSON in `camelCase`, timestamps in ISO-8601 UTC.
@@ -373,7 +373,7 @@ Local development: `infra/docker-compose.dev.yml` starts only Postgres with its 
 | Output adapters | Persistence adapters and mappers against a real Postgres | `@DataJpaTest` + Testcontainers |
 | Architecture | Dependency rules of section 3.4 | ArchUnit |
 | Integration | HTTP event → pipeline → Postgres end to end | `@SpringBootTest` + Testcontainers |
-| Smoke (deployed) | `/actuator/health`, `/api/system/status`, `POST /api/ingestion/events` | curl / Postman |
+| Smoke (deployed) | `/actuator/health`, `/api/v1/system/status`, `POST /api/v1/ingestion/events` | curl / Postman |
 
 ---
 

@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** Smoke-test endpoint for the deployment. Not part of the domain. */
 @RestController
-@RequestMapping("/api/system")
+@RequestMapping("/api/v1/system")
 public class SystemController {
 
     private final JdbcTemplate jdbcTemplate;

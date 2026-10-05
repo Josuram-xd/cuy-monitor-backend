@@ -99,7 +99,7 @@ El sistema **no diagnostica** enfermedades. Da una **alerta temprana**: "este cu
 
 | Hito | Fecha | Qué debe funcionar |
 |---|---|---|
-| **Avance** | 30 de septiembre de 2026 | Backend desplegado en AWS con Docker, Postgres y HTTPS. Eventos falsos entrando por `POST /api/ingestion/events`. Esqueleto de patrones. Dashboard mostrando datos (puede ser con mocks). **Sin demo en vivo, solo desplegado.** |
+| **Avance** | 30 de septiembre de 2026 | Backend desplegado en AWS con Docker, Postgres y HTTPS. Eventos falsos entrando por `POST /api/v1/ingestion/events`. Esqueleto de patrones. Dashboard mostrando datos (puede ser con mocks). **Sin demo en vivo, solo desplegado.** |
 | Datos y modelos | Octubre | Detector, tracker, clasificadores entrenados; Arduino y puente funcionando |
 | Prueba en jaula real | 27 oct – 9 nov | Sistema corriendo varios días; ajuste de umbrales |
 | **Entrega final** | Noviembre | Todo funcionando con datos reales, informe y sustentación |
@@ -108,8 +108,8 @@ El sistema **no diagnostica** enfermedades. Da una **alerta temprana**: "este cu
 
 - ✅ EC2 con Elastic IP, dominio `cuymonitor.duckdns.org`, HTTPS con Caddy.
 - ✅ Postgres 18 y backend Spring Boot 4.1 corriendo en Docker Compose.
-- ✅ Endpoint de ingesta `POST /api/ingestion/events` recibiendo eventos (por ahora solo los registra).
-- ✅ Endpoints de prueba: `/actuator/health`, `/api/system/status`.
+- ✅ Endpoint de ingesta `POST /api/v1/ingestion/events` recibiendo eventos (por ahora solo los registra).
+- ✅ Endpoints de prueba: `/actuator/health`, `/api/v1/system/status`.
 - ⏳ Patrones, API del dashboard, WebSocket, dashboard, ai-service mock.
 
 ## 9. Métricas de éxito (para el informe)

@@ -1,6 +1,6 @@
 # Auth API
 
-Base path: `/api/auth`. All bodies are JSON (`Content-Type: application/json`), timestamps are ISO-8601 UTC.
+Base path: `/api/v1/auth`. All bodies are JSON (`Content-Type: application/json`), timestamps are ISO-8601 UTC.
 
 There is a single basic user type. Anyone can register from the login screen. Login always takes two steps: password first, then a 6-digit code sent by email.
 
@@ -17,7 +17,7 @@ otp/verify { challengeId, code }  ◄──────────────�
 
 ## Endpoints
 
-### `POST /api/auth/register`
+### `POST /api/v1/auth/register`
 
 ```json
 { "username": "juan", "fullName": "Juan Perez", "email": "juan@mail.com", "password": "secret-pass" }
@@ -38,7 +38,7 @@ otp/verify { challengeId, code }  ◄──────────────�
 
 The account is created as `PENDING_VERIFICATION` and a code is emailed.
 
-### `POST /api/auth/login`
+### `POST /api/v1/auth/login`
 
 ```json
 { "username": "juan", "password": "secret-pass" }
@@ -46,7 +46,7 @@ The account is created as `PENDING_VERIFICATION` and a code is emailed.
 
 `200 OK`: same body as register. A new code is emailed and any previous pending code of that user stops working. It also works for accounts that were never verified, so it doubles as "resend code".
 
-### `POST /api/auth/otp/verify`
+### `POST /api/v1/auth/otp/verify`
 
 ```json
 { "challengeId": "6f1c…", "code": "123456" }
@@ -85,7 +85,7 @@ Every error has the shape `{ "error": "<message>" }`. Validation errors also inc
 
 | Route | Auth |
 |---|---|
-| `/api/auth/**` | public |
+| `/api/v1/auth/**` | public |
 | `/actuator/health` | public |
-| `/api/ingestion/**` | `X-API-Key` header (no JWT) |
-| everything else under `/api/**` | `Authorization: Bearer <accessToken>`, otherwise `401` |
+| `/api/v1/ingestion/**` | `X-API-Key` header (no JWT) |
+| everything else under `/api/v1/**` | `Authorization: Bearer <accessToken>`, otherwise `401` |

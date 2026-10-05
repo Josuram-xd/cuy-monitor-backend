@@ -48,39 +48,39 @@ class SecurityConfigTest {
 
     @Test
     void protectedRouteWithoutTokenReturns401() throws Exception {
-        mvc.perform(get("/api/system/status")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/system/status")).andExpect(status().isUnauthorized());
     }
 
     @Test
     void protectedRouteWithValidTokenReturns200() throws Exception {
         given(jdbcTemplate.queryForObject(anyString(), any(Class.class))).willReturn(1);
 
-        mvc.perform(get("/api/system/status").header("Authorization", "Bearer " + token("cuy-monitor-backend")))
+        mvc.perform(get("/api/v1/system/status").header("Authorization", "Bearer " + token("cuy-monitor-backend")))
                 .andExpect(status().isOk());
     }
 
     @Test
     void tokenFromAnotherIssuerIsRejected() throws Exception {
-        mvc.perform(get("/api/system/status").header("Authorization", "Bearer " + token("someone-else")))
+        mvc.perform(get("/api/v1/system/status").header("Authorization", "Bearer " + token("someone-else")))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void garbageTokenIsRejected() throws Exception {
-        mvc.perform(get("/api/system/status").header("Authorization", "Bearer not-a-jwt"))
+        mvc.perform(get("/api/v1/system/status").header("Authorization", "Bearer not-a-jwt"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void ingestionStillWorksWithApiKeyAndNoToken() throws Exception {
-        mvc.perform(post("/api/ingestion/events").header("X-API-Key", "test-key")
+        mvc.perform(post("/api/v1/ingestion/events").header("X-API-Key", "test-key")
                         .contentType(MediaType.APPLICATION_JSON).content(EVENT))
                 .andExpect(status().isAccepted());
     }
 
     @Test
     void ingestionWithWrongApiKeyReturns401() throws Exception {
-        mvc.perform(post("/api/ingestion/events").header("X-API-Key", "wrong")
+        mvc.perform(post("/api/v1/ingestion/events").header("X-API-Key", "wrong")
                         .contentType(MediaType.APPLICATION_JSON).content(EVENT))
                 .andExpect(status().isUnauthorized());
     }

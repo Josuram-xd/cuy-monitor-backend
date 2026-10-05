@@ -4,7 +4,7 @@ Instrucciones para cualquier agente de IA (Claude Code, Copilot, Cursor, Codex�
 
 ## Qué es este repo
 
-Backend en **Java 25 + Spring Boot 4.1** del Monitor de Salud de Cuyes. Recibe eventos por HTTP (`POST /api/ingestion/events`), aplica 6 patrones de diseño dentro de un núcleo hexagonal, guarda en PostgreSQL y expone REST + WebSocket al dashboard. También contiene el despliegue (`infra/`) y los contratos entre repos (`docs/contracts/`).
+Backend en **Java 25 + Spring Boot 4.1** del Monitor de Salud de Cuyes. Recibe eventos por HTTP (`POST /api/v1/ingestion/events`), aplica 6 patrones de diseño dentro de un núcleo hexagonal, guarda en PostgreSQL y expone REST + WebSocket al dashboard. También contiene el despliegue (`infra/`) y los contratos entre repos (`docs/contracts/`).
 
 Es un proyecto universitario de **Patrones de Diseño**: que cada patrón se vea claro y explicable importa más que ahorrar líneas.
 
@@ -78,7 +78,7 @@ config/        arma los beans
 ## Ingesta
 
 - La ingesta es **HTTP directo** (ver ADR-003 en `docs/ARCHITECTURE.md`). No agregues colas ni brokers de mensajes sin que el usuario lo pida.
-- Todos los datos de afuera entran por **un solo endpoint**: `POST /api/ingestion/events` con header `X-API-Key` y el sobre común (`eventId`, `type`, `cageId`, `timestamp`, `source`, `schemaVersion`, `payload`).
+- Todos los datos de afuera entran por **un solo endpoint**: `POST /api/v1/ingestion/events` con header `X-API-Key` y el sobre común (`eventId`, `type`, `cageId`, `timestamp`, `source`, `schemaVersion`, `payload`).
 - El `AdapterFactory` elige el adaptador según `type` (`BEHAVIOR`, `AUDIO`, `WEIGHT`). No crees un endpoint distinto por tipo de evento.
 - `eventId` lo genera quien manda el evento y sirve para detectar duplicados (los productores reintentan).
 

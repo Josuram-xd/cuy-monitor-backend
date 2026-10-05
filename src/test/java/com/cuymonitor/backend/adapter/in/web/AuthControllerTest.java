@@ -55,7 +55,7 @@ class AuthControllerTest {
         given(registerUserUseCase.register(argThat(matchesRegister("juan", "juan@mail.com"))))
                 .willReturn(new LoginChallenge(CHALLENGE_ID, EXPIRES_AT));
 
-        mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
                         {"username":"juan","fullName":"Juan Perez","email":"juan@mail.com","password":"secret-pass"}
                         """))
                 .andExpect(status().isCreated())
@@ -65,7 +65,7 @@ class AuthControllerTest {
 
     @Test
     void registerWithInvalidBodyReturns400() throws Exception {
-        mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
                         {"username":"","fullName":"Juan","email":"not-an-email","password":"secret-pass"}
                         """))
                 .andExpect(status().isBadRequest())
@@ -78,7 +78,7 @@ class AuthControllerTest {
     void registerWithWeakPasswordReturns400() throws Exception {
         given(registerUserUseCase.register(any())).willThrow(new WeakPasswordException("password too short"));
 
-        mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
                         {"username":"juan","fullName":"Juan","email":"juan@mail.com","password":"short"}
                         """))
                 .andExpect(status().isBadRequest())
@@ -89,7 +89,7 @@ class AuthControllerTest {
     void registerWithTakenUsernameReturns409() throws Exception {
         given(registerUserUseCase.register(any())).willThrow(new UserAlreadyExistsException());
 
-        mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
                         {"username":"juan","fullName":"Juan","email":"juan@mail.com","password":"secret-pass"}
                         """))
                 .andExpect(status().isConflict());
@@ -99,7 +99,7 @@ class AuthControllerTest {
     void loginReturnsTheChallenge() throws Exception {
         given(loginUseCase.login(any())).willReturn(new LoginChallenge(CHALLENGE_ID, EXPIRES_AT));
 
-        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("""
+        mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON).content("""
                         {"username":"juan","password":"secret-pass"}
                         """))
                 .andExpect(status().isOk())
@@ -110,7 +110,7 @@ class AuthControllerTest {
     void loginWithBadCredentialsReturns401() throws Exception {
         given(loginUseCase.login(any())).willThrow(new InvalidCredentialsException());
 
-        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("""
+        mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON).content("""
                         {"username":"juan","password":"wrong-pass"}
                         """))
                 .andExpect(status().isUnauthorized())
@@ -121,7 +121,7 @@ class AuthControllerTest {
     void verifyOtpReturnsBearerToken() throws Exception {
         given(verifyOtpUseCase.verify(any())).willReturn(new AuthToken("jwt-token", EXPIRES_AT));
 
-        mvc.perform(post("/api/auth/otp/verify").contentType(MediaType.APPLICATION_JSON).content("""
+        mvc.perform(post("/api/v1/auth/otp/verify").contentType(MediaType.APPLICATION_JSON).content("""
                         {"challengeId":"%s","code":"123456"}
                         """.formatted(CHALLENGE_ID)))
                 .andExpect(status().isOk())
@@ -133,7 +133,7 @@ class AuthControllerTest {
     void verifyOtpWithWrongCodeReturns401() throws Exception {
         given(verifyOtpUseCase.verify(any())).willThrow(new InvalidOtpException());
 
-        mvc.perform(post("/api/auth/otp/verify").contentType(MediaType.APPLICATION_JSON).content("""
+        mvc.perform(post("/api/v1/auth/otp/verify").contentType(MediaType.APPLICATION_JSON).content("""
                         {"challengeId":"%s","code":"000000"}
                         """.formatted(CHALLENGE_ID)))
                 .andExpect(status().isUnauthorized());
@@ -141,7 +141,7 @@ class AuthControllerTest {
 
     @Test
     void verifyOtpWithMalformedCodeReturns400() throws Exception {
-        mvc.perform(post("/api/auth/otp/verify").contentType(MediaType.APPLICATION_JSON).content("""
+        mvc.perform(post("/api/v1/auth/otp/verify").contentType(MediaType.APPLICATION_JSON).content("""
                         {"challengeId":"%s","code":"12ab"}
                         """.formatted(CHALLENGE_ID)))
                 .andExpect(status().isBadRequest());

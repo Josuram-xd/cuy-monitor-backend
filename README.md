@@ -36,7 +36,7 @@ Cuy Monitor watches a guinea pig cage and flags animals whose behavior changes i
 
 This repository is the **heart of the system**. It:
 
-- Receives normalized events (`BEHAVIOR`, `AUDIO`, `WEIGHT`) through a single endpoint: `POST /api/ingestion/events`.
+- Receives normalized events (`BEHAVIOR`, `AUDIO`, `WEIGHT`) through a single endpoint: `POST /api/v1/ingestion/events`.
 - Evaluates them through a **Chain of Responsibility** and updates each guinea pig's **health state**: `NORMAL → OBSERVED → ALERT → CRITICAL` (and back).
 - Aggregates the health of the whole cage with a **Composite** tree.
 - Notifies subscribers (dashboard via WebSocket, database, application log) through an **Observer**.
@@ -52,9 +52,9 @@ This repository is the **heart of the system**. It:
 │        │ video + audio       │          │    ├── /api/**, /ws/** ──► backend  (:8080)     │
 │        ▼                     │  HTTPS   │    └── /ai/**          ──► ai-service (:8000)   │
 │ Edge laptop                  │ +API key │                                                 │
-│  ├─ edge_agent ──────────────┼─────────►│  ai-service ── POST /api/ingestion/events ──┐   │
+│  ├─ edge_agent ──────────────┼─────────►│  ai-service ── POST /api/v1/ingestion/events ──┐   │
 │  │   frames 1–2 fps + audio  │          │                                             ▼   │
-│  └─ serial_bridge ───────────┼─────────►│  POST /api/ingestion/events ──► backend (Java)  │
+│  └─ serial_bridge ───────────┼─────────►│  POST /api/v1/ingestion/events ──► backend (Java)  │
 │        ▲ USB serial          │          │                                    │            │
 │ Arduino + HX711 load cell    │          │                                    ▼            │
 └──────────────────────────────┘          │                              PostgreSQL 18      │
@@ -77,7 +77,7 @@ This repository is the **heart of the system**. It:
 
 ### How an event flows through the backend
 
-1. The AI service sends a `BEHAVIOR` event to `POST /api/ingestion/events` (one per guinea pig, every 60 s window).
+1. The AI service sends a `BEHAVIOR` event to `POST /api/v1/ingestion/events` (one per guinea pig, every 60 s window).
 2. `IngestionController` checks the `X-API-Key` header; the **Factory Method** picks the right adapter for the event `type`.
 3. The **Adapter** converts the raw payload into the internal `HealthEvent` record.
 4. The **Chain of Responsibility** validates, identifies, evaluates thresholds and confirms the anomaly is sustained.
@@ -114,7 +114,7 @@ AlertPublisher ◄────────────────────�
 |---|---|
 | Language | Java 25 LTS (Eclipse Temurin) |
 | Framework | Spring Boot 4.1 (Web MVC, Data JPA, Validation, WebSocket, Actuator) |
-| Ingestion | HTTP (`POST /api/ingestion/events` + `X-API-Key`) |
+| Ingestion | HTTP (`POST /api/v1/ingestion/events` + `X-API-Key`) |
 | Database | PostgreSQL 18 + Flyway migrations |
 | Build | Maven (wrapper included) |
 | Testing | JUnit 5, Spring Boot test starters, Testcontainers |
@@ -139,7 +139,7 @@ cuy-monitor-backend/
 │   ├── Caddyfile
 │   └── .env.example
 ├── dev/
-│   └── fake-producer/          # Sends sample events to /api/ingestion/events
+│   └── fake-producer/          # Sends sample events to /api/v1/ingestion/events
 └── src/
     ├── main/java/com/cuymonitor/backend/
     │   ├── config/             # WebSocket, CORS, API key filter
@@ -169,7 +169,7 @@ cuy-monitor-backend/
 Every event from outside enters through one endpoint. The `AdapterFactory` chooses the adapter from `type`.
 
 ```http
-POST /api/ingestion/events
+POST /api/v1/ingestion/events
 X-API-Key: <API_KEY>
 Content-Type: application/json
 ```
@@ -222,14 +222,14 @@ Content-Type: application/json
 
 | Method & path | Consumer | Description |
 |---|---|---|
-| `GET /api/cages/{id}/health` | dashboard | Cage health summary (from the Composite) |
-| `GET /api/cages/{id}/guinea-pigs` | dashboard | Guinea pigs with their current state |
-| `POST /api/cages/{id}/guinea-pigs` | dashboard | Register a guinea pig (name + mark color) |
-| `GET /api/guinea-pigs/{id}/history?from=&to=` | dashboard | Behavior and state history |
-| `GET /api/alerts?status=OPEN` | dashboard | List alerts |
-| `PATCH /api/alerts/{id}` | dashboard | Mark an alert as `REVIEWED` |
-| `GET /api/cages/{id}/weight?from=&to=` | dashboard | Weight history |
-| `POST /api/ingestion/weight` | serial bridge | Ingest a weight reading (requires `X-API-Key`) |
+| `GET /api/v1/cages/{id}/health` | dashboard | Cage health summary (from the Composite) |
+| `GET /api/v1/cages/{id}/guinea-pigs` | dashboard | Guinea pigs with their current state |
+| `POST /api/v1/cages/{id}/guinea-pigs` | dashboard | Register a guinea pig (name + mark color) |
+| `GET /api/v1/guinea-pigs/{id}/history?from=&to=` | dashboard | Behavior and state history |
+| `GET /api/v1/alerts?status=OPEN` | dashboard | List alerts |
+| `PATCH /api/v1/alerts/{id}` | dashboard | Mark an alert as `REVIEWED` |
+| `GET /api/v1/cages/{id}/weight?from=&to=` | dashboard | Weight history |
+| `POST /api/v1/ingestion/weight` | serial bridge | Ingest a weight reading (requires `X-API-Key`) |
 | `WS /ws` → `/topic/cages/{id}` | dashboard | Live updates (STOMP) |
 | `GET /actuator/health` | all / Caddy | Liveness and database health |
 
