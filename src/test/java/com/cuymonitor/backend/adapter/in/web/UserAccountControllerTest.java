@@ -59,7 +59,9 @@ class UserAccountControllerTest {
 
     @Test
     void withoutTokenReturns401() throws Exception {
-        mvc.perform(get("/api/v1/users/me")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/users/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("unauthorized"));
         verifyNoInteractions(getCurrentUserUseCase);
     }
 
@@ -79,7 +81,10 @@ class UserAccountControllerTest {
     void disabledAccountWithValidTokenReturns401() throws Exception {
         given(getCurrentUserUseCase.getCurrentUser(USER_ID)).willThrow(new AccountDisabledException());
 
-        mvc.perform(get("/api/v1/users/me").with(token())).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/users/me").with(token()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("unauthorized"))
+                .andExpect(jsonPath("$.message").value("account is disabled"));
     }
 
     @Test

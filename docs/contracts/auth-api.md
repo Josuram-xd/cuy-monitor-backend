@@ -125,10 +125,12 @@ The password hash is never returned.
 
 ### Account errors
 
-| Status | When |
-|---|---|
-| `400` | Invalid body or new password outside 8–72 bytes |
-| `401` | No token, invalid or expired token, wrong `currentPassword` (`invalid credentials`), or disabled account (`account is disabled`) |
+| Status | `error` | `message` | When |
+|---|---|---|---|
+| `400` | `bad_request` | varies | Invalid body or new password outside 8–72 bytes |
+| `401` | `unauthorized` | `missing, invalid or expired token` | No token, or invalid or expired token |
+| `401` | `unauthorized` | `invalid credentials` | Wrong `currentPassword` |
+| `401` | `unauthorized` | `account is disabled` | The account was deactivated but its token has not expired yet |
 
 ## Which routes need what
 
