@@ -82,7 +82,7 @@ Los productores de datos (ai-service, serial bridge) **no son usuarios**: entran
 | RF-13 | Toda la interfaz del criador en español | Alta | Avance |
 | RF-14 | Registro de usuario con verificación del correo por código OTP de 6 dígitos | Alta | Final |
 | RF-15 | Inicio de sesión en dos pasos (usuario + contraseña → código OTP al correo) que entrega un JWT de 30 min | Alta | Final |
-| RF-16 | Toda la API del dashboard (`/api/**` menos `/api/auth/**` y `/api/ingestion/**`) y el WebSocket exigen un JWT válido | Alta | Final |
+| RF-16 | Toda la API del dashboard (`/api/v1/**` menos `/api/v1/auth/**` y `/api/v1/ingestion/**`) y el WebSocket exigen un JWT válido | Alta | Final |
 | RF-17 | Cuenta propia: ver datos, editar nombre, cambiar contraseña, desactivar (borrado lógico) | Media | Final |
 | RF-18 | Cerrar sesión desde el dashboard (borra el token del navegador) | Alta | Final |
 
@@ -130,7 +130,7 @@ Decisiones de despliegue (detalle en `ARCHITECTURE.md`, ADR-008 a ADR-011):
 
 | Hito | Fecha | Qué debe funcionar |
 |---|---|---|
-| **Avance** | 30 de septiembre de 2026 | Backend desplegado en AWS con Docker, Postgres y HTTPS. Eventos falsos entrando por `POST /api/ingestion/events`. Esqueleto de patrones. Dashboard mostrando datos (puede ser con mocks). **Sin demo en vivo, solo desplegado.** |
+| **Avance** | 30 de septiembre de 2026 | Backend desplegado en AWS con Docker, Postgres y HTTPS. Eventos falsos entrando por `POST /api/v1/ingestion/events`. Esqueleto de patrones. Dashboard mostrando datos (puede ser con mocks). **Sin demo en vivo, solo desplegado.** |
 | Datos, modelos y cuentas | Octubre | Repo `cuy-monitor-db` separado y aplicado en RDS; registro + login con OTP; detector, tracker, clasificadores entrenados; Arduino y puente funcionando |
 | Prueba en jaula real | 27 oct – 9 nov | Sistema corriendo varios días; ajuste de umbrales |
 | **Entrega final** | Noviembre | Todo funcionando con datos reales y detrás de login, informe y sustentación |
@@ -139,8 +139,8 @@ Decisiones de despliegue (detalle en `ARCHITECTURE.md`, ADR-008 a ADR-011):
 
 - ✅ EC2 con Elastic IP, dominio `cuymonitor.duckdns.org`, HTTPS con Caddy.
 - ✅ Postgres 18 (contenedor) y backend Spring Boot 4.1 corriendo en Docker Compose.
-- ✅ Endpoint de ingesta `POST /api/ingestion/events` recibiendo eventos (por ahora solo los registra).
-- ✅ Endpoints de prueba: `/actuator/health`, `/api/system/status`.
+- ✅ Endpoint de ingesta `POST /api/v1/ingestion/events` recibiendo eventos (por ahora solo los registra).
+- ✅ Endpoints de prueba: `/actuator/health`, `/api/v1/system/status`.
 - ✅ Auth: modelos de dominio, puertos, migración `V2` (`app_user`, `otp_challenge`) y adaptadores JPA.
 - ⏳ Separar migraciones a `cuy-monitor-db` y pasar a RDS.
 - ⏳ Servicio de auth, controllers, seguridad, pantallas de login en el dashboard.

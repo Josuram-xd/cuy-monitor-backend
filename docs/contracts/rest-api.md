@@ -18,9 +18,9 @@
 
 | Path | Access |
 |---|---|
-| `/actuator/health`, `/api/auth/**` | Public |
-| `/api/ingestion/**` | `X-API-Key` header (no JWT) |
-| everything else under `/api/**` | `Authorization: Bearer <jwt>` |
+| `/actuator/health`, `/api/v1/auth/**` | Public |
+| `/api/v1/ingestion/**` | `X-API-Key` header (no JWT) |
+| everything else under `/api/v1/**` | `Authorization: Bearer <jwt>` |
 | `/ws` | JWT on the STOMP `CONNECT` frame (section 4) |
 
 Common errors for every JWT endpoint: `401` without a token, with an invalid or expired token, or for a `DISABLED` account.
@@ -36,7 +36,7 @@ Common errors for every JWT endpoint: `401` without a token, with an invalid or 
 
 ## 2. Ingestion
 
-### `POST /api/ingestion/events`
+### `POST /api/v1/ingestion/events`
 
 Header `X-API-Key`. Body is the event envelope. Full field rules, payloads and retry behavior: [`events.md`](events.md).
 
@@ -54,15 +54,15 @@ Summary:
 
 | Method and path | Purpose | Success |
 |---|---|---|
-| `GET /api/cages/{cageId}/health` | Cage status summary | `200` |
-| `GET /api/cages/{cageId}/guinea-pigs` | Guinea pigs with current status | `200` |
-| `POST /api/cages/{cageId}/guinea-pigs` | Register a guinea pig | `201` |
-| `GET /api/guinea-pigs/{id}/history?from=&to=` | State changes and behavior windows | `200` |
-| `GET /api/alerts?status=` | List alerts | `200` |
-| `PATCH /api/alerts/{id}` | Mark an alert as reviewed | `200` |
-| `GET /api/cages/{cageId}/weight?from=&to=` | Weight readings | `200` |
+| `GET /api/v1/cages/{cageId}/health` | Cage status summary | `200` |
+| `GET /api/v1/cages/{cageId}/guinea-pigs` | Guinea pigs with current status | `200` |
+| `POST /api/v1/cages/{cageId}/guinea-pigs` | Register a guinea pig | `201` |
+| `GET /api/v1/guinea-pigs/{id}/history?from=&to=` | State changes and behavior windows | `200` |
+| `GET /api/v1/alerts?status=` | List alerts | `200` |
+| `PATCH /api/v1/alerts/{id}` | Mark an alert as reviewed | `200` |
+| `GET /api/v1/cages/{cageId}/weight?from=&to=` | Weight readings | `200` |
 
-### 3.1 `GET /api/cages/{cageId}/health`
+### 3.1 `GET /api/v1/cages/{cageId}/health`
 
 Result of the Composite: the cage status and its parts.
 
@@ -84,7 +84,7 @@ Result of the Composite: the cage status and its parts.
 | `status` | `HealthStatus` of the whole cage (worst of its parts). |
 | `audio`, `weight` | Cage-level signals. `lastEventAt`, `lastGrams`, `lastMeasuredAt` are `null` if nothing arrived yet. |
 
-### 3.2 `GET /api/cages/{cageId}/guinea-pigs`
+### 3.2 `GET /api/v1/cages/{cageId}/guinea-pigs`
 
 Active guinea pigs only.
 
@@ -94,7 +94,7 @@ Active guinea pigs only.
 ]
 ```
 
-### 3.3 `POST /api/cages/{cageId}/guinea-pigs`
+### 3.3 `POST /api/v1/cages/{cageId}/guinea-pigs`
 
 ```json
 { "name": "Canela", "markColor": "RED" }
@@ -107,7 +107,7 @@ Active guinea pigs only.
 
 `201` returns the created guinea pig (same shape as an item of 3.2, `status: "NORMAL"`). `400` invalid body · `409` color already used in the cage · `404` unknown cage.
 
-### 3.4 `GET /api/guinea-pigs/{id}/history?from=&to=`
+### 3.4 `GET /api/v1/guinea-pigs/{id}/history?from=&to=`
 
 `from` and `to` are optional; the default is the last 24 hours. `to` must be after `from`.
 
@@ -127,7 +127,7 @@ Active guinea pigs only.
 
 Both lists are ordered by `occurredAt`, oldest first. `windows` comes from stored `BEHAVIOR` events. `404` unknown guinea pig.
 
-### 3.5 `GET /api/alerts?status=`
+### 3.5 `GET /api/v1/alerts?status=`
 
 `status` is optional (`OPEN` or `REVIEWED`); without it, all alerts. Newest first.
 
@@ -153,7 +153,7 @@ Both lists are ordered by `occurredAt`, oldest first. `windows` comes from store
 | `level` | `ALERT` or `CRITICAL`. |
 | `type` | `BEHAVIOR`, `AUDIO` or `WEIGHT`. |
 
-### 3.6 `PATCH /api/alerts/{id}`
+### 3.6 `PATCH /api/v1/alerts/{id}`
 
 ```json
 { "status": "REVIEWED" }
@@ -161,7 +161,7 @@ Both lists are ordered by `occurredAt`, oldest first. `windows` comes from store
 
 Only `REVIEWED` is accepted. Returns `200` with the updated alert (same shape as 3.5, with `reviewedAt` set). Marking an already reviewed alert is a no-op that also returns `200`. `400` any other status · `404` unknown alert.
 
-### 3.7 `GET /api/cages/{cageId}/weight?from=&to=`
+### 3.7 `GET /api/v1/cages/{cageId}/weight?from=&to=`
 
 Same defaults and rules for `from`/`to` as 3.4.
 
@@ -212,8 +212,8 @@ Messages are notifications to update the screen quickly; the REST endpoints stay
 | Method and path | Access | Notes |
 |---|---|---|
 | `GET /actuator/health` | Public | `{ "status": "UP" }`. Used by Caddy and the team. |
-| `GET /api/system/status` | JWT | Temporary smoke test (counts cages). Removed in Task 17.1. Not for the dashboard. |
-| `/api/auth/**`, `/api/users/me/**` | see `auth-api.md` | Registration, login with OTP, own account. |
+| `GET /api/v1/system/status` | JWT | Temporary smoke test (counts cages). Removed in Task 17.1. Not for the dashboard. |
+| `/api/v1/auth/**`, `/api/v1/users/me/**` | see `auth-api.md` | Registration, login with OTP, own account. |
 
 ---
 

@@ -42,7 +42,7 @@
 - [x] **Task 2.3** — `feat(domain): add EventType enum and IngestionEvent envelope`
   `EventType` en `domain/model/`; `IngestionEvent` en `adapter/in/ingestion/dto/`.
 - [x] **Task 2.4** — `feat(web): add IngestionController with API key check`
-  `adapter/in/web/IngestionController`: `POST /api/ingestion/events` → `202` / `400` / `401`. Por ahora solo registra en el log.
+  `adapter/in/web/IngestionController`: `POST /api/v1/ingestion/events` → `202` / `400` / `401`. Por ahora solo registra en el log.
 - [x] **Task 2.5** — `chore(infra): remove broker service from compose files`
 - [x] **Task 2.6** — *(sin commit)* desplegar con `docker compose up -d --build --remove-orphans` y probar el `POST` desde Postman
 
@@ -126,11 +126,11 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 - [ ] **Task 8.1** — `feat(config): allow localhost:5173 in CORS for the dev profile`
   En producción el dashboard se sirve desde el mismo dominio (Caddy), así que no hace falta CORS.
 - [ ] **Task 8.2** — `feat(web): add cage health and guinea pigs list endpoints`
-  `GetCageHealthUseCase`, `ListGuineaPigsUseCase` → `GET /api/cages/{id}/health`, `GET /api/cages/{id}/guinea-pigs`.
+  `GetCageHealthUseCase`, `ListGuineaPigsUseCase` → `GET /api/v1/cages/{id}/health`, `GET /api/v1/cages/{id}/guinea-pigs`.
 - [ ] **Task 8.3** — `feat(web): add endpoint to register a guinea pig`
-  `RegisterGuineaPigUseCase` → `POST /api/cages/{id}/guinea-pigs`.
+  `RegisterGuineaPigUseCase` → `POST /api/v1/cages/{id}/guinea-pigs`.
 - [ ] **Task 8.4** — `feat(web): add alerts list endpoint`
-  `ListAlertsUseCase` → `GET /api/alerts?status=`.
+  `ListAlertsUseCase` → `GET /api/v1/alerts?status=`.
 - [ ] **Task 8.5** — *(sin commit)* desplegar y probar cada endpoint en Postman
 
 🔓 **Desbloquea:** `cuy-monitor-dashboard` Task 5
@@ -138,7 +138,7 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 ### Task 9 — Datos falsos para el avance
 
 - [ ] **Task 9.1** — `feat(dev): add fake producer that posts random events`
-  `dev/fake-producer/` manda eventos `BEHAVIOR`, `AUDIO` y `WEIGHT` a `/api/ingestion/events`.
+  `dev/fake-producer/` manda eventos `BEHAVIOR`, `AUDIO` y `WEIGHT` a `/api/v1/ingestion/events`.
 - [ ] **Task 9.2** — *(sin commit)* dejarlo corriendo contra el servidor y ver cambios de estado en el dashboard
 
 ---
@@ -171,11 +171,11 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 ### Task 13 — API de historial y alertas
 
 - [ ] **Task 13.1** — `feat(web): add guinea pig history endpoint by date range`
-  `GetGuineaPigHistoryUseCase` → `GET /api/guinea-pigs/{id}/history`.
+  `GetGuineaPigHistoryUseCase` → `GET /api/v1/guinea-pigs/{id}/history`.
 - [ ] **Task 13.2** — `feat(web): add cage weight history endpoint by date range`
-  `GetWeightHistoryUseCase` → `GET /api/cages/{id}/weight`.
+  `GetWeightHistoryUseCase` → `GET /api/v1/cages/{id}/weight`.
 - [ ] **Task 13.3** — `feat(web): add endpoint to mark an alert as reviewed`
-  `ReviewAlertUseCase` → `PATCH /api/alerts/{id}`.
+  `ReviewAlertUseCase` → `PATCH /api/v1/alerts/{id}`.
 
 🔓 **Desbloquea:** `cuy-monitor-dashboard` Task 8, 9 y 10
 
@@ -215,7 +215,7 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 
 ## 🔐 Autenticación y cuentas de usuario
 
-Un solo tipo de usuario (básico, sin roles ni admin). Cualquiera puede registrarse desde la pantalla de login ("¿No tienes cuenta?"). Cada usuario solo ve y modifica **su propia cuenta** (`/api/users/me`); no hay listado de usuarios.
+Un solo tipo de usuario (básico, sin roles ni admin). Cualquiera puede registrarse desde la pantalla de login ("¿No tienes cuenta?"). Cada usuario solo ve y modifica **su propia cuenta** (`/api/v1/users/me`); no hay listado de usuarios.
 
 Se divide en tres tareas, cada una con su rama y su PR: la Task 19 (CRUD) y la Task 20 (WebSocket con JWT) necesitan el modelo `User`, la seguridad y el JWT de la Task 18, así que sus ramas salen de `main` cuando la 18 ya esté mergeada.
 
@@ -249,10 +249,10 @@ Rama: `feature/task-18-auth-jwt-otp`.
 
 **Flujo**
 
-1. **Registro**: `POST /api/auth/register` `{ username, fullName, email, password }` → `201 { challengeId, expiresAt }`. El usuario queda en `PENDING_VERIFICATION` y se le envía un código de 6 dígitos al correo.
-2. **Login**: `POST /api/auth/login` `{ username, password }` → `200 { challengeId, expiresAt }` y se envía un código nuevo al correo. También sirve para reenviar el código a una cuenta que aún no se verificó.
-3. **Verificar OTP**: `POST /api/auth/otp/verify` `{ challengeId, code }` → `200 { accessToken, tokenType: "Bearer", expiresAt }`. Si la cuenta estaba `PENDING_VERIFICATION`, pasa a `ACTIVE` (el código prueba que el correo es suyo).
-4. El resto de `/api/**` pide `Authorization: Bearer <jwt>`. `/api/ingestion/**` sigue con `X-API-Key`; `/api/auth/**` y `/actuator/health` son públicos.
+1. **Registro**: `POST /api/v1/auth/register` `{ username, fullName, email, password }` → `201 { challengeId, expiresAt }`. El usuario queda en `PENDING_VERIFICATION` y se le envía un código de 6 dígitos al correo.
+2. **Login**: `POST /api/v1/auth/login` `{ username, password }` → `200 { challengeId, expiresAt }` y se envía un código nuevo al correo. También sirve para reenviar el código a una cuenta que aún no se verificó.
+3. **Verificar OTP**: `POST /api/v1/auth/otp/verify` `{ challengeId, code }` → `200 { accessToken, tokenType: "Bearer", expiresAt }`. Si la cuenta estaba `PENDING_VERIFICATION`, pasa a `ACTIVE` (el código prueba que el correo es suyo).
+4. El resto de `/api/v1/**` pide `Authorization: Bearer <jwt>`. `/api/v1/ingestion/**` sigue con `X-API-Key`; `/api/v1/auth/**` y `/actuator/health` son públicos.
 
 **Arquitectura**
 
@@ -279,36 +279,36 @@ config/                     SecurityConfig, JwtConfig, AuthProperties, AuthConfi
 - [x] **Task 18.3** — `docs(tasks): split auth into registration/login and account CRUD tasks`
 - [x] **Task 18.4** — `feat(domain): add User, OtpChallenge and auth models`
   `User` (crear pendiente, activar, saber si puede iniciar sesión), `UserStatus`, `PasswordPolicy`, `OtpChallenge`, `LoginChallenge`, `AuthToken` y excepciones del dominio.
-- [ ] **Task 18.5** — `test(domain): cover User and OtpChallenge rules`
+- [x] **Task 18.5** — `test(domain): cover User and OtpChallenge rules`
   JUnit puro: OTP expira, agota intentos, un solo uso; usuario se activa; política de contraseña.
 - [x] **Task 18.6** — `feat(domain): add auth ports`
   `RegisterUserUseCase`, `LoginUseCase`, `VerifyOtpUseCase`, `UserRepository`, `OtpChallengeRepository`, `PasswordHasher`, `OtpSender`, `TokenIssuer`.
-- [ ] **Task 18.7** — `feat(application): add AuthenticationService for register, login and OTP`
+- [x] **Task 18.7** — `feat(application): add AuthenticationService for register, login and OTP`
   Genera el código con `SecureRandom`, lo hashea, invalida retos anteriores, envía el correo; al verificar activa la cuenta si hace falta y emite el token. Usa `java.time.Clock` inyectado.
-- [ ] **Task 18.8** — `test(application): cover AuthenticationService with in-memory fakes`
+- [x] **Task 18.8** — `test(application): cover AuthenticationService with in-memory fakes`
   Registro correcto, usuario o correo repetido, login correcto, contraseña incorrecta, usuario inexistente, cuenta `DISABLED`, código correcto (y activa la cuenta), incorrecto, expirado, intentos agotados, reutilizado.
 - [x] **Task 18.9** — `feat(db): add V2 migration for app_user and otp_challenge`
   Se mueve tal cual a `cuy-monitor-db` (Task 21.1 de este repo · Task 2 de ese repo). Las tablas de salud quedan en `V4` (la `V3` agrega `cage.code`).
 - [x] **Task 18.10** — `feat(persistence): add user and otp challenge JPA adapters`
   Entidades, Spring Data, mappers y adaptadores que implementan los puertos.
-- [ ] **Task 18.11** — `feat(security): add BCrypt password hasher and JWT token issuer`
+- [x] **Task 18.11** — `feat(security): add BCrypt password hasher and JWT token issuer`
   `adapter/out/security/`.
-- [ ] **Task 18.12** — `test(security): cover password hasher and JWT issuer`
+- [x] **Task 18.12** — `test(security): cover password hasher and JWT issuer`
   Hash/verify, y que el JWT emitido se valida con el decoder y trae `sub`, `iss` y `exp`.
-- [ ] **Task 18.13** — `feat(mail): add email and log OTP senders`
+- [x] **Task 18.13** — `feat(mail): add email and log OTP senders`
   `EmailOtpSender` con `JavaMailSender` (SMTP de Amazon SES o Gmail con contraseña de aplicación); `LogOtpSender` para el perfil `dev` (escribe el código en el log).
-- [ ] **Task 18.14** — `feat(config): add security filter chain and auth wiring`
+- [x] **Task 18.14** — `feat(config): add security filter chain and auth wiring`
   `SecurityConfig`, `JwtConfig`, `AuthProperties` (`app.auth.*`), `AuthConfig` (arma el servicio).
-  ⚠️ **Urgente:** desde la Task 18.2 `spring-boot-starter-security` está en el `pom.xml` y todavía no hay `SecurityConfig`, así que Spring Boot protege **todos** los endpoints con su login por defecto (la ingesta y `/api/system/status` responden `401`). No desplegar `main` en la EC2 hasta mergear esta subtarea, o adelantar un `SecurityConfig` mínimo que deje pasar `/api/ingestion/**` (con su `X-API-Key`) y `/actuator/health`.
-- [ ] **Task 18.15** — `feat(web): add AuthController with register, login and OTP endpoints`
+  ⚠️ **Urgente:** desde la Task 18.2 `spring-boot-starter-security` está en el `pom.xml` y todavía no hay `SecurityConfig`, así que Spring Boot protege **todos** los endpoints con su login por defecto (la ingesta y `/api/v1/system/status` responden `401`). No desplegar `main` en la EC2 hasta mergear esta subtarea, o adelantar un `SecurityConfig` mínimo que deje pasar `/api/v1/ingestion/**` (con su `X-API-Key`) y `/actuator/health`.
+- [x] **Task 18.15** — `feat(web): add AuthController with register, login and OTP endpoints`
   DTOs `record` con `@Valid`; `AuthExceptionHandler` → `400` / `401` / `409`.
-- [ ] **Task 18.16** — `test(web): cover auth endpoints and protected routes`
+- [x] **Task 18.16** — `test(web): cover auth endpoints and protected routes`
   `@WebMvcTest` con casos de uso falsos + prueba de que una ruta protegida da `401` sin token, `200` con token, y que la ingesta sigue entrando con `X-API-Key`.
-- [ ] **Task 18.17** — `chore(infra): add JWT and SMTP env vars`
+- [x] **Task 18.17** — `chore(infra): add JWT and SMTP env vars`
   `application.yml` (solo referencias `${...}`), `infra/.env.example`, `infra/docker-compose.yml`: `APP_JWT_SECRET`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`.
-- [ ] **Task 18.18** — `docs(contracts): add auth API contract`
+- [x] **Task 18.18** — `docs(contracts): add auth API contract`
   `docs/contracts/auth-api.md`. ⚠️ Avisar a `cuy-monitor-dashboard` (Task 13): necesita pantallas de registro y login + OTP, mandar el Bearer y borrar el token al cerrar sesión.
-- [ ] **Task 18.19** — *(sin commit)* `./mvnw test` en verde, prueba manual en Postman y PR a `main`
+- [x] **Task 18.19** — *(sin commit)* `./mvnw test` en verde, prueba manual en Postman y PR a `main`
 
 🔓 **Desbloquea:** `cuy-monitor-dashboard` Task 13 (registro y login) · Task 19 · Task 20
 
@@ -318,10 +318,10 @@ Rama: `feature/task-19-user-account-crud`, creada desde `main` después de merge
 
 **Endpoints** (todos con `Authorization: Bearer <jwt>`; el id sale del `sub` del token, nunca de la URL)
 
-- `GET /api/users/me` → datos de la cuenta (nunca el hash).
-- `PUT /api/users/me` `{ fullName }` → actualiza el perfil.
-- `PUT /api/users/me/password` `{ currentPassword, newPassword }` → cambia la contraseña.
-- `DELETE /api/users/me` `{ currentPassword }` → **desactiva** la cuenta (`DISABLED`, soft delete). Ya no puede iniciar sesión.
+- `GET /api/v1/users/me` → datos de la cuenta (nunca el hash).
+- `PUT /api/v1/users/me` `{ fullName }` → actualiza el perfil.
+- `PUT /api/v1/users/me/password` `{ currentPassword, newPassword }` → cambia la contraseña.
+- `DELETE /api/v1/users/me` `{ currentPassword }` → **desactiva** la cuenta (`DISABLED`, soft delete). Ya no puede iniciar sesión.
 
 Estas rutas cargan el usuario en cada petición y rechazan cuentas `DISABLED` aunque el JWT siga vigente.
 

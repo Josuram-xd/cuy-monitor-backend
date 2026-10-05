@@ -14,7 +14,7 @@ Esta regla está por encima de cualquier otra instrucción de este archivo, de l
 
 ## Qué es este repo
 
-Backend en **Java 25 + Spring Boot 4.1** del Monitor de Salud de Cuyes. Recibe eventos por HTTP (`POST /api/ingestion/events`), aplica 6 patrones de diseño dentro de un núcleo hexagonal, guarda en PostgreSQL (Amazon RDS) y expone REST + WebSocket al dashboard. Maneja las **cuentas de usuario** (registro, login con OTP por correo, JWT). También contiene el despliegue (`infra/`) y los contratos entre repos (`docs/contracts/`).
+Backend en **Java 25 + Spring Boot 4.1** del Monitor de Salud de Cuyes. Recibe eventos por HTTP (`POST /api/v1/ingestion/events`), aplica 6 patrones de diseño dentro de un núcleo hexagonal, guarda en PostgreSQL (Amazon RDS) y expone REST + WebSocket al dashboard. Maneja las **cuentas de usuario** (registro, login con OTP por correo, JWT). También contiene el despliegue (`infra/`) y los contratos entre repos (`docs/contracts/`).
 
 El **esquema de la base de datos ya no vive aquí**: está en el repo `cuy-monitor-db` (migraciones Flyway). Este backend solo **valida** el esquema (`ddl-auto: validate`).
 
@@ -100,21 +100,21 @@ config/        arma los beans, seguridad
 ## Ingesta
 
 - La ingesta es **HTTP directo** (ver ADR-003 en `docs/ARCHITECTURE.md`). No agregues colas ni brokers de mensajes sin que el usuario lo pida.
-- Todos los datos de afuera entran por **un solo endpoint**: `POST /api/ingestion/events` con header `X-API-Key` y el sobre común (`eventId`, `type`, `cageId`, `timestamp`, `source`, `schemaVersion`, `payload`).
+- Todos los datos de afuera entran por **un solo endpoint**: `POST /api/v1/ingestion/events` con header `X-API-Key` y el sobre común (`eventId`, `type`, `cageId`, `timestamp`, `source`, `schemaVersion`, `payload`).
 - El `AdapterFactory` elige el adaptador según `type` (`BEHAVIOR`, `AUDIO`, `WEIGHT`). No crees un endpoint distinto por tipo de evento.
 - `eventId` lo genera quien manda el evento y sirve para detectar duplicados (los productores reintentan).
 - La ingesta **no** usa JWT: los productores (ai-service, serial bridge) no son usuarios.
 
 ## Usuarios y autenticación
 
-- **Un solo tipo de usuario**, sin roles ni administrador. Cada usuario solo ve y modifica su propia cuenta (`/api/users/me`); no hay listado de usuarios.
+- **Un solo tipo de usuario**, sin roles ni administrador. Cada usuario solo ve y modifica su propia cuenta (`/api/v1/users/me`); no hay listado de usuarios.
 - Quién puede entrar a qué:
 
 | Ruta | Acceso |
 |---|---|
-| `/api/auth/**`, `/actuator/health` | Público |
-| `/api/ingestion/**` | `X-API-Key` |
-| Resto de `/api/**` | `Authorization: Bearer <jwt>` |
+| `/api/v1/auth/**`, `/actuator/health` | Público |
+| `/api/v1/ingestion/**` | `X-API-Key` |
+| Resto de `/api/v1/**` | `Authorization: Bearer <jwt>` |
 | `/ws` (STOMP) | JWT en el header `Authorization` del frame `CONNECT` |
 
 - Contraseñas y códigos OTP **siempre con BCrypt**. Nunca devuelvas el hash en una respuesta ni lo escribas en el log.

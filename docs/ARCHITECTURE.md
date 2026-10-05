@@ -21,7 +21,7 @@ The database **schema** lives in its own repo, `cuy-monitor-db` (ADR-008). This 
 │   ├─ edge_agent ────────────────────┼─key─┼─►│  ├── /ai/*                           ─► ai-service │  │
 │   │   (repo: ai-service)  /ai/...   │     │  │  └── /*  (SPA)                       ─► dashboard  │  │
 │   └─ serial_bridge ─────────────────┼────►│  └────────────────────────────────────────────────────┘  │
-│          ▲ (repo: arduino)          │     │   ai-service ──POST /api/ingestion/events──► backend      │
+│          ▲ (repo: arduino)          │     │   ai-service ──POST /api/v1/ingestion/events──► backend   │
 │          │ USB serial               │     │                 (internal http://backend:8080)  │        │
 │  Arduino Uno + HX711 + load cell    │     │   migrate (one-shot, repo: cuy-monitor-db) ──┐  │ JDBC   │
 └─────────────────────────────────────┘     │                                              ▼  ▼ TLS    │
@@ -33,9 +33,9 @@ The database **schema** lives in its own repo, `cuy-monitor-db` (ADR-008). This 
 | Repo | Role | Talks to the backend through |
 |---|---|---|
 | `cuy-monitor-db` | PostgreSQL schema (Flyway migrations), local Postgres, dev seeds | Nothing at runtime: its `migrate` container prepares the schema the backend validates |
-| `cuy-monitor-ai-service` | Vision + audio ML (Python) | `POST /api/ingestion/events` over the internal Docker network (`X-API-Key`) |
-| `cuy-monitor-arduino` | Weight sensor + serial bridge | `POST /api/ingestion/events` over HTTPS through Caddy (`X-API-Key`) |
-| `cuy-monitor-dashboard` | Farmer UI (React + TS), behind login | `/api/auth/**` (public), REST `/api/**` + STOMP `/ws` with a JWT, same origin |
+| `cuy-monitor-ai-service` | Vision + audio ML (Python) | `POST /api/v1/ingestion/events` over the internal Docker network (`X-API-Key`) |
+| `cuy-monitor-arduino` | Weight sensor + serial bridge | `POST /api/v1/ingestion/events` over HTTPS through Caddy (`X-API-Key`) |
+| `cuy-monitor-dashboard` | Farmer UI (React + TS), behind login | `/api/v1/auth/**` (public), REST `/api/v1/**` + STOMP `/ws` with a JWT, same origin |
 
 All producers send the **same event envelope** to the **same endpoint**. The backend decides what to do by the event `type`. Producers use the API key; people use a JWT.
 
@@ -44,11 +44,11 @@ All producers send the **same event envelope** to the **same endpoint**. The bac
 ## 2. Responsibilities
 
 **In scope:**
-- Receive events on `POST /api/ingestion/events` and normalize them into a single internal `HealthEvent`.
+- Receive events on `POST /api/v1/ingestion/events` and normalize them into a single internal `HealthEvent`.
 - Decide health: per guinea pig state machine + cage-level aggregation.
 - Persist events, state transitions, alerts, weight readings, baselines, users and OTP challenges (through JPA, on the schema owned by `cuy-monitor-db`).
 - Notify: WebSocket push, database, application log.
-- User accounts: register, verify email with an OTP, login with password + OTP, issue and validate JWTs, account CRUD on `/api/users/me`.
+- User accounts: register, verify email with an OTP, login with password + OTP, issue and validate JWTs, account CRUD on `/api/v1/users/me`.
 - Expose the REST API and WebSocket for the dashboard, protected by JWT.
 - Own `infra/` (Compose, Caddy, env template) and `docs/contracts/`.
 
@@ -87,7 +87,7 @@ The backend is organized as a **hexagon**: a core with the business rules and th
 ### 3.1 Event flow through the hexagon
 
 ```
-POST /api/ingestion/events
+POST /api/v1/ingestion/events
   └► IngestionController                       adapter.in.web        (API key, validation)
        └► AdapterFactory                        adapter.in.ingestion  FACTORY METHOD: each concrete factory creates its adapter
             └► EventSourceAdapter               adapter.in.ingestion  ADAPTER: envelope payload → HealthEvent
@@ -204,13 +204,13 @@ One kind of user (the person who looks at the dashboard). No roles, no admin. An
 ### 4.1 Flows
 
 ```
-REGISTER   POST /api/auth/register {username, fullName, email, password}
+REGISTER   POST /api/v1/auth/register {username, fullName, email, password}
              → user PENDING_VERIFICATION, 6-digit code emailed      → 201 {challengeId, expiresAt}
-LOGIN      POST /api/auth/login {username, password}
+LOGIN      POST /api/v1/auth/login {username, password}
              → password OK (and not DISABLED), new code emailed     → 200 {challengeId, expiresAt}
-VERIFY     POST /api/auth/otp/verify {challengeId, code}
+VERIFY     POST /api/v1/auth/otp/verify {challengeId, code}
              → code OK; PENDING_VERIFICATION becomes ACTIVE         → 200 {accessToken, tokenType: "Bearer", expiresAt}
-USE        any /api/** with  Authorization: Bearer <jwt>
+USE        any /api/v1/** with  Authorization: Bearer <jwt>
            STOMP CONNECT on /ws with header  Authorization: Bearer <jwt>
 LOGOUT     the dashboard deletes the token (stateless API; the token expires by itself after 30 min)
 ```
@@ -219,10 +219,10 @@ LOGOUT     the dashboard deletes the token (stateless API; the token expires by 
 
 | Path | Access |
 |---|---|
-| `/api/auth/**`, `/actuator/health` | Public |
-| `/api/ingestion/**` | `X-API-Key` filter (no JWT) |
+| `/api/v1/auth/**`, `/actuator/health` | Public |
+| `/api/v1/ingestion/**` | `X-API-Key` filter (no JWT) |
 | `/ws` (HTTP handshake) | Open; the JWT is checked on the STOMP `CONNECT` frame by a `ChannelInterceptor` (browsers can't set headers on the WebSocket handshake) |
-| everything else under `/api/**` | `Authorization: Bearer <jwt>` (OAuth2 resource server, HS256) |
+| everything else under `/api/v1/**` | `Authorization: Bearer <jwt>` (OAuth2 resource server, HS256) |
 
 Session `STATELESS`, CSRF disabled (Bearer API), CORS only for `http://localhost:5173` in the `dev` profile (in prod the dashboard is served from the same domain).
 
@@ -232,7 +232,7 @@ Session `STATELESS`, CSRF disabled (Bearer API), CORS only for `http://localhost
 - OTP: single use, expires in 5 min, max 5 attempts; requesting a new code revokes the previous ones of that user.
 - JWT HS256, secret ≥ 32 bytes from `APP_JWT_SECRET`, 30 min. Claims `sub` (user id), `iat`, `exp`, `iss`. No refresh token, no revocation list.
 - Generic `401 invalid credentials` on login (hash is computed even when the user doesn't exist). `DISABLED` accounts get the same answer.
-- `/api/users/me` loads the user on every request and rejects `DISABLED` accounts even if the JWT is still valid.
+- `/api/v1/users/me` loads the user on every request and rejects `DISABLED` accounts even if the JWT is still valid.
 - Mail: `EmailOtpSender` with `JavaMailSender` over SMTP (Amazon SES SMTP or Gmail with an app password). Profile `dev` uses `LogOtpSender` (writes the code to the log).
 - Out of scope: rate limiting, password recovery, email change.
 
@@ -312,7 +312,7 @@ Source of truth: `docs/contracts/` in this repo. Other repos copy from here.
 ### Ingestion endpoint
 
 ```http
-POST /api/ingestion/events
+POST /api/v1/ingestion/events
 X-API-Key: <API_KEY>
 Content-Type: application/json
 ```
@@ -366,30 +366,30 @@ Producers: `ai-service` (`BEHAVIOR`, `AUDIO`) calls `http://backend:8080` inside
 
 | Method and path | Body | Response |
 |---|---|---|
-| `POST /api/auth/register` | `{ username, fullName, email, password }` | `201 { challengeId, expiresAt }` · `400` invalid / weak password · `409` username or email taken |
-| `POST /api/auth/login` | `{ username, password }` | `200 { challengeId, expiresAt }` · `401` invalid credentials |
-| `POST /api/auth/otp/verify` | `{ challengeId, code }` | `200 { accessToken, tokenType: "Bearer", expiresAt }` · `401` invalid / expired / used code |
-| `GET /api/users/me` | — | `200 { id, username, fullName, email, status, createdAt }` |
-| `PUT /api/users/me` | `{ fullName }` | `200` user |
-| `PUT /api/users/me/password` | `{ currentPassword, newPassword }` | `204` · `401` wrong current password |
-| `DELETE /api/users/me` | `{ currentPassword }` | `204` (account `DISABLED`) · `401` wrong current password |
+| `POST /api/v1/auth/register` | `{ username, fullName, email, password }` | `201 { challengeId, expiresAt }` · `400` invalid / weak password · `409` username or email taken |
+| `POST /api/v1/auth/login` | `{ username, password }` | `200 { challengeId, expiresAt }` · `401` invalid credentials |
+| `POST /api/v1/auth/otp/verify` | `{ challengeId, code }` | `200 { accessToken, tokenType: "Bearer", expiresAt }` · `401` invalid / expired / used code |
+| `GET /api/v1/users/me` | — | `200 { id, username, fullName, email, status, createdAt }` |
+| `PUT /api/v1/users/me` | `{ fullName }` | `200` user |
+| `PUT /api/v1/users/me/password` | `{ currentPassword, newPassword }` | `204` · `401` wrong current password |
+| `DELETE /api/v1/users/me` | `{ currentPassword }` | `204` (account `DISABLED`) · `401` wrong current password |
 
 ### REST API
 
 | Method and path | Auth | Client | Status |
 |---|---|---|---|
 | `GET /actuator/health` | public | Caddy, everyone | ✅ |
-| `GET /api/system/status` | JWT (once security is on) | smoke test (counts cages) | ✅ (removed in Task 17.1) |
-| `POST /api/ingestion/events` | `X-API-Key` | ai-service, serial_bridge | ✅ (receives and logs; pipeline pending) |
-| `/api/auth/**` | public | dashboard | planned (Task 18) |
-| `/api/users/me/**` | JWT | dashboard | planned (Task 19) |
-| `GET /api/cages/{id}/health` | JWT | dashboard | planned |
-| `GET /api/cages/{id}/guinea-pigs` | JWT | dashboard | planned |
-| `POST /api/cages/{id}/guinea-pigs` | JWT | dashboard | planned |
-| `GET /api/guinea-pigs/{id}/history?from=&to=` | JWT | dashboard | planned |
-| `GET /api/alerts?status=OPEN` | JWT | dashboard | planned |
-| `PATCH /api/alerts/{id}` | JWT | dashboard | planned |
-| `GET /api/cages/{id}/weight?from=&to=` | JWT | dashboard | planned |
+| `GET /api/v1/system/status` | JWT (once security is on) | smoke test (counts cages) | ✅ (removed in Task 17.1) |
+| `POST /api/v1/ingestion/events` | `X-API-Key` | ai-service, serial_bridge | ✅ (receives and logs; pipeline pending) |
+| `/api/v1/auth/**` | public | dashboard | planned (Task 18) |
+| `/api/v1/users/me/**` | JWT | dashboard | planned (Task 19) |
+| `GET /api/v1/cages/{id}/health` | JWT | dashboard | planned |
+| `GET /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | planned |
+| `POST /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | planned |
+| `GET /api/v1/guinea-pigs/{id}/history?from=&to=` | JWT | dashboard | planned |
+| `GET /api/v1/alerts?status=OPEN` | JWT | dashboard | planned |
+| `PATCH /api/v1/alerts/{id}` | JWT | dashboard | planned |
+| `GET /api/v1/cages/{id}/weight?from=&to=` | JWT | dashboard | planned |
 | `WS /ws` → STOMP `/topic/cages/{id}` | JWT on `CONNECT` | dashboard | planned |
 
 Conventions: paths in `kebab-case` and plural, JSON in `camelCase`, timestamps in ISO-8601 UTC. Errors as `{ "error": "<code>", "message": "..." }`.
@@ -487,7 +487,7 @@ Local development: `docker compose -f ../cuy-monitor-db/docker-compose.yml up -d
 | Output adapters | Persistence adapters and mappers against a real Postgres with the migrations of `../cuy-monitor-db/migrations` | `@DataJpaTest` + Testcontainers |
 | Architecture | Dependency rules of section 3.4 | ArchUnit |
 | Integration | HTTP event → pipeline → Postgres end to end | `@SpringBootTest` + Testcontainers |
-| Smoke (deployed) | `/actuator/health`, register + login + OTP, a protected endpoint, `POST /api/ingestion/events` | curl / Postman |
+| Smoke (deployed) | `/actuator/health`, register + login + OTP, a protected endpoint, `POST /api/v1/ingestion/events` | curl / Postman |
 
 ---
 
@@ -616,5 +616,5 @@ Local development: `docker compose -f ../cuy-monitor-db/docker-compose.yml up -d
 - Many cages: put a queue (e.g. Amazon SQS) between producers and the backend, keeping the same envelope.
 - More availability: same images on ECS Fargate + RDS Multi-AZ.
 - Mobile notifications: add a `PushAlertObserver` without touching the rest.
-- Password recovery and rate limiting on `/api/auth/**`.
+- Password recovery and rate limiting on `/api/v1/auth/**`.
 - CI/CD: GitHub Actions → GHCR (or ECR) → `docker compose pull` on the EC2.

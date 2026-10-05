@@ -38,7 +38,7 @@ Cuy Monitor watches a guinea pig cage and flags animals whose behavior changes i
 
 This repository is the **heart of the system**. It:
 
-- Receives normalized events (`BEHAVIOR`, `AUDIO`, `WEIGHT`) through a single endpoint: `POST /api/ingestion/events`.
+- Receives normalized events (`BEHAVIOR`, `AUDIO`, `WEIGHT`) through a single endpoint: `POST /api/v1/ingestion/events`.
 - Evaluates them through a **Chain of Responsibility** and updates each guinea pig's **health state**: `NORMAL → OBSERVED → ALERT → CRITICAL` (and back).
 - Aggregates the health of the whole cage with a **Composite** tree.
 - Notifies subscribers (dashboard via WebSocket, database, application log) through an **Observer**.
@@ -58,7 +58,7 @@ The **database schema** is not in this repo: it lives in [`cuy-monitor-db`](http
 │        ▼                     │ HTTPS │    ├── /api/**, /ws, /actuator/health ──► backend (:8080) │
 │ Edge laptop                  │ + API │    ├── /ai/**                         ──► ai-service      │
 │  ├─ edge_agent ──────────────┼──key─►│    └── /  (SPA)                       ──► dashboard       │
-│  │   frames 1–2 fps + audio  │       │  ai-service ── POST /api/ingestion/events ──► backend    │
+│  │   frames 1–2 fps + audio  │       │  ai-service ── POST /api/v1/ingestion/events ──► backend │
 │  └─ serial_bridge ───────────┼──────►│  migrate (one-shot, from cuy-monitor-db) ─┐     │        │
 │        ▲ USB serial          │       │                                           ▼     ▼ TLS    │
 │ Arduino + HX711 load cell    │       │  Amazon RDS for PostgreSQL 18 (private, no public IP)    │
@@ -83,7 +83,7 @@ The **database schema** is not in this repo: it lives in [`cuy-monitor-db`](http
 
 ### How an event flows through the backend
 
-1. The AI service sends a `BEHAVIOR` event to `POST /api/ingestion/events` (one per guinea pig, every 60 s window).
+1. The AI service sends a `BEHAVIOR` event to `POST /api/v1/ingestion/events` (one per guinea pig, every 60 s window).
 2. `IngestionController` checks the `X-API-Key` header; the **Factory Method** picks the right adapter for the event `type`.
 3. The **Adapter** converts the raw payload into the internal `HealthEvent` record.
 4. The **Chain of Responsibility** validates, identifies, evaluates thresholds and confirms the anomaly is sustained.
@@ -118,16 +118,16 @@ AlertPublisher ◄────────────────────�
 
 | Step | Endpoint | Result |
 |---|---|---|
-| Register | `POST /api/auth/register` | Account `PENDING_VERIFICATION`, 6-digit code emailed |
-| Log in | `POST /api/auth/login` | Password checked, new code emailed |
-| Verify code | `POST /api/auth/otp/verify` | Account `ACTIVE` (if it was pending) + JWT valid for 30 min |
-| Use the app | any `/api/**` with `Authorization: Bearer <jwt>`; STOMP `CONNECT` on `/ws` with the same header | |
+| Register | `POST /api/v1/auth/register` | Account `PENDING_VERIFICATION`, 6-digit code emailed |
+| Log in | `POST /api/v1/auth/login` | Password checked, new code emailed |
+| Verify code | `POST /api/v1/auth/otp/verify` | Account `ACTIVE` (if it was pending) + JWT valid for 30 min |
+| Use the app | any `/api/v1/**` with `Authorization: Bearer <jwt>`; STOMP `CONNECT` on `/ws` with the same header | |
 | Log out | dashboard deletes the token (stateless API) | |
-| My account | `GET/PUT /api/users/me`, `PUT /api/users/me/password`, `DELETE /api/users/me` | Profile, password, soft-delete |
+| My account | `GET/PUT /api/v1/users/me`, `PUT /api/v1/users/me/password`, `DELETE /api/v1/users/me` | Profile, password, soft-delete |
 
 - Passwords and codes are stored as **BCrypt** hashes. Codes are single-use, expire in 5 min, max 5 attempts.
 - JWT signed with HS256 (`APP_JWT_SECRET`, ≥ 32 bytes). No roles, no refresh tokens.
-- Ingestion (`/api/ingestion/**`) keeps using `X-API-Key`: producers are not users.
+- Ingestion (`/api/v1/ingestion/**`) keeps using `X-API-Key`: producers are not users.
 - Not in this version: password recovery, email change, rate limiting.
 
 ## Tech stack
@@ -136,7 +136,7 @@ AlertPublisher ◄────────────────────�
 |---|---|
 | Language | Java 25 LTS (Eclipse Temurin) |
 | Framework | Spring Boot 4.1 (Web MVC, Data JPA, Validation, WebSocket, Security, OAuth2 Resource Server, Mail, Actuator) |
-| Ingestion | HTTP (`POST /api/ingestion/events` + `X-API-Key`) |
+| Ingestion | HTTP (`POST /api/v1/ingestion/events` + `X-API-Key`) |
 | Auth | BCrypt + JWT (HS256, Nimbus) + email OTP (SMTP: Amazon SES or Gmail) |
 | Database | PostgreSQL 18 on Amazon RDS; schema managed by Flyway in `cuy-monitor-db` |
 | Build | Maven (wrapper included) |
@@ -161,7 +161,7 @@ cuy-monitor-backend/
 │   ├── Caddyfile
 │   └── .env.example
 ├── dev/
-│   └── fake-producer/          # Sends sample events to /api/ingestion/events — planned
+│   └── fake-producer/          # Sends sample events to /api/v1/ingestion/events — planned
 └── src/
     ├── main/java/com/cuymonitor/backend/
     │   ├── domain/             # Pure Java: model (+ user, auth), health (chain, state, composite),
@@ -186,7 +186,7 @@ cuy-monitor-backend/
 Every event from outside enters through one endpoint. The `AdapterFactory` chooses the adapter from `type`.
 
 ```http
-POST /api/ingestion/events
+POST /api/v1/ingestion/events
 X-API-Key: <API_KEY>
 Content-Type: application/json
 ```
@@ -241,23 +241,23 @@ Responses: `202 Accepted` · `400` invalid envelope (don't retry) · `401` wrong
 | Method & path | Auth | Consumer | Description |
 |---|---|---|---|
 | `GET /actuator/health` | public | all / Caddy | Liveness and database health |
-| `POST /api/ingestion/events` | `X-API-Key` | ai-service, serial bridge | Ingest any event |
-| `POST /api/auth/register` | public | dashboard | Create an account (sends a code) |
-| `POST /api/auth/login` | public | dashboard | Check password (sends a code) |
-| `POST /api/auth/otp/verify` | public | dashboard | Exchange the code for a JWT |
-| `GET` / `PUT /api/users/me` | JWT | dashboard | View / update my profile |
-| `PUT /api/users/me/password` | JWT | dashboard | Change my password |
-| `DELETE /api/users/me` | JWT | dashboard | Deactivate my account |
-| `GET /api/cages/{id}/health` | JWT | dashboard | Cage health summary (from the Composite) |
-| `GET /api/cages/{id}/guinea-pigs` | JWT | dashboard | Guinea pigs with their current state |
-| `POST /api/cages/{id}/guinea-pigs` | JWT | dashboard | Register a guinea pig (name + mark color) |
-| `GET /api/guinea-pigs/{id}/history?from=&to=` | JWT | dashboard | Behavior and state history |
-| `GET /api/alerts?status=OPEN` | JWT | dashboard | List alerts |
-| `PATCH /api/alerts/{id}` | JWT | dashboard | Mark an alert as `REVIEWED` |
-| `GET /api/cages/{id}/weight?from=&to=` | JWT | dashboard | Weight history |
+| `POST /api/v1/ingestion/events` | `X-API-Key` | ai-service, serial bridge | Ingest any event |
+| `POST /api/v1/auth/register` | public | dashboard | Create an account (sends a code) |
+| `POST /api/v1/auth/login` | public | dashboard | Check password (sends a code) |
+| `POST /api/v1/auth/otp/verify` | public | dashboard | Exchange the code for a JWT |
+| `GET` / `PUT /api/v1/users/me` | JWT | dashboard | View / update my profile |
+| `PUT /api/v1/users/me/password` | JWT | dashboard | Change my password |
+| `DELETE /api/v1/users/me` | JWT | dashboard | Deactivate my account |
+| `GET /api/v1/cages/{id}/health` | JWT | dashboard | Cage health summary (from the Composite) |
+| `GET /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | Guinea pigs with their current state |
+| `POST /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | Register a guinea pig (name + mark color) |
+| `GET /api/v1/guinea-pigs/{id}/history?from=&to=` | JWT | dashboard | Behavior and state history |
+| `GET /api/v1/alerts?status=OPEN` | JWT | dashboard | List alerts |
+| `PATCH /api/v1/alerts/{id}` | JWT | dashboard | Mark an alert as `REVIEWED` |
+| `GET /api/v1/cages/{id}/weight?from=&to=` | JWT | dashboard | Weight history |
 | `WS /ws` → `/topic/cages/{id}` | JWT on STOMP `CONNECT` | dashboard | Live updates |
 
-Only `/actuator/health`, `/api/system/status` (temporary) and `/api/ingestion/events` exist today; the rest is in progress (see [`TASKS.md`](TASKS.md)).
+Only `/actuator/health`, `/api/v1/system/status` (temporary) and `/api/v1/ingestion/events` exist today; the rest is in progress (see [`TASKS.md`](TASKS.md)).
 
 ## Data model
 

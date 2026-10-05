@@ -6,7 +6,7 @@
 All producers send the **same envelope** to the **same endpoint**. The backend picks what to do from `type`.
 
 ```http
-POST /api/ingestion/events
+POST /api/v1/ingestion/events
 X-API-Key: <API_KEY>
 Content-Type: application/json
 ```
