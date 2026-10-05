@@ -25,6 +25,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = {SystemController.class, IngestionController.class},
@@ -48,7 +50,10 @@ class SecurityConfigTest {
 
     @Test
     void protectedRouteWithoutTokenReturns401() throws Exception {
-        mvc.perform(get("/api/v1/system/status")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/system/status"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().exists("WWW-Authenticate"))
+                .andExpect(jsonPath("$.error").value("unauthorized"));
     }
 
     @Test
@@ -68,7 +73,8 @@ class SecurityConfigTest {
     @Test
     void garbageTokenIsRejected() throws Exception {
         mvc.perform(get("/api/v1/system/status").header("Authorization", "Bearer not-a-jwt"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("unauthorized"));
     }
 
     @Test
@@ -82,7 +88,9 @@ class SecurityConfigTest {
     void ingestionWithWrongApiKeyReturns401() throws Exception {
         mvc.perform(post("/api/v1/ingestion/events").header("X-API-Key", "wrong")
                         .contentType(MediaType.APPLICATION_JSON).content(EVENT))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("unauthorized"))
+                .andExpect(jsonPath("$.message").value("invalid api key"));
     }
 
     private String token(String issuer) {

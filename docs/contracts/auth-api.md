@@ -62,18 +62,19 @@ If the account was `PENDING_VERIFICATION` it becomes `ACTIVE`.
 
 ## Errors
 
-Every error has the shape `{ "error": "<message>" }`. Validation errors also include the failing fields:
+Every error follows the API convention `{ "error": "<code>", "message": "..." }` (see `rest-api.md`). Validation errors also include the failing fields:
 
 ```json
-{ "error": "validation failed", "fields": { "email": "must be a well-formed email address" } }
+{ "error": "bad_request", "message": "validation failed", "fields": { "email": "must be a well-formed email address" } }
 ```
 
-| Status | When |
-|---|---|
-| `400` | Invalid body, malformed JSON, password outside 8–72 bytes, code not 6 digits |
-| `401` `invalid credentials` | Wrong username or password, unknown user, or disabled account (same message on purpose) |
-| `401` `invalid or expired code` | Wrong, expired, already used or revoked code, or 5 failed attempts (same message on purpose) |
-| `409` | Username or email already in use |
+| Status | `error` | `message` | When |
+|---|---|---|---|
+| `400` | `bad_request` | varies | Invalid body, malformed JSON, password outside 8–72 bytes, code not 6 digits |
+| `401` | `unauthorized` | `invalid credentials` | Wrong username or password, unknown user, or disabled account (same message on purpose) |
+| `401` | `unauthorized` | `invalid or expired code` | Wrong, expired, already used or revoked code, or 5 failed attempts (same message on purpose) |
+| `401` | `unauthorized` | `missing, invalid or expired token` | Protected route without a valid `Authorization: Bearer` header |
+| `409` | `conflict` | `username or email already in use` | Username or email already taken |
 
 ## Rules
 

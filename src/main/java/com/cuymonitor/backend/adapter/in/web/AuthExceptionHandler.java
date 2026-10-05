@@ -25,30 +25,32 @@ public class AuthExceptionHandler {
         for (FieldError error : ex.getBindingResult().getFieldErrors()) {
             fields.putIfAbsent(error.getField(), error.getDefaultMessage());
         }
-        return ResponseEntity.badRequest().body(Map.of("error", "validation failed", "fields", fields));
+        Map<String, Object> body = ApiError.body(ApiError.BAD_REQUEST, "validation failed");
+        body.put("fields", fields);
+        return ResponseEntity.badRequest().body(body);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Map<String, Object>> handleUnreadableBody() {
-        return error(HttpStatus.BAD_REQUEST, "malformed request body");
+        return error(HttpStatus.BAD_REQUEST, ApiError.BAD_REQUEST, "malformed request body");
     }
 
     @ExceptionHandler(WeakPasswordException.class)
     public ResponseEntity<Map<String, Object>> handleWeakPassword(WeakPasswordException ex) {
-        return error(HttpStatus.BAD_REQUEST, ex.getMessage());
+        return error(HttpStatus.BAD_REQUEST, ApiError.BAD_REQUEST, ex.getMessage());
     }
 
     @ExceptionHandler({InvalidCredentialsException.class, InvalidOtpException.class, AccountDisabledException.class})
     public ResponseEntity<Map<String, Object>> handleUnauthorized(RuntimeException ex) {
-        return error(HttpStatus.UNAUTHORIZED, ex.getMessage());
+        return error(HttpStatus.UNAUTHORIZED, ApiError.UNAUTHORIZED, ex.getMessage());
     }
 
     @ExceptionHandler(UserAlreadyExistsException.class)
     public ResponseEntity<Map<String, Object>> handleConflict(UserAlreadyExistsException ex) {
-        return error(HttpStatus.CONFLICT, ex.getMessage());
+        return error(HttpStatus.CONFLICT, ApiError.CONFLICT, ex.getMessage());
     }
 
-    private static ResponseEntity<Map<String, Object>> error(HttpStatus status, String message) {
-        return ResponseEntity.status(status).body(Map.of("error", message));
+    private static ResponseEntity<Map<String, Object>> error(HttpStatus status, String code, String message) {
+        return ResponseEntity.status(status).body(ApiError.body(code, message));
     }
 }

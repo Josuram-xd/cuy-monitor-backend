@@ -38,7 +38,7 @@ public class IngestionController {
 
         if (providedKey == null
                 || !MessageDigest.isEqual(apiKey, providedKey.getBytes(StandardCharsets.UTF_8))) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "invalid api key"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiError.body(ApiError.UNAUTHORIZED, "invalid api key"));
         }
 
         log.info("Received event id={} type={} cage={} source={}",
