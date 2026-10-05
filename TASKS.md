@@ -39,7 +39,7 @@
 - [x] **Task 2.3** — `feat(domain): add EventType enum and IngestionEvent envelope`
   `EventType` en `domain/model/`; `IngestionEvent` en `adapter/in/ingestion/dto/`.
 - [x] **Task 2.4** — `feat(web): add IngestionController with API key check`
-  `adapter/in/web/IngestionController`: `POST /api/ingestion/events` → `202` / `400` / `401`. Por ahora solo registra en el log.
+  `adapter/in/web/IngestionController`: `POST /api/v1/ingestion/events` → `202` / `400` / `401`. Por ahora solo registra en el log.
 - [x] **Task 2.5** — `chore(infra): remove broker service from compose files`
 - [x] **Task 2.6** — *(sin commit)* desplegar con `docker compose up -d --build --remove-orphans` y probar el `POST` desde Postman
 
@@ -122,11 +122,11 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 
 - [ ] **Task 8.1** — `feat(config): add CORS for the Amplify domain`
 - [ ] **Task 8.2** — `feat(web): add cage health and guinea pigs list endpoints`
-  `GetCageHealthUseCase`, `ListGuineaPigsUseCase` → `GET /api/cages/{id}/health`, `GET /api/cages/{id}/guinea-pigs`.
+  `GetCageHealthUseCase`, `ListGuineaPigsUseCase` → `GET /api/v1/cages/{id}/health`, `GET /api/v1/cages/{id}/guinea-pigs`.
 - [ ] **Task 8.3** — `feat(web): add endpoint to register a guinea pig`
-  `RegisterGuineaPigUseCase` → `POST /api/cages/{id}/guinea-pigs`.
+  `RegisterGuineaPigUseCase` → `POST /api/v1/cages/{id}/guinea-pigs`.
 - [ ] **Task 8.4** — `feat(web): add alerts list endpoint`
-  `ListAlertsUseCase` → `GET /api/alerts?status=`.
+  `ListAlertsUseCase` → `GET /api/v1/alerts?status=`.
 - [ ] **Task 8.5** — *(sin commit)* desplegar y probar cada endpoint en Postman
 
 🔓 **Desbloquea:** `cuy-monitor-dashboard` Task 5
@@ -134,7 +134,7 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 ### Task 9 — Datos falsos para el avance 👤 Compañero
 
 - [ ] **Task 9.1** — `feat(dev): add fake producer that posts random events`
-  `dev/fake-producer/` manda eventos `BEHAVIOR`, `AUDIO` y `WEIGHT` a `/api/ingestion/events`.
+  `dev/fake-producer/` manda eventos `BEHAVIOR`, `AUDIO` y `WEIGHT` a `/api/v1/ingestion/events`.
 - [ ] **Task 9.2** — *(sin commit)* dejarlo corriendo contra el servidor y ver cambios de estado en el dashboard
 
 ---
@@ -167,11 +167,11 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 ### Task 13 — API de historial y alertas 👤 Josuram
 
 - [ ] **Task 13.1** — `feat(web): add guinea pig history endpoint by date range`
-  `GetGuineaPigHistoryUseCase` → `GET /api/guinea-pigs/{id}/history`.
+  `GetGuineaPigHistoryUseCase` → `GET /api/v1/guinea-pigs/{id}/history`.
 - [ ] **Task 13.2** — `feat(web): add cage weight history endpoint by date range`
-  `GetWeightHistoryUseCase` → `GET /api/cages/{id}/weight`.
+  `GetWeightHistoryUseCase` → `GET /api/v1/cages/{id}/weight`.
 - [ ] **Task 13.3** — `feat(web): add endpoint to mark an alert as reviewed`
-  `ReviewAlertUseCase` → `PATCH /api/alerts/{id}`.
+  `ReviewAlertUseCase` → `PATCH /api/v1/alerts/{id}`.
 
 🔓 **Desbloquea:** `cuy-monitor-dashboard` Task 8, 9 y 10
 
@@ -210,7 +210,7 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 
 ## 🔐 Autenticación y cuentas de usuario
 
-Un solo tipo de usuario (básico, sin roles ni admin). Cualquiera puede registrarse desde la pantalla de login ("¿No tienes cuenta?"). Cada usuario solo ve y modifica **su propia cuenta** (`/api/users/me`); no hay listado de usuarios.
+Un solo tipo de usuario (básico, sin roles ni admin). Cualquiera puede registrarse desde la pantalla de login ("¿No tienes cuenta?"). Cada usuario solo ve y modifica **su propia cuenta** (`/api/v1/users/me`); no hay listado de usuarios.
 
 Se divide en dos tareas, cada una con su rama y su PR: la Task 19 (CRUD) necesita el modelo `User`, la seguridad y el JWT de la Task 18, así que su rama sale de `main` cuando la 18 ya esté mergeada.
 
@@ -242,10 +242,10 @@ Rama: `feature/task-18-auth-jwt-otp`.
 
 **Flujo**
 
-1. **Registro**: `POST /api/auth/register` `{ username, fullName, email, password }` → `201 { challengeId, expiresAt }`. El usuario queda en `PENDING_VERIFICATION` y se le envía un código de 6 dígitos al correo.
-2. **Login**: `POST /api/auth/login` `{ username, password }` → `200 { challengeId, expiresAt }` y se envía un código nuevo al correo. También sirve para reenviar el código a una cuenta que aún no se verificó.
-3. **Verificar OTP**: `POST /api/auth/otp/verify` `{ challengeId, code }` → `200 { accessToken, tokenType: "Bearer", expiresAt }`. Si la cuenta estaba `PENDING_VERIFICATION`, pasa a `ACTIVE` (el código prueba que el correo es suyo).
-4. El resto de `/api/**` pide `Authorization: Bearer <jwt>`. `/api/ingestion/**` sigue con `X-API-Key`; `/api/auth/**` y `/actuator/health` son públicos.
+1. **Registro**: `POST /api/v1/auth/register` `{ username, fullName, email, password }` → `201 { challengeId, expiresAt }`. El usuario queda en `PENDING_VERIFICATION` y se le envía un código de 6 dígitos al correo.
+2. **Login**: `POST /api/v1/auth/login` `{ username, password }` → `200 { challengeId, expiresAt }` y se envía un código nuevo al correo. También sirve para reenviar el código a una cuenta que aún no se verificó.
+3. **Verificar OTP**: `POST /api/v1/auth/otp/verify` `{ challengeId, code }` → `200 { accessToken, tokenType: "Bearer", expiresAt }`. Si la cuenta estaba `PENDING_VERIFICATION`, pasa a `ACTIVE` (el código prueba que el correo es suyo).
+4. El resto de `/api/v1/**` pide `Authorization: Bearer <jwt>`. `/api/v1/ingestion/**` sigue con `X-API-Key`; `/api/v1/auth/**` y `/actuator/health` son públicos.
 
 **Arquitectura**
 
@@ -310,10 +310,10 @@ Rama: `feature/task-19-user-account-crud`, creada desde `main` después de merge
 
 **Endpoints** (todos con `Authorization: Bearer <jwt>`; el id sale del `sub` del token, nunca de la URL)
 
-- `GET /api/users/me` → datos de la cuenta (nunca el hash).
-- `PUT /api/users/me` `{ fullName }` → actualiza el perfil.
-- `PUT /api/users/me/password` `{ currentPassword, newPassword }` → cambia la contraseña.
-- `DELETE /api/users/me` `{ currentPassword }` → **desactiva** la cuenta (`DISABLED`, soft delete). Ya no puede iniciar sesión.
+- `GET /api/v1/users/me` → datos de la cuenta (nunca el hash).
+- `PUT /api/v1/users/me` `{ fullName }` → actualiza el perfil.
+- `PUT /api/v1/users/me/password` `{ currentPassword, newPassword }` → cambia la contraseña.
+- `DELETE /api/v1/users/me` `{ currentPassword }` → **desactiva** la cuenta (`DISABLED`, soft delete). Ya no puede iniciar sesión.
 
 Estas rutas cargan el usuario en cada petición y rechazan cuentas `DISABLED` aunque el JWT siga vigente.
 

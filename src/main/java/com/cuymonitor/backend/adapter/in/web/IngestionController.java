@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
  * Single entry point for data coming from outside: ai-service and the Arduino serial bridge.
  */
 @RestController
-@RequestMapping("/api/ingestion")
+@RequestMapping("/api/v1/ingestion")
 public class IngestionController {
 
     private static final Logger log = LoggerFactory.getLogger(IngestionController.class);

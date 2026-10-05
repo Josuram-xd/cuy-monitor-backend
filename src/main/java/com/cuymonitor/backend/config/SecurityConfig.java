@@ -20,7 +20,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // ingestion is not public: IngestionController checks the X-API-Key header itself
-                        .requestMatchers("/api/auth/**", "/api/ingestion/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**", "/api/v1/ingestion/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/error").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
