@@ -2,6 +2,7 @@ package com.cuymonitor.backend.config;
 
 import com.cuymonitor.backend.adapter.out.security.JwtTokenIssuer;
 import com.cuymonitor.backend.application.AuthenticationService;
+import com.cuymonitor.backend.application.UserAccountService;
 import com.cuymonitor.backend.domain.port.out.OtpChallengeRepository;
 import com.cuymonitor.backend.domain.port.out.OtpSender;
 import com.cuymonitor.backend.domain.port.out.PasswordHasher;
@@ -34,5 +35,11 @@ public class AuthConfig {
                                                        AuthProperties properties) {
         return new AuthenticationService(userRepository, otpChallengeRepository, passwordHasher, otpSender,
                 tokenIssuer, clock, properties.otp().ttl(), properties.otp().maxAttempts());
+    }
+
+    @Bean
+    public UserAccountService userAccountService(UserRepository userRepository, PasswordHasher passwordHasher,
+                                                 Clock clock) {
+        return new UserAccountService(userRepository, passwordHasher, clock);
     }
 }

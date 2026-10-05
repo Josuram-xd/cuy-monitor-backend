@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.domain.model.user;
 
+import com.cuymonitor.backend.domain.exception.AccountDisabledException;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -66,6 +67,59 @@ class UserTest {
         assertThat(restore(UserStatus.PENDING_VERIFICATION).canLogIn()).isTrue();
         assertThat(restore(UserStatus.ACTIVE).canLogIn()).isTrue();
         assertThat(restore(UserStatus.DISABLED).canLogIn()).isFalse();
+    }
+
+    @Test
+    void updateProfileChangesFullName() {
+        User user = restore(UserStatus.ACTIVE);
+        Instant later = NOW.plusSeconds(60);
+
+        user.updateProfile("  Juan Carlos Perez ", later);
+
+        assertThat(user.getFullName()).isEqualTo("Juan Carlos Perez");
+        assertThat(user.getUpdatedAt()).isEqualTo(later);
+    }
+
+    @Test
+    void updateProfileRejectsBlankName() {
+        User user = restore(UserStatus.ACTIVE);
+
+        assertThatThrownBy(() -> user.updateProfile(" ", NOW)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(user.getFullName()).isEqualTo("Juan");
+    }
+
+    @Test
+    void changePasswordReplacesTheHash() {
+        User user = restore(UserStatus.ACTIVE);
+        Instant later = NOW.plusSeconds(60);
+
+        user.changePassword("new-hash", later);
+
+        assertThat(user.getPasswordHash()).isEqualTo("new-hash");
+        assertThat(user.getUpdatedAt()).isEqualTo(later);
+    }
+
+    @Test
+    void deactivateDisablesTheAccount() {
+        User user = restore(UserStatus.ACTIVE);
+        Instant later = NOW.plusSeconds(60);
+
+        user.deactivate(later);
+
+        assertThat(user.getStatus()).isEqualTo(UserStatus.DISABLED);
+        assertThat(user.canLogIn()).isFalse();
+        assertThat(user.getUpdatedAt()).isEqualTo(later);
+    }
+
+    @Test
+    void disabledAccountCannotBeChanged() {
+        User user = restore(UserStatus.DISABLED);
+
+        assertThatThrownBy(() -> user.updateProfile("Other", NOW)).isInstanceOf(AccountDisabledException.class);
+        assertThatThrownBy(() -> user.changePassword("new-hash", NOW)).isInstanceOf(AccountDisabledException.class);
+        assertThatThrownBy(() -> user.deactivate(NOW)).isInstanceOf(AccountDisabledException.class);
+        assertThat(user.getFullName()).isEqualTo("Juan");
+        assertThat(user.getPasswordHash()).isEqualTo("hash");
     }
 
     private static User restore(UserStatus status) {

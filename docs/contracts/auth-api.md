@@ -62,24 +62,75 @@ If the account was `PENDING_VERIFICATION` it becomes `ACTIVE`.
 
 ## Errors
 
-Every error has the shape `{ "error": "<message>" }`. Validation errors also include the failing fields:
+Every error follows the API convention `{ "error": "<code>", "message": "..." }` (see `rest-api.md`). Validation errors also include the failing fields:
 
 ```json
-{ "error": "validation failed", "fields": { "email": "must be a well-formed email address" } }
+{ "error": "bad_request", "message": "validation failed", "fields": { "email": "must be a well-formed email address" } }
 ```
 
-| Status | When |
-|---|---|
-| `400` | Invalid body, malformed JSON, password outside 8–72 bytes, code not 6 digits |
-| `401` `invalid credentials` | Wrong username or password, unknown user, or disabled account (same message on purpose) |
-| `401` `invalid or expired code` | Wrong, expired, already used or revoked code, or 5 failed attempts (same message on purpose) |
-| `409` | Username or email already in use |
+| Status | `error` | `message` | When |
+|---|---|---|---|
+| `400` | `bad_request` | varies | Invalid body, malformed JSON, password outside 8–72 bytes, code not 6 digits |
+| `401` | `unauthorized` | `invalid credentials` | Wrong username or password, unknown user, or disabled account (same message on purpose) |
+| `401` | `unauthorized` | `invalid or expired code` | Wrong, expired, already used or revoked code, or 5 failed attempts (same message on purpose) |
+| `401` | `unauthorized` | `missing, invalid or expired token` | Protected route without a valid `Authorization: Bearer` header |
+| `409` | `conflict` | `username or email already in use` | Username or email already taken |
 
 ## Rules
 
 - Code: 6 digits, valid for **5 minutes**, single use, at most **5 attempts**. Asking for a new one (login) invalidates the previous ones.
 - Token: JWT signed with HS256, valid for **30 minutes**. Claims: `sub` (user id, UUID), `iss` (`cuy-monitor-backend`), `iat`, `exp`. There is no refresh token: when it expires the user logs in again.
 - Logout: the API is stateless. The dashboard just deletes the token; it stops working on its own when it expires.
+
+## Account (`/api/v1/users/me`)
+
+All these routes need `Authorization: Bearer <accessToken>`. The account is always the one in the token `sub`; there is no id in the URL and no way to list or touch other users. Every request loads the account again, so a `DISABLED` account gets `401` even if its token has not expired yet.
+
+### `GET /api/v1/users/me`
+
+`200 OK`
+
+```json
+{
+  "id": "3f2a…", "username": "juan", "fullName": "Juan Perez", "email": "juan@mail.com",
+  "status": "ACTIVE", "createdAt": "2026-10-01T10:00:00Z", "updatedAt": "2026-10-01T10:00:00Z"
+}
+```
+
+The password hash is never returned.
+
+### `PUT /api/v1/users/me`
+
+```json
+{ "fullName": "Juan Carlos Perez" }
+```
+
+`200 OK`: the updated account (same body as `GET`). `fullName` is required, max 150. Username and email cannot be changed.
+
+### `PUT /api/v1/users/me/password`
+
+```json
+{ "currentPassword": "secret-pass", "newPassword": "new-secret-pass" }
+```
+
+`204 No Content`. The new password follows the same 8–72 bytes rule. Tokens already issued keep working until they expire.
+
+### `DELETE /api/v1/users/me`
+
+```json
+{ "currentPassword": "secret-pass" }
+```
+
+`204 No Content`. Soft delete: the account becomes `DISABLED` and can no longer log in. The dashboard should delete its token right after.
+
+### Account errors
+
+| Status | `error` | `message` | When |
+|---|---|---|---|
+| `400` | `bad_request` | varies | Invalid body or new password outside 8–72 bytes |
+| `401` | `unauthorized` | `missing, invalid or expired token` | No token, or invalid or expired token |
+| `401` | `unauthorized` | `invalid credentials` | Wrong `currentPassword` |
+| `401` | `unauthorized` | `account is disabled` | The account was deactivated but its token has not expired yet |
 
 ## Which routes need what
 

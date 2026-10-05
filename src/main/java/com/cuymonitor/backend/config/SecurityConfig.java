@@ -23,7 +23,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**", "/api/v1/ingestion/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/error").permitAll()
                         .anyRequest().authenticated())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(Customizer.withDefaults())
+                        .authenticationEntryPoint(new JsonAuthenticationEntryPoint()))
+                .exceptionHandling(errors -> errors.authenticationEntryPoint(new JsonAuthenticationEntryPoint()));
         return http.build();
     }
 }

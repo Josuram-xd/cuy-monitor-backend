@@ -336,19 +336,19 @@ adapter/in/web/             UserAccountController, dto/
 
 **Subtareas**
 
-- [ ] **Task 19.1** — `feat(domain): add profile, password and deactivation rules to User`
-- [ ] **Task 19.2** — `test(domain): cover User account rules`
+- [x] **Task 19.1** — `feat(domain): add profile, password and deactivation rules to User`
+- [x] **Task 19.2** — `test(domain): cover User account rules`
   Cambia perfil y contraseña, se desactiva, no cambia nada si está `DISABLED`.
-- [ ] **Task 19.3** — `feat(domain): add user account ports`
-- [ ] **Task 19.4** — `feat(application): add UserAccountService for the account CRUD`
-- [ ] **Task 19.5** — `test(application): cover UserAccountService with in-memory fakes`
+- [x] **Task 19.3** — `feat(domain): add user account ports`
+- [x] **Task 19.4** — `feat(application): add UserAccountService for the account CRUD`
+- [x] **Task 19.5** — `test(application): cover UserAccountService with in-memory fakes`
   Ver perfil, actualizar, cambiar contraseña (actual correcta e incorrecta), desactivar (contraseña correcta e incorrecta), operar sobre una cuenta `DISABLED`.
-- [ ] **Task 19.6** — `feat(web): add UserAccountController for /api/users/me`
-- [ ] **Task 19.7** — `test(web): cover user account endpoints`
+- [x] **Task 19.6** — `feat(web): add UserAccountController for /api/users/me`
+- [x] **Task 19.7** — `test(web): cover user account endpoints`
   `401` sin token, `200` con token, `401` con contraseña actual incorrecta, `204` al desactivar.
-- [ ] **Task 19.8** — `docs(contracts): add user account endpoints to auth API contract`
+- [x] **Task 19.8** — `docs(contracts): add user account endpoints to auth API contract`
   ⚠️ Avisar a `cuy-monitor-dashboard` (Task 14): pantalla "mi cuenta".
-- [ ] **Task 19.9** — *(sin commit)* `./mvnw test` en verde, prueba manual en Postman y PR a `main`
+- [x] **Task 19.9** — *(sin commit)* `./mvnw test` en verde, prueba manual en Postman y PR a `main`
 
 🔓 **Desbloquea:** `cuy-monitor-dashboard` Task 14 (pantalla "mi cuenta")
 
