@@ -81,11 +81,11 @@ Every error has the shape `{ "error": "<message>" }`. Validation errors also inc
 - Token: JWT signed with HS256, valid for **30 minutes**. Claims: `sub` (user id, UUID), `iss` (`cuy-monitor-backend`), `iat`, `exp`. There is no refresh token: when it expires the user logs in again.
 - Logout: the API is stateless. The dashboard just deletes the token; it stops working on its own when it expires.
 
-## Account (`/api/users/me`)
+## Account (`/api/v1/users/me`)
 
 All these routes need `Authorization: Bearer <accessToken>`. The account is always the one in the token `sub`; there is no id in the URL and no way to list or touch other users. Every request loads the account again, so a `DISABLED` account gets `401` even if its token has not expired yet.
 
-### `GET /api/users/me`
+### `GET /api/v1/users/me`
 
 `200 OK`
 
@@ -98,7 +98,7 @@ All these routes need `Authorization: Bearer <accessToken>`. The account is alwa
 
 The password hash is never returned.
 
-### `PUT /api/users/me`
+### `PUT /api/v1/users/me`
 
 ```json
 { "fullName": "Juan Carlos Perez" }
@@ -106,7 +106,7 @@ The password hash is never returned.
 
 `200 OK`: the updated account (same body as `GET`). `fullName` is required, max 150. Username and email cannot be changed.
 
-### `PUT /api/users/me/password`
+### `PUT /api/v1/users/me/password`
 
 ```json
 { "currentPassword": "secret-pass", "newPassword": "new-secret-pass" }
@@ -114,7 +114,7 @@ The password hash is never returned.
 
 `204 No Content`. The new password follows the same 8–72 bytes rule. Tokens already issued keep working until they expire.
 
-### `DELETE /api/users/me`
+### `DELETE /api/v1/users/me`
 
 ```json
 { "currentPassword": "secret-pass" }

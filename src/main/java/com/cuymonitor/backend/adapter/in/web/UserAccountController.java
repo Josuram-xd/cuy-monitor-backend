@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/users/me")
+@RequestMapping("/api/v1/users/me")
 public class UserAccountController {
 
     private final GetCurrentUserUseCase getCurrentUserUseCase;
