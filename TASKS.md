@@ -209,7 +209,7 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 
 - [ ] **Task 17.1** — `refactor(web): remove SystemController smoke endpoint`
 - [ ] **Task 17.2** — *(sin commit)* medir RAM con el ai-service y decidir si subir la EC2 a c7i-flex.large
-- [ ] **Task 17.3** — `ci: add GitHub Actions build and test on pull requests` *(opcional)*
+- [x] **Task 17.3** — `ci: add GitHub Actions build and test on pull requests` *(opcional)*
   Hace checkout también de `cuy-monitor-db` al lado, para que los tests de integración encuentren las migraciones.
 
 ---
