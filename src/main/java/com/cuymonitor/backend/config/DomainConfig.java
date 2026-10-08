@@ -3,7 +3,9 @@ package com.cuymonitor.backend.config;
 import com.cuymonitor.backend.adapter.out.notification.DatabaseAlertObserver;
 import com.cuymonitor.backend.adapter.out.notification.LogAlertObserver;
 import com.cuymonitor.backend.adapter.out.notification.WebSocketAlertObserver;
+import com.cuymonitor.backend.application.CageQueryService;
 import com.cuymonitor.backend.application.EventProcessingService;
+import com.cuymonitor.backend.application.GuineaPigService;
 import com.cuymonitor.backend.domain.health.chain.ChainSettings;
 import com.cuymonitor.backend.domain.health.chain.EventHandler;
 import com.cuymonitor.backend.domain.health.chain.HandlerChainBuilder;
@@ -56,5 +58,18 @@ public class DomainConfig {
                                                          AlertPublisher alertPublisher, Clock clock) {
         return new EventProcessingService(cageRepository, guineaPigRepository, eventRepository,
                 stateTransitionRepository, weightReadingRepository, eventHandlerChain, alertPublisher, clock);
+    }
+
+    @Bean
+    public CageQueryService cageQueryService(CageRepository cageRepository, GuineaPigRepository guineaPigRepository,
+                                             EventRepository eventRepository,
+                                             WeightReadingRepository weightReadingRepository, Clock clock) {
+        return new CageQueryService(cageRepository, guineaPigRepository, eventRepository, weightReadingRepository,
+                clock);
+    }
+
+    @Bean
+    public GuineaPigService guineaPigService(CageRepository cageRepository, GuineaPigRepository guineaPigRepository) {
+        return new GuineaPigService(cageRepository, guineaPigRepository);
     }
 }
