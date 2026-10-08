@@ -88,7 +88,7 @@
   `adapter/in/ingestion/factory/`.
 - [x] **Task 5.4** — `feat(domain): add ProcessEventUseCase input port` *(contrato entre la entrada y el núcleo: revisarlo en equipo)*
 - [x] **Task 5.5** — `feat(web): wire IngestionController to AdapterFactory and ProcessEventUseCase`
-- [ ] **Task 5.6** — `test(ingestion): cover factory selection and each adapter`
+- [x] **Task 5.6** — `test(ingestion): cover factory selection and each adapter`
 
 ### Task 6 — Núcleo de salud
 
