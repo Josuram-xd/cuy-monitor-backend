@@ -64,7 +64,7 @@
 
 🔗 **Depende de:** Task 2.2 de este repo (estructura hexagonal) · `cuy-monitor-db` Task 3 (tablas de salud, para las Task 4.6–4.8)
 
-- [ ] **Task 4.1** — `feat(domain): add MarkColor, HealthStatus and AlertStatus enums`
+- [x] **Task 4.1** — `feat(domain): add MarkColor, HealthStatus and AlertStatus enums`
 - [ ] **Task 4.2** — `feat(domain): add Cage, GuineaPig and HealthEvent models`
   Clases/records de Java puro en `domain/model/`, sin anotaciones. `HealthEvent` es la frontera entre las dos mitades *(revisar en equipo: es la frontera entre la entrada y el núcleo)*.
 - [ ] **Task 4.3** — `feat(domain): add repository output ports`
