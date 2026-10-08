@@ -80,7 +80,7 @@
 
 🔗 **Depende de:** seguir con las Task 2.3–2.4 y 4.2 de este repo
 
-- [ ] **Task 5.1** — `feat(ingestion): add EventSourceAdapter target interface`
+- [x] **Task 5.1** — `feat(ingestion): add EventSourceAdapter target interface`
   `adapter/in/ingestion/adapter/`.
 - [ ] **Task 5.2** — `feat(ingestion): add camera, audio and weight adapters`
   `CameraBehaviorAdapter`, `AudioClassificationAdapter`, `WeightReadingAdapter` → `HealthEvent`.
