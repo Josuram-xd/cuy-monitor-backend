@@ -100,7 +100,7 @@
 - [x] **Task 6.3** — `feat(state): add HealthState and the four states`
 - [x] **Task 6.4** — `feat(state): add GuineaPigHealthContext`
 - [x] **Task 6.5** — `feat(composite): add HealthComponent, leaves and CageHealth`
-- [ ] **Task 6.6** — `feat(application): add EventProcessingService implementing ProcessEventUseCase`
+- [x] **Task 6.6** — `feat(application): add EventProcessingService implementing ProcessEventUseCase`
   Orquesta cadena → estado → composite → `AlertPublisher`.
   🔗 Depende de: Task 5.4
 - [ ] **Task 6.7** — `feat(config): add DomainConfig wiring the chain and domain beans`
