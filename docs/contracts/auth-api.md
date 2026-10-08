@@ -140,3 +140,19 @@ The password hash is never returned.
 | `/actuator/health` | public |
 | `/api/v1/ingestion/**` | `X-API-Key` header (no JWT) |
 | everything else under `/api/v1/**` | `Authorization: Bearer <accessToken>`, otherwise `401` |
+| `/ws` (STOMP) | handshake is open; `Authorization: Bearer <accessToken>` goes on the STOMP `CONNECT` frame |
+
+### WebSocket (`/ws`)
+
+Browsers cannot set headers on the WebSocket handshake, so the token travels as a STOMP header of the `CONNECT` frame. With `@stomp/stompjs`:
+
+```js
+const client = new Client({
+  brokerURL: `wss://${location.host}/ws`,
+  connectHeaders: { Authorization: `Bearer ${accessToken}` },
+});
+```
+
+- No token, a header without the `Bearer ` prefix, or an invalid, expired or foreign token: the server answers with a STOMP `ERROR` frame and closes the connection. Do not rely on the text of the `message` header.
+- A `SUBSCRIBE` from a session that did not authenticate on `CONNECT` is rejected the same way.
+- The token is only checked on `CONNECT`. An open connection is not closed when the token expires; after logging in again the dashboard reconnects with the new token.

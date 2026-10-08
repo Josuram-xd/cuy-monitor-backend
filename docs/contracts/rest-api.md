@@ -188,6 +188,7 @@ Ordered by `measuredAt`, oldest first. Includes unstable readings; the client fi
 | Rejection | `CONNECT` without a token, or with an invalid or expired one, is answered with an `ERROR` frame and the connection is closed. Subscriptions from unauthenticated sessions are rejected. |
 | Direction | Server → client only. The client sends nothing besides `CONNECT` and `SUBSCRIBE`. |
 | Token expiry | The token lasts 30 min. The check happens at `CONNECT`; the dashboard reconnects with a new token after logging in again. |
+| Client example | `connectHeaders: { Authorization: "Bearer <jwt>" }` in `@stomp/stompjs` (see `auth-api.md`, WebSocket section) |
 
 ### Topic `/topic/cages/{cageId}`
 

@@ -22,6 +22,8 @@ public class SecurityConfig {
                         // ingestion is not public: IngestionController checks the X-API-Key header itself
                         .requestMatchers("/api/v1/auth/**", "/api/v1/ingestion/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/error").permitAll()
+                        // the handshake can't carry the token; JwtChannelInterceptor checks it on STOMP CONNECT
+                        .requestMatchers("/ws", "/ws/**").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(Customizer.withDefaults())
