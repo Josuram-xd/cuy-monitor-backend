@@ -67,7 +67,7 @@
 - [x] **Task 4.1** — `feat(domain): add MarkColor, HealthStatus and AlertStatus enums`
 - [x] **Task 4.2** — `feat(domain): add Cage, GuineaPig and HealthEvent models`
   Clases/records de Java puro en `domain/model/`, sin anotaciones. `HealthEvent` es la frontera entre las dos mitades *(revisar en equipo: es la frontera entre la entrada y el núcleo)*.
-- [ ] **Task 4.3** — `feat(domain): add repository output ports`
+- [x] **Task 4.3** — `feat(domain): add repository output ports`
   Interfaces en `domain/port/out/`: `CageRepository`, `GuineaPigRepository`, `EventRepository`, `StateTransitionRepository`, `AlertRepository`, `WeightReadingRepository`, `BaselineProfileRepository`.
 - [ ] **Task 4.4** — ~~`feat(db): add V2 migration…`~~ **Se movió a `cuy-monitor-db` Task 3** (`V4__create_health_tables.sql`). Aquí no se hace commit.
 - [x] **Task 4.5** — `feat(domain): add Alert, WeightReading, BaselineProfile and StateTransition models`
