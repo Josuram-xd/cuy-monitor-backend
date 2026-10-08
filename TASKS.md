@@ -94,7 +94,7 @@
 
 🔗 **Depende de:** seguir con las Task 4.2–4.3 de este repo
 
-- [ ] **Task 6.1** — `feat(chain): add EventHandler and the four handlers`
+- [x] **Task 6.1** — `feat(chain): add EventHandler and the four handlers`
   `domain/health/chain/`: `ValidationHandler`, `IdentificationHandler`, `BehaviorThresholdHandler`, `SustainedAnomalyHandler` (lógica simple por ahora; reciben los puertos que necesitan por constructor).
 - [ ] **Task 6.2** — `feat(chain): add HandlerChainBuilder`
 - [ ] **Task 6.3** — `feat(state): add HealthState and the four states`
