@@ -113,7 +113,8 @@
   `AlertObserver` en `domain/port/out/`, `AlertPublisher` en `domain/notification/`.
 - [ ] **Task 7.2** — `feat(observer): add DatabaseAlertObserver and LogAlertObserver`
   En `adapter/out/notification/`; `DatabaseAlertObserver` guarda usando el puerto `AlertRepository`.
-- [ ] **Task 7.3** — `feat(websocket): add STOMP config on /ws`
+- [x] **Task 7.3** — `feat(websocket): add STOMP config on /ws`
+  Se hizo en la rama de la Task 20 (`feature/task-20-websocket-jwt`) porque el interceptor la necesita.
 - [ ] **Task 7.4** — `feat(observer): add WebSocketAlertObserver publishing to /topic/cages/{id}`
 - [ ] **Task 7.5** — `feat(state): publish alerts on transitions to ALERT and CRITICAL` *(el State llama a `AlertPublisher`)*
 
@@ -358,11 +359,11 @@ Rama: `feature/task-20-websocket-jwt`, desde `main` después de mergear la Task 
 
 El navegador no puede mandar headers en el handshake del WebSocket, así que el token va en el frame STOMP `CONNECT` (`Authorization: Bearer <jwt>`) y se valida con un `ChannelInterceptor`.
 
-- [ ] **Task 20.1** — `feat(websocket): validate JWT on STOMP CONNECT with a channel interceptor`
+- [x] **Task 20.1** — `feat(websocket): validate JWT on STOMP CONNECT with a channel interceptor`
   Usa el mismo `JwtDecoder` de la Task 18.14. Sin token o con token vencido → se rechaza el `CONNECT`.
-- [ ] **Task 20.2** — `feat(websocket): reject subscriptions from unauthenticated sessions`
-- [ ] **Task 20.3** — `test(websocket): cover CONNECT with valid, missing and expired tokens`
-- [ ] **Task 20.4** — `docs(contracts): document STOMP CONNECT auth header`
+- [x] **Task 20.2** — `feat(websocket): reject subscriptions from unauthenticated sessions`
+- [x] **Task 20.3** — `test(websocket): cover CONNECT with valid, missing and expired tokens`
+- [x] **Task 20.4** — `docs(contracts): document STOMP CONNECT auth header`
   ⚠️ Avisar a `cuy-monitor-dashboard` (Task 13.6): mandar el token en `connectHeaders`.
 
 🔓 **Desbloquea:** `cuy-monitor-dashboard` Task 13.6
