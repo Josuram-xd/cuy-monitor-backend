@@ -28,6 +28,17 @@ services:
       JAVA_OPTS: "-Xms256m -Xmx384m"
     # No ports published: only reachable through Caddy
 
+  # Static build of the SPA served by its own Caddy on port 80.
+  # Needs cuy-monitor-dashboard cloned next to cuy-monitor-backend.
+  dashboard:
+    build:
+      context: ../../cuy-monitor-dashboard
+      args:
+        VITE_USE_MOCKS: "false"
+    image: cuy-monitor-dashboard:local
+    restart: unless-stopped
+    # No ports published: only reachable through Caddy
+
   # Starts only with:  docker compose --profile ai up -d --build
   # Needs cuy-monitor-ai-service cloned next to cuy-monitor-backend.
   # Sends its results to the backend over the internal Docker network.
