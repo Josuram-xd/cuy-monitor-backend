@@ -3,6 +3,7 @@ package com.cuymonitor.backend.config;
 import com.cuymonitor.backend.adapter.out.notification.DatabaseAlertObserver;
 import com.cuymonitor.backend.adapter.out.notification.LogAlertObserver;
 import com.cuymonitor.backend.adapter.out.notification.WebSocketAlertObserver;
+import com.cuymonitor.backend.application.AlertService;
 import com.cuymonitor.backend.application.CageQueryService;
 import com.cuymonitor.backend.application.EventProcessingService;
 import com.cuymonitor.backend.application.GuineaPigService;
@@ -10,6 +11,7 @@ import com.cuymonitor.backend.domain.health.chain.ChainSettings;
 import com.cuymonitor.backend.domain.health.chain.EventHandler;
 import com.cuymonitor.backend.domain.health.chain.HandlerChainBuilder;
 import com.cuymonitor.backend.domain.notification.AlertPublisher;
+import com.cuymonitor.backend.domain.port.out.AlertRepository;
 import com.cuymonitor.backend.domain.port.out.BaselineProfileRepository;
 import com.cuymonitor.backend.domain.port.out.CageRepository;
 import com.cuymonitor.backend.domain.port.out.EventRepository;
@@ -72,5 +74,10 @@ public class DomainConfig {
     public GuineaPigService guineaPigService(CageRepository cageRepository, GuineaPigRepository guineaPigRepository,
                                              Clock clock) {
         return new GuineaPigService(cageRepository, guineaPigRepository, clock);
+    }
+
+    @Bean
+    public AlertService alertService(AlertRepository alertRepository) {
+        return new AlertService(alertRepository);
     }
 }

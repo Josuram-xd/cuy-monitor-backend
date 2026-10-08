@@ -130,7 +130,7 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
   `GetCageHealthUseCase`, `ListGuineaPigsUseCase` → `GET /api/v1/cages/{id}/health`, `GET /api/v1/cages/{id}/guinea-pigs`.
 - [x] **Task 8.3** — `feat(web): add endpoint to register a guinea pig`
   `RegisterGuineaPigUseCase` → `POST /api/v1/cages/{id}/guinea-pigs`.
-- [ ] **Task 8.4** — `feat(web): add alerts list endpoint`
+- [x] **Task 8.4** — `feat(web): add alerts list endpoint`
   `ListAlertsUseCase` → `GET /api/v1/alerts?status=`.
 - [ ] **Task 8.5** — *(sin commit)* desplegar y probar cada endpoint en Postman
 
