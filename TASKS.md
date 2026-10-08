@@ -124,7 +124,7 @@
 
 Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application/` + controller en `adapter/in/web/`. Todos exigen JWT cuando la Task 18.14 esté mergeada (mientras tanto, se prueban sin token).
 
-- [ ] **Task 8.1** — `feat(config): allow localhost:5173 in CORS for the dev profile`
+- [x] **Task 8.1** — `feat(config): allow localhost:5173 in CORS for the dev profile`
   En producción el dashboard se sirve desde el mismo dominio (Caddy), así que no hace falta CORS.
 - [ ] **Task 8.2** — `feat(web): add cage health and guinea pigs list endpoints`
   `GetCageHealthUseCase`, `ListGuineaPigsUseCase` → `GET /api/v1/cages/{id}/health`, `GET /api/v1/cages/{id}/guinea-pigs`.
