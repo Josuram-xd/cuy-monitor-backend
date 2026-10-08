@@ -10,6 +10,8 @@ services:
     image: cuy-monitor-backend:local
     restart: unless-stopped
     environment:
+      # application-prod.yml: TLS on the JDBC connection
+      SPRING_PROFILES_ACTIVE: prod
       # RDS endpoint and credentials (password from Secrets Manager)
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT:-5432}
