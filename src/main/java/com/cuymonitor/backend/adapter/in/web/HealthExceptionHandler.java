@@ -2,6 +2,7 @@ package com.cuymonitor.backend.adapter.in.web;
 
 import com.cuymonitor.backend.adapter.in.ingestion.InvalidEventException;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
+import com.cuymonitor.backend.domain.exception.MarkColorAlreadyUsedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -20,5 +21,10 @@ public class HealthExceptionHandler {
     @ExceptionHandler(CageNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleCageNotFound(CageNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.body(ApiError.NOT_FOUND, ex.getMessage()));
+    }
+
+    @ExceptionHandler(MarkColorAlreadyUsedException.class)
+    public ResponseEntity<Map<String, Object>> handleColorUsed(MarkColorAlreadyUsedException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.body(ApiError.CONFLICT, ex.getMessage()));
     }
 }

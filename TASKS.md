@@ -128,7 +128,7 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
   En producción el dashboard se sirve desde el mismo dominio (Caddy), así que no hace falta CORS.
 - [x] **Task 8.2** — `feat(web): add cage health and guinea pigs list endpoints`
   `GetCageHealthUseCase`, `ListGuineaPigsUseCase` → `GET /api/v1/cages/{id}/health`, `GET /api/v1/cages/{id}/guinea-pigs`.
-- [ ] **Task 8.3** — `feat(web): add endpoint to register a guinea pig`
+- [x] **Task 8.3** — `feat(web): add endpoint to register a guinea pig`
   `RegisterGuineaPigUseCase` → `POST /api/v1/cages/{id}/guinea-pigs`.
 - [ ] **Task 8.4** — `feat(web): add alerts list endpoint`
   `ListAlertsUseCase` → `GET /api/v1/alerts?status=`.

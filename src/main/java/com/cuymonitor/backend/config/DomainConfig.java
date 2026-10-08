@@ -69,7 +69,8 @@ public class DomainConfig {
     }
 
     @Bean
-    public GuineaPigService guineaPigService(CageRepository cageRepository, GuineaPigRepository guineaPigRepository) {
-        return new GuineaPigService(cageRepository, guineaPigRepository);
+    public GuineaPigService guineaPigService(CageRepository cageRepository, GuineaPigRepository guineaPigRepository,
+                                             Clock clock) {
+        return new GuineaPigService(cageRepository, guineaPigRepository, clock);
     }
 }

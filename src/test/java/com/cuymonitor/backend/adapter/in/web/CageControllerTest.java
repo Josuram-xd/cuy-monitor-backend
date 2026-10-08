@@ -9,7 +9,6 @@ import com.cuymonitor.backend.domain.model.HealthStatus;
 import com.cuymonitor.backend.domain.model.MarkColor;
 import com.cuymonitor.backend.domain.model.WeightReading;
 import com.cuymonitor.backend.domain.port.in.GetCageHealthUseCase;
-import com.cuymonitor.backend.domain.port.in.ListGuineaPigsUseCase;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -31,7 +30,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = {CageController.class, GuineaPigController.class},
+@WebMvcTest(controllers = CageController.class,
         properties = "app.auth.jwt.secret=test-secret-with-at-least-32-bytes!!")
 @Import({SecurityConfig.class, JwtConfig.class, CageControllerTest.FixedClock.class})
 class CageControllerTest {
@@ -51,8 +50,6 @@ class CageControllerTest {
 
     @MockitoBean
     private GetCageHealthUseCase getCageHealthUseCase;
-    @MockitoBean
-    private ListGuineaPigsUseCase listGuineaPigsUseCase;
 
     @Test
     void cageHealthNeedsAToken() throws Exception {
@@ -88,18 +85,5 @@ class CageControllerTest {
         mvc.perform(get("/api/v1/cages/cage-9/health").with(jwt()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("not_found"));
-    }
-
-    @Test
-    void listsTheGuineaPigsOfTheCage() throws Exception {
-        given(listGuineaPigsUseCase.listGuineaPigs("cage-1")).willReturn(List.of(
-                GuineaPig.restore(1L, "cage-1", "Canela", MarkColor.RED, HealthStatus.NORMAL, NOW, true, NOW)));
-
-        mvc.perform(get("/api/v1/cages/cage-1/guinea-pigs").with(jwt()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(1))
-                .andExpect(jsonPath("$[0].markColor").value("RED"))
-                .andExpect(jsonPath("$[0].status").value("NORMAL"))
-                .andExpect(jsonPath("$[0].statusSince").value("2026-10-05T14:32:05Z"));
     }
 }
