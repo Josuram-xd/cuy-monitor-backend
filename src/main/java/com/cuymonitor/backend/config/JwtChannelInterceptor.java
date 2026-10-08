@@ -6,6 +6,7 @@ import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
@@ -36,6 +37,9 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
         if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
             // the user stays attached to the session, so later frames carry it too
             accessor.setUser(authenticate(accessor.getFirstNativeHeader(AUTHORIZATION)));
+        } else if (accessor != null && StompCommand.SUBSCRIBE.equals(accessor.getCommand())
+                && accessor.getUser() == null) {
+            throw new AccessDeniedException("subscription requires an authenticated session");
         }
         return message;
     }
