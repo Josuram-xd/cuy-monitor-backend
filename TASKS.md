@@ -70,7 +70,7 @@
 - [ ] **Task 4.3** — `feat(domain): add repository output ports`
   Interfaces en `domain/port/out/`: `CageRepository`, `GuineaPigRepository`, `EventRepository`, `StateTransitionRepository`, `AlertRepository`, `WeightReadingRepository`, `BaselineProfileRepository`.
 - [ ] **Task 4.4** — ~~`feat(db): add V2 migration…`~~ **Se movió a `cuy-monitor-db` Task 3** (`V4__create_health_tables.sql`). Aquí no se hace commit.
-- [ ] **Task 4.5** — `feat(domain): add Alert, WeightReading, BaselineProfile and StateTransition models`
+- [x] **Task 4.5** — `feat(domain): add Alert, WeightReading, BaselineProfile and StateTransition models`
 - [ ] **Task 4.6** — `feat(persistence): add JPA entities, Spring Data repositories and mappers`
   `adapter/out/persistence/{entity,repository,mapper}/`.
 - [ ] **Task 4.7** — `feat(persistence): add persistence adapters implementing the repository ports`
