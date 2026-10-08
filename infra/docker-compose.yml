@@ -1,38 +1,21 @@
 # Production stack for the EC2 instance.
 # Run from this folder:  docker compose up -d --build --remove-orphans
+# The database is Amazon RDS (private, same VPC); there is no Postgres container.
 name: cuy-monitor
 
 services:
-  postgres:
-    image: postgres:18
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      # Postgres 18 images store data under /var/lib/postgresql/18/docker,
-      # so the volume goes on /var/lib/postgresql (NOT .../data like in older versions)
-      - pgdata:/var/lib/postgresql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
   backend:
     build:
       context: ..
     image: cuy-monitor-backend:local
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
-      DB_HOST: postgres
-      DB_NAME: ${POSTGRES_DB}
-      DB_USER: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      # RDS endpoint and credentials (password from Secrets Manager)
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
       APP_API_KEY: ${API_KEY}
       APP_JWT_SECRET: ${APP_JWT_SECRET}
       MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
@@ -75,6 +58,5 @@ services:
       - caddy_config:/config
 
 volumes:
-  pgdata:
   caddy_data:
   caddy_config:
