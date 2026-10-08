@@ -428,7 +428,7 @@ baseline_profile  (guinea_pig_id, avg_still_seconds, avg_feeder_visits, avg_grou
 |---|---|---|
 | EC2 | **t3.small** (2 GB + swap) today; **c7i-flex.large** (4 GB) when the real ai-service models arrive | Runs the Compose stack |
 | Elastic IP + DuckDNS | `cuymonitor.duckdns.org` | Stable public name; Caddy gets the certificate |
-| RDS for PostgreSQL | `db.t4g.micro`, single-AZ, 20 GB gp3, PostgreSQL 18 (17 if 18 isn't offered in the region), automated backups 7 days, **not publicly accessible**, same VPC/region as the EC2 | Managed DB with backups; frees ~150 MB on the EC2 |
+| RDS for PostgreSQL | `cuy-monitor-db`: `db.t3.micro` (PostgreSQL 18.6 is not offered on `t4g.micro` in us-east-1), single-AZ, 20 GB, encrypted, automated backups **1 day** (max on the account's Free plan), deletion protection, **not publicly accessible**, same VPC and AZ as the EC2, master password in Secrets Manager | Managed DB with backups; frees ~150 MB on the EC2 |
 | Security groups | `sg-ec2`: 80/443 from anywhere, 22 only from the team's IPs · `sg-rds`: 5432 **only from `sg-ec2`** | Database never reachable from the internet |
 | SES (optional) | SMTP credentials, verified sender; sandbox → verify recipients or request production access | OTP emails |
 | AWS Budgets | Alert at 50 % / 80 % of the credits | Avoid surprises |
@@ -438,7 +438,7 @@ baseline_profile  (guinea_pig_id, avg_still_seconds, avg_feeder_visits, avg_grou
 | Container | Image / build | Exposed to the internet | Memory |
 |---|---|---|---|
 | caddy | `caddy:2.11` | 80, 443 (tcp + udp) | ~30 MB |
-| migrate | built from `../../cuy-monitor-db` (`flyway/flyway` + migrations); runs `migrate` once and exits | no | only while it runs |
+| migrate | *(pending, backend Task 22.4)* built from `../../cuy-monitor-db` (`flyway/flyway` + migrations); runs `migrate` once and exits. Until then Flyway runs inside the backend at startup | no | only while it runs |
 | backend | built from `Dockerfile` (`eclipse-temurin:25-jre`), starts after `migrate` finishes OK | no (only via Caddy) | `-Xms256m -Xmx384m` |
 | dashboard | built from `../../cuy-monitor-dashboard` (static build served by Caddy inside the image) | no (only via Caddy `/`) | ~20 MB |
 | ai-service | built from `../../cuy-monitor-ai-service`, profile `ai` | no (only via Caddy `/ai/*`) | +0.6–1 GB |

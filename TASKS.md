@@ -394,15 +394,17 @@ Rama: `refactor/task-21-split-database`.
 Rama: `chore/task-22-rds`.
 🔗 **Depende de:** Task 21 · `cuy-monitor-db` Task 4 (imagen `migrate`)
 
-- [ ] **Task 22.1** — *(sin commit)* crear la RDS PostgreSQL `db.t4g.micro`, single-AZ, 20 GB gp3, sin acceso público, en la misma VPC y región que la EC2, respaldos de 7 días
+- [x] **Task 22.1** — *(sin commit)* crear la RDS PostgreSQL `db.t4g.micro`, single-AZ, 20 GB gp3, sin acceso público, en la misma VPC y región que la EC2, respaldos de 7 días
+  Hecho desde la consola: `cuy-monitor-db`, PostgreSQL 18.6 en `db.t3.micro` (18.6 no se ofrece en `t4g.micro` en us-east-1) y backups de **1 día** (máximo del plan Free de la cuenta). Security group `cuy-rds`: 5432 solo desde el SG de la EC2. Contraseña en Secrets Manager.
   Postgres 18 (o 17 si 18 no está disponible en la región). Security group `sg-rds`: 5432 solo desde `sg-ec2`.
-- [ ] **Task 22.2** — `chore(infra): replace postgres container with RDS connection settings`
+- [x] **Task 22.2** — `chore(infra): replace postgres container with RDS connection settings`
   Quitar el servicio `postgres` y el volumen `pgdata` de `infra/docker-compose.yml`. Backend con `DB_HOST` (endpoint de la RDS), `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`.
-- [ ] **Task 22.3** — `chore(config): require TLS on the JDBC connection in prod`
+- [x] **Task 22.3** — `chore(config): require TLS on the JDBC connection in prod`
   `?sslmode=require` en la URL del perfil `prod`.
 - [ ] **Task 22.4** — `chore(infra): add one-shot migrate service built from cuy-monitor-db`
+  ⏸️ Pendiente: `cuy-monitor-db` aún no tiene migraciones ni Dockerfile. Mientras tanto Flyway corre dentro del backend y crea el esquema en la RDS.
   `build: ../../cuy-monitor-db`, mismas variables `DB_*`; el backend con `depends_on: migrate: condition: service_completed_successfully`.
-- [ ] **Task 22.5** — `chore(infra): update env example for RDS, JWT and SMTP`
+- [x] **Task 22.5** — `chore(infra): update env example for RDS, JWT and SMTP`
 - [ ] **Task 22.6** — *(sin commit)* clonar `cuy-monitor-db` al lado del backend en la EC2, `docker compose up -d --build --remove-orphans`, revisar `docker compose logs migrate` y `/actuator/health`
   La RDS empieza vacía (solo había datos de prueba); los usuarios de prueba se registran de nuevo.
 - [ ] **Task 22.7** — *(sin commit)* configurar AWS Budgets (50 % y 80 %) y anotar cómo detener la RDS cuando no se use
@@ -412,9 +414,9 @@ Rama: `chore/task-22-rds`.
 Rama: `chore/task-23-dashboard-container`.
 🔗 **Depende de:** `cuy-monitor-dashboard` Task 4.4 (Dockerfile del dashboard)
 
-- [ ] **Task 23.1** — `chore(infra): add dashboard service built from cuy-monitor-dashboard`
+- [x] **Task 23.1** — `chore(infra): add dashboard service built from cuy-monitor-dashboard`
   `build: ../../cuy-monitor-dashboard`, sin puertos publicados.
-- [ ] **Task 23.2** — `chore(infra): route the SPA through Caddy`
+- [x] **Task 23.2** — `chore(infra): route the SPA through Caddy`
   En el `Caddyfile`, el `handle` final pasa de `respond "cuy-monitor API"` a `reverse_proxy dashboard:80`. `/api/*`, `/ws*`, `/actuator/health*` y `/ai/*` quedan igual.
 - [ ] **Task 23.3** — *(sin commit)* desplegar y verificar en el celular: login, vista de jaula y WebSocket por `wss://cuymonitor.duckdns.org/ws`
 
