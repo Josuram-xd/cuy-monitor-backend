@@ -138,7 +138,7 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 
 ### Task 9 — Datos falsos para el avance
 
-- [ ] **Task 9.1** — `feat(dev): add fake producer that posts random events`
+- [x] **Task 9.1** — `feat(dev): add fake producer that posts random events`
   `dev/fake-producer/` manda eventos `BEHAVIOR`, `AUDIO` y `WEIGHT` a `/api/v1/ingestion/events`.
 - [ ] **Task 9.2** — *(sin commit)* dejarlo corriendo contra el servidor y ver cambios de estado en el dashboard
 
