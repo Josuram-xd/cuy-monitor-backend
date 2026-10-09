@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -19,10 +20,14 @@ class DatabaseAlertObserverTest {
         var repository = new RecordingAlertRepository();
         var observer = new DatabaseAlertObserver(repository);
         var alert = Alert.forCage("cage-1", EventType.AUDIO, HealthStatus.ALERT, "noise", Instant.EPOCH);
+        var savedAlert = Alert.restore(17L, "cage-1", null, HealthStatus.ALERT, EventType.AUDIO, "noise",
+                AlertStatus.OPEN, Instant.EPOCH, null);
+        repository.savedResult = savedAlert;
 
         observer.onAlert(alert);
 
         assertSame(alert, repository.savedAlert);
+        assertEquals(17L, alert.getId());
     }
 
     @Test
@@ -35,11 +40,12 @@ class DatabaseAlertObserverTest {
     private static final class RecordingAlertRepository implements AlertRepository {
 
         private Alert savedAlert;
+        private Alert savedResult;
 
         @Override
         public Alert save(Alert alert) {
             savedAlert = alert;
-            return alert;
+            return savedResult == null ? alert : savedResult;
         }
 
         @Override
