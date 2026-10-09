@@ -39,3 +39,7 @@ __pycache__/
 ### Documentos internos (no se suben) ###
 guia-despliegue-backend.md
 plan-monitor-cuyes*.md
+
+### Instrucciones de agentes IA (solo locales) ###
+AGENTS.md
+CLAUDE.md
