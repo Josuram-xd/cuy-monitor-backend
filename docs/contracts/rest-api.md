@@ -90,20 +90,32 @@ Active guinea pigs only.
 
 ```json
 [
-  { "id": 1, "name": "Canela", "markColor": "RED", "status": "OBSERVED", "statusSince": "2026-10-05T14:10:00Z" }
+  {
+    "id": 1, "name": "Canela", "markColor": "RED", "status": "OBSERVED", "statusSince": "2026-10-05T14:10:00Z",
+    "breed": "TEDDY", "coatColor": "CREAM", "initialWeightGrams": 850, "notes": "Muy tranquila"
+  }
 ]
 ```
+
+`breed`, `coatColor`, `initialWeightGrams` and `notes` are `null` for a guinea pig registered without them (all the ones created before they existed).
 
 ### 3.3 `POST /api/v1/cages/{cageId}/guinea-pigs`
 
 ```json
-{ "name": "Canela", "markColor": "RED" }
+{
+  "name": "Canela", "markColor": "RED",
+  "breed": "TEDDY", "coatColor": "CREAM", "initialWeightGrams": 850, "notes": "Muy tranquila"
+}
 ```
 
 | Field | Rules |
 |---|---|
 | `name` | Required, 1–100 characters. |
-| `markColor` | Required, a `MarkColor`. One color per guinea pig in a cage. |
+| `markColor` | Required, a `MarkColor`. One color per guinea pig in a cage. It is what the camera uses to tell them apart. |
+| `breed` | Optional, a `GuineaPigBreed`. |
+| `coatColor` | Optional, a `CoatColor`: the real color of the fur, not the mark. |
+| `initialWeightGrams` | Optional, integer from 50 to 2000. Weight on arrival. |
+| `notes` | Optional, up to 500 characters (trimmed; blank is stored as `null`). |
 
 `201` returns the created guinea pig (same shape as an item of 3.2, `status: "NORMAL"`). `400` invalid body · `409` color already used in the cage · `404` unknown cage.
 

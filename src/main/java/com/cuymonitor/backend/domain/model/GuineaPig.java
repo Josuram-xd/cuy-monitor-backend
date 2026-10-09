@@ -13,9 +13,10 @@ public class GuineaPig {
     private Instant statusSince;
     private final boolean active;
     private final Instant createdAt;
+    private final GuineaPigProfile profile;
 
     private GuineaPig(Long id, String cageCode, String name, MarkColor markColor, HealthStatus status,
-                      Instant statusSince, boolean active, Instant createdAt) {
+                      Instant statusSince, boolean active, Instant createdAt, GuineaPigProfile profile) {
         this.id = id;
         this.cageCode = Objects.requireNonNull(cageCode, "cageCode");
         this.name = requireName(name);
@@ -24,15 +25,26 @@ public class GuineaPig {
         this.statusSince = Objects.requireNonNull(statusSince, "statusSince");
         this.active = active;
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
+        this.profile = profile == null ? GuineaPigProfile.EMPTY : profile;
     }
 
     public static GuineaPig register(String cageCode, String name, MarkColor markColor, Instant now) {
-        return new GuineaPig(null, cageCode, name, markColor, HealthStatus.NORMAL, now, true, now);
+        return register(cageCode, name, markColor, GuineaPigProfile.EMPTY, now);
+    }
+
+    public static GuineaPig register(String cageCode, String name, MarkColor markColor, GuineaPigProfile profile,
+                                     Instant now) {
+        return new GuineaPig(null, cageCode, name, markColor, HealthStatus.NORMAL, now, true, now, profile);
     }
 
     public static GuineaPig restore(Long id, String cageCode, String name, MarkColor markColor, HealthStatus status,
                                     Instant statusSince, boolean active, Instant createdAt) {
-        return new GuineaPig(id, cageCode, name, markColor, status, statusSince, active, createdAt);
+        return restore(id, cageCode, name, markColor, status, statusSince, active, createdAt, GuineaPigProfile.EMPTY);
+    }
+
+    public static GuineaPig restore(Long id, String cageCode, String name, MarkColor markColor, HealthStatus status,
+                                    Instant statusSince, boolean active, Instant createdAt, GuineaPigProfile profile) {
+        return new GuineaPig(id, cageCode, name, markColor, status, statusSince, active, createdAt, profile);
     }
 
     public void changeStatus(HealthStatus newStatus, Instant now) {
@@ -73,6 +85,10 @@ public class GuineaPig {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public GuineaPigProfile getProfile() {
+        return profile;
     }
 
     private static String requireName(String name) {

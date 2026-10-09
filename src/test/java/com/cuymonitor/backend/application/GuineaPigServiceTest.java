@@ -5,7 +5,10 @@ import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryGuineaPigRe
 import com.cuymonitor.backend.application.fake.MutableClock;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
 import com.cuymonitor.backend.domain.exception.ColorAlreadyUsedException;
+import com.cuymonitor.backend.domain.model.CoatColor;
 import com.cuymonitor.backend.domain.model.GuineaPig;
+import com.cuymonitor.backend.domain.model.GuineaPigBreed;
+import com.cuymonitor.backend.domain.model.GuineaPigProfile;
 import com.cuymonitor.backend.domain.model.HealthStatus;
 import com.cuymonitor.backend.domain.model.MarkColor;
 import com.cuymonitor.backend.domain.port.in.RegisterGuineaPigCommand;
@@ -39,6 +42,18 @@ class GuineaPigServiceTest {
         assertThat(created.getStatus()).isEqualTo(HealthStatus.NORMAL);
         assertThat(created.getStatusSince()).isEqualTo(NOW);
         assertThat(service.list("cage-1")).extracting(GuineaPig::getName).containsExactly("Canela");
+    }
+
+    @Test
+    void keepsTheBreedCoatWeightAndNotes() {
+        GuineaPigProfile profile = new GuineaPigProfile(GuineaPigBreed.PERUVIAN, CoatColor.TRICOLOR, 900, "nueva");
+
+        GuineaPig created = service.register(new RegisterGuineaPigCommand("cage-1", "Canela", MarkColor.RED, profile));
+
+        assertThat(service.list("cage-1")).singleElement().satisfies(pig -> {
+            assertThat(pig.getId()).isEqualTo(created.getId());
+            assertThat(pig.getProfile()).isEqualTo(profile);
+        });
     }
 
     @Test
