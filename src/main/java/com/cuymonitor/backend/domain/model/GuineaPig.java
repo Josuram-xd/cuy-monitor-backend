@@ -11,7 +11,7 @@ public class GuineaPig {
     private final MarkColor markColor;
     private HealthStatus status;
     private Instant statusSince;
-    private final boolean active;
+    private boolean active;
     private final Instant createdAt;
     private final GuineaPigProfile profile;
 
@@ -45,6 +45,11 @@ public class GuineaPig {
     public static GuineaPig restore(Long id, String cageCode, String name, MarkColor markColor, HealthStatus status,
                                     Instant statusSince, boolean active, Instant createdAt, GuineaPigProfile profile) {
         return new GuineaPig(id, cageCode, name, markColor, status, statusSince, active, createdAt, profile);
+    }
+
+    /** Soft delete: it keeps its history but is no longer an active guinea pig of the cage. */
+    public void deactivate() {
+        active = false;
     }
 
     public void changeStatus(HealthStatus newStatus, Instant now) {

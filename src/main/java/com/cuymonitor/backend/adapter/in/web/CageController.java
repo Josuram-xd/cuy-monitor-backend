@@ -1,8 +1,10 @@
 package com.cuymonitor.backend.adapter.in.web;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
 import com.cuymonitor.backend.adapter.in.web.dto.CageHealthResponse;
 import com.cuymonitor.backend.adapter.in.web.dto.GuineaPigResponse;
 import com.cuymonitor.backend.adapter.in.web.dto.RegisterGuineaPigRequest;
+import com.cuymonitor.backend.domain.port.in.DeleteGuineaPigUseCase;
 import com.cuymonitor.backend.domain.port.in.GetCageHealthUseCase;
 import com.cuymonitor.backend.domain.port.in.ListGuineaPigsUseCase;
 import com.cuymonitor.backend.domain.port.in.RegisterGuineaPigCommand;
@@ -26,12 +28,15 @@ public class CageController {
     private final GetCageHealthUseCase getCageHealthUseCase;
     private final ListGuineaPigsUseCase listGuineaPigsUseCase;
     private final RegisterGuineaPigUseCase registerGuineaPigUseCase;
+    private final DeleteGuineaPigUseCase deleteGuineaPigUseCase;
 
     public CageController(GetCageHealthUseCase getCageHealthUseCase, ListGuineaPigsUseCase listGuineaPigsUseCase,
-                          RegisterGuineaPigUseCase registerGuineaPigUseCase) {
+                          RegisterGuineaPigUseCase registerGuineaPigUseCase,
+                          DeleteGuineaPigUseCase deleteGuineaPigUseCase) {
         this.getCageHealthUseCase = getCageHealthUseCase;
         this.listGuineaPigsUseCase = listGuineaPigsUseCase;
         this.registerGuineaPigUseCase = registerGuineaPigUseCase;
+        this.deleteGuineaPigUseCase = deleteGuineaPigUseCase;
     }
 
     @GetMapping("/health")
@@ -50,5 +55,12 @@ public class CageController {
                                                @Valid @RequestBody RegisterGuineaPigRequest request) {
         return GuineaPigResponse.from(registerGuineaPigUseCase.register(
                 new RegisterGuineaPigCommand(cageId, request.name(), request.markColor(), request.profile())));
+    }
+
+    /** Soft delete: the guinea pig disappears from the cage and frees its color; its history is kept. */
+    @DeleteMapping("/guinea-pigs/{guineaPigId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteGuineaPig(@PathVariable String cageId, @PathVariable long guineaPigId) {
+        deleteGuineaPigUseCase.delete(cageId, guineaPigId);
     }
 }

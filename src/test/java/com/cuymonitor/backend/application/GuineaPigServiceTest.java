@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.application;
 
+import com.cuymonitor.backend.domain.exception.GuineaPigNotFoundException;
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryCageRepository;
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryGuineaPigRepository;
 import com.cuymonitor.backend.application.fake.MutableClock;
@@ -54,6 +55,43 @@ class GuineaPigServiceTest {
             assertThat(pig.getId()).isEqualTo(created.getId());
             assertThat(pig.getProfile()).isEqualTo(profile);
         });
+    }
+
+    @Test
+    void deletingKeepsTheRecordButHidesItAndFreesItsColor() {
+        GuineaPig canela = service.register(new RegisterGuineaPigCommand("cage-1", "Canela", MarkColor.RED));
+
+        service.delete("cage-1", canela.getId());
+
+        assertThat(service.list("cage-1")).isEmpty();
+        assertThat(guineaPigs.findById(canela.getId())).get().extracting(GuineaPig::isActive).isEqualTo(false);
+        // the color is free again
+        assertThat(service.register(new RegisterGuineaPigCommand("cage-1", "Pelusa", MarkColor.RED)).getId())
+                .isNotEqualTo(canela.getId());
+    }
+
+    @Test
+    void deletingAnUnknownOrAlreadyDeletedGuineaPigIsNotFound() {
+        GuineaPig canela = service.register(new RegisterGuineaPigCommand("cage-1", "Canela", MarkColor.RED));
+        service.delete("cage-1", canela.getId());
+
+        assertThatThrownBy(() -> service.delete("cage-1", canela.getId()))
+                .isInstanceOf(GuineaPigNotFoundException.class);
+        assertThatThrownBy(() -> service.delete("cage-1", 999L)).isInstanceOf(GuineaPigNotFoundException.class);
+    }
+
+    @Test
+    void deletingAnIdOfAnotherCageDoesNothing() {
+        GuineaPig other = guineaPigs.save(GuineaPig.register("cage-2", "Ajeno", MarkColor.BLUE, NOW));
+
+        assertThatThrownBy(() -> service.delete("cage-1", other.getId()))
+                .isInstanceOf(GuineaPigNotFoundException.class);
+        assertThat(guineaPigs.findById(other.getId())).get().extracting(GuineaPig::isActive).isEqualTo(true);
+    }
+
+    @Test
+    void deletingFromAnUnknownCageIsNotFound() {
+        assertThatThrownBy(() -> service.delete("nope", 1L)).isInstanceOf(CageNotFoundException.class);
     }
 
     @Test

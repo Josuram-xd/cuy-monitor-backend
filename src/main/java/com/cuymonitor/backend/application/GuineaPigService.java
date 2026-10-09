@@ -2,7 +2,9 @@ package com.cuymonitor.backend.application;
 
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
 import com.cuymonitor.backend.domain.exception.ColorAlreadyUsedException;
+import com.cuymonitor.backend.domain.exception.GuineaPigNotFoundException;
 import com.cuymonitor.backend.domain.model.GuineaPig;
+import com.cuymonitor.backend.domain.port.in.DeleteGuineaPigUseCase;
 import com.cuymonitor.backend.domain.port.in.ListGuineaPigsUseCase;
 import com.cuymonitor.backend.domain.port.in.RegisterGuineaPigCommand;
 import com.cuymonitor.backend.domain.port.in.RegisterGuineaPigUseCase;
@@ -13,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.util.List;
 
-public class GuineaPigService implements ListGuineaPigsUseCase, RegisterGuineaPigUseCase {
+public class GuineaPigService implements ListGuineaPigsUseCase, RegisterGuineaPigUseCase, DeleteGuineaPigUseCase {
 
     private final CageRepository cages;
     private final GuineaPigRepository guineaPigs;
@@ -42,6 +44,18 @@ public class GuineaPigService implements ListGuineaPigsUseCase, RegisterGuineaPi
         return guineaPigs.save(
                 GuineaPig.register(command.cageCode(), command.name(), command.markColor(), command.profile(),
                         clock.instant()));
+    }
+
+    @Override
+    @Transactional
+    public void delete(String cageCode, long guineaPigId) {
+        requireCage(cageCode);
+        // the id must belong to an active guinea pig of THIS cage: another cage's id is a 404, not a deletion
+        GuineaPig guineaPig = guineaPigs.findById(guineaPigId)
+                .filter(g -> g.isActive() && g.getCageCode().equals(cageCode))
+                .orElseThrow(GuineaPigNotFoundException::new);
+        guineaPig.deactivate();
+        guineaPigs.save(guineaPig);
     }
 
     private void requireCage(String cageCode) {

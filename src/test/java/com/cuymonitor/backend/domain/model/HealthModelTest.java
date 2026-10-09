@@ -13,6 +13,17 @@ class HealthModelTest {
     private static final Instant NOW = Instant.parse("2026-10-05T14:00:00Z");
 
     @Test
+    void deactivatingKeepsTheRestOfTheGuineaPig() {
+        GuineaPig pig = GuineaPig.register("cage-1", "Canela", MarkColor.RED, NOW);
+
+        pig.deactivate();
+
+        assertThat(pig.isActive()).isFalse();
+        assertThat(pig.getName()).isEqualTo("Canela");
+        assertThat(pig.getStatus()).isEqualTo(HealthStatus.NORMAL);
+    }
+
+    @Test
     void healthStatusOrderGoesFromNormalToCritical() {
         assertThat(HealthStatus.CRITICAL.isWorseThan(HealthStatus.ALERT)).isTrue();
         assertThat(HealthStatus.NORMAL.isWorseThan(HealthStatus.OBSERVED)).isFalse();
