@@ -32,6 +32,8 @@ main() {
   install_timer "$infra_dir"
 
   docker compose up -d --build --remove-orphans
+  # the Caddyfile is a bind mount: Compose does not recreate Caddy when only that file changed
+  docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
   docker compose ps
   wait_for_health "$infra_dir"
   docker image prune -f >/dev/null
