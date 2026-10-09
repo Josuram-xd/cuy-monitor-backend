@@ -3,6 +3,7 @@ package com.cuymonitor.backend.adapter.out.persistence.memory;
 import com.cuymonitor.backend.domain.model.Alert;
 import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.port.out.AlertRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -12,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Component
+@Profile("memory")
 public class InMemoryAlertRepository implements AlertRepository {
 
     private static final Comparator<Alert> NEWEST_FIRST =
