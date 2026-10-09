@@ -32,6 +32,10 @@ build/
 ### VS Code ###
 .vscode/
 
+### Python dev tooling ###
+__pycache__/
+*.py[cod]
+
 ### Documentos internos (no se suben) ###
 guia-despliegue-backend.md
 plan-monitor-cuyes*.md
