@@ -13,7 +13,8 @@ spring:
       ddl-auto: validate
 
   flyway:
-    enabled: true
+    # cuy-monitor-db owns the schema (ADR-008); the backend only validates it
+    enabled: false
 
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}

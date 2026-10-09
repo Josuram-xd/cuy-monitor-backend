@@ -177,7 +177,7 @@ cuy-monitor-backend/
     └── test/java/com/cuymonitor/backend/
 ```
 
-`src/main/resources/db/migration/` still holds `V1` and `V2` until Task 21 moves them to `cuy-monitor-db`.
+The backend has no migrations: Flyway is off at runtime and the schema comes from `cuy-monitor-db`.
 
 ## Event contracts
 
@@ -304,7 +304,7 @@ Compose and the integration tests rely on `../cuy-monitor-db` (and `../cuy-monit
 docker compose -f ../cuy-monitor-db/docker-compose.yml up -d   # Postgres 18 on localhost:5432 + migrations + dev seeds
 ```
 
-> Until Task 21 is merged, the old way still works: `docker compose -f infra/docker-compose.dev.yml up -d` and Flyway runs inside the backend.
+> `infra/docker-compose.dev.yml` starts an **empty** Postgres (no tables); use it only if you apply the migrations of `cuy-monitor-db` yourself.
 
 ### 3. Run the backend
 
