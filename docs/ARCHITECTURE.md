@@ -48,14 +48,14 @@ All producers send the **same event envelope** to the **same endpoint**. The bac
 - Decide health: per guinea pig state machine + cage-level aggregation.
 - Persist events, state transitions, alerts, weight readings, baselines, users and OTP challenges (through JPA, on the schema owned by `cuy-monitor-db`).
 - Notify: WebSocket push, database, application log.
-- User accounts: register, verify email with an OTP, login with password + OTP, issue and validate JWTs, account CRUD on `/api/v1/users/me`.
+- User accounts: register, verify email with an OTP, login with password + OTP, issue and validate JWTs, account CRUD on `/api/v1/account`.
 - Expose the REST API and WebSocket for the dashboard, protected by JWT.
 - Own `infra/` (Compose, Caddy, env template) and `docs/contracts/`.
 
 **Out of scope:**
 - Object detection, tracking, feature extraction, ML inference (all in `cuy-monitor-ai-service`).
 - Creating or changing tables (all in `cuy-monitor-db`).
-- Roles, admin users, password recovery, rate limiting (not in this version).
+- Roles, admin users, password recovery, general rate limiting (only the OTP request limit exists).
 
 ---
 
@@ -232,9 +232,9 @@ Session `STATELESS`, CSRF disabled (Bearer API), CORS only for `http://localhost
 - OTP: single use, expires in 5 min, max 5 attempts; requesting a new code revokes the previous ones of that user.
 - JWT HS256, secret ≥ 32 bytes from `APP_JWT_SECRET`, 30 min. Claims `sub` (user id), `iat`, `exp`, `iss`. No refresh token, no revocation list.
 - Generic `401 invalid credentials` on login (hash is computed even when the user doesn't exist). `DISABLED` accounts get the same answer.
-- `/api/v1/users/me` loads the user on every request and rejects `DISABLED` accounts even if the JWT is still valid.
+- `/api/v1/account` loads the user on every request and rejects `DISABLED` accounts even if the JWT is still valid.
 - Mail: `EmailOtpSender` with `JavaMailSender` over SMTP (Amazon SES SMTP or Gmail with an app password). Profile `dev` uses `LogOtpSender` (writes the code to the log).
-- Out of scope: rate limiting, password recovery, email change.
+- Out of scope: general rate limiting (OTP requests are capped at 5 per 15 min), password recovery, email change.
 
 ### 4.4 SOLID in the auth part
 
@@ -369,10 +369,10 @@ Producers: `ai-service` (`BEHAVIOR`, `AUDIO`) calls `http://backend:8080` inside
 | `POST /api/v1/auth/register` | `{ username, fullName, email, password }` | `201 { challengeId, expiresAt }` · `400` invalid / weak password · `409` username or email taken |
 | `POST /api/v1/auth/login` | `{ username, password }` | `200 { challengeId, expiresAt }` · `401` invalid credentials |
 | `POST /api/v1/auth/otp/verify` | `{ challengeId, code }` | `200 { accessToken, tokenType: "Bearer", expiresAt }` · `401` invalid / expired / used code |
-| `GET /api/v1/users/me` | — | `200 { id, username, fullName, email, status, createdAt }` |
-| `PUT /api/v1/users/me` | `{ fullName }` | `200` user |
-| `PUT /api/v1/users/me/password` | `{ currentPassword, newPassword }` | `204` · `401` wrong current password |
-| `DELETE /api/v1/users/me` | `{ currentPassword }` | `204` (account `DISABLED`) · `401` wrong current password |
+| `GET /api/v1/account/profile` | — | `200 { id, username, fullName, email, status, createdAt }` |
+| `PUT /api/v1/account/profile` | `{ fullName }` | `200` user |
+| `PUT /api/v1/account/password` | `{ currentPassword, newPassword }` | `204` · `401` wrong current password |
+| `DELETE /api/v1/account` | `{ currentPassword }` | `204` (account `DISABLED`) · `401` wrong current password |
 
 ### REST API
 
@@ -382,7 +382,7 @@ Producers: `ai-service` (`BEHAVIOR`, `AUDIO`) calls `http://backend:8080` inside
 | `GET /api/v1/system/status` | JWT (once security is on) | smoke test (counts cages) | ✅ (removed in Task 17.1) |
 | `POST /api/v1/ingestion/events` | `X-API-Key` | ai-service, serial_bridge | ✅ (receives and logs; pipeline pending) |
 | `/api/v1/auth/**` | public | dashboard | planned (Task 18) |
-| `/api/v1/users/me/**` | JWT | dashboard | planned (Task 19) |
+| `/api/v1/account/**` | JWT | dashboard | planned (Task 19) |
 | `GET /api/v1/cages/{id}/health` | JWT | dashboard | planned |
 | `GET /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | planned |
 | `POST /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | planned |
