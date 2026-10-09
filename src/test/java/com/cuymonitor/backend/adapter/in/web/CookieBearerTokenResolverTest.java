@@ -57,6 +57,24 @@ class CookieBearerTokenResolverTest {
         assertThat(resolver.resolve(request)).isNull();
     }
 
+    @Test
+    void theWebSocketHandshakeNeverUsesTheTokenEither() {
+        MockHttpServletRequest request = request("/ws");
+        request.setCookies(new Cookie("access_token", "revoked"));
+
+        // the token is validated on the STOMP CONNECT frame, which answers with an ERROR frame
+        assertThat(resolver.resolve(request)).isNull();
+        assertThat(resolver.resolve(request("/ws/info"))).isNull();
+    }
+
+    @Test
+    void aPathThatOnlyStartsWithWsIsNotTheWebSocket() {
+        MockHttpServletRequest request = request("/wsx");
+        request.setCookies(new Cookie("access_token", "from-cookie"));
+
+        assertThat(resolver.resolve(request)).isEqualTo("from-cookie");
+    }
+
     private static MockHttpServletRequest request(String uri) {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", uri);
         request.setRequestURI(uri);
