@@ -32,8 +32,9 @@ main() {
   install_timer "$infra_dir"
 
   docker compose up -d --build --remove-orphans
-  # the Caddyfile is a bind mount: Compose does not recreate Caddy when only that file changed
-  docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+  # Git replaces the Caddyfile (new inode) and a single-file bind mount keeps showing the old one:
+  # a restart (a few seconds, the certificate lives in a volume) makes Caddy read the new file
+  docker compose restart caddy
   docker compose ps
   wait_for_health "$infra_dir"
   docker image prune -f >/dev/null
