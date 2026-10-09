@@ -2,6 +2,7 @@ package com.cuymonitor.backend.config;
 
 import com.cuymonitor.backend.adapter.in.web.IngestionController;
 import com.cuymonitor.backend.adapter.in.web.SystemController;
+import com.cuymonitor.backend.domain.port.in.ProcessEventUseCase;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -36,7 +37,7 @@ class SecurityConfigTest {
 
     private static final String EVENT = """
             {"eventId":"%s","type":"WEIGHT","cageId":"cage-1","timestamp":"2026-10-01T10:00:00Z",
-             "source":"arduino","schemaVersion":1,"payload":{"grams":1200}}
+             "source":"arduino","schemaVersion":1,"payload":{"grams":1200,"stable":true}}
             """.formatted(UUID.randomUUID());
 
     @Autowired
@@ -47,6 +48,9 @@ class SecurityConfigTest {
 
     @MockitoBean
     private JdbcTemplate jdbcTemplate;
+
+    @MockitoBean
+    private ProcessEventUseCase processEventUseCase;
 
     @Test
     void protectedRouteWithoutTokenReturns401() throws Exception {

@@ -80,31 +80,31 @@
 
 🔗 **Depende de:** seguir con las Task 2.3–2.4 y 4.2 de este repo
 
-- [ ] **Task 5.1** — `feat(ingestion): add EventSourceAdapter target interface`
+- [x] **Task 5.1** — `feat(ingestion): add EventSourceAdapter target interface`
   `adapter/in/ingestion/adapter/`.
-- [ ] **Task 5.2** — `feat(ingestion): add camera, audio and weight adapters`
+- [x] **Task 5.2** — `feat(ingestion): add camera, audio and weight adapters`
   `CameraBehaviorAdapter`, `AudioClassificationAdapter`, `WeightReadingAdapter` → `HealthEvent`.
-- [ ] **Task 5.3** — `feat(ingestion): add AdapterFactory and concrete factories`
+- [x] **Task 5.3** — `feat(ingestion): add AdapterFactory and concrete factories`
   `adapter/in/ingestion/factory/`.
-- [ ] **Task 5.4** — `feat(domain): add ProcessEventUseCase input port` *(contrato entre la entrada y el núcleo: revisarlo en equipo)*
-- [ ] **Task 5.5** — `feat(web): wire IngestionController to AdapterFactory and ProcessEventUseCase`
-- [ ] **Task 5.6** — `test(ingestion): cover factory selection and each adapter`
+- [x] **Task 5.4** — `feat(domain): add ProcessEventUseCase input port` *(contrato entre la entrada y el núcleo: revisarlo en equipo)*
+- [x] **Task 5.5** — `feat(web): wire IngestionController to AdapterFactory and ProcessEventUseCase`
+- [x] **Task 5.6** — `test(ingestion): cover factory selection and each adapter`
 
 ### Task 6 — Núcleo de salud
 
 🔗 **Depende de:** seguir con las Task 4.2–4.3 de este repo
 
-- [ ] **Task 6.1** — `feat(chain): add EventHandler and the four handlers`
+- [x] **Task 6.1** — `feat(chain): add EventHandler and the four handlers`
   `domain/health/chain/`: `ValidationHandler`, `IdentificationHandler`, `BehaviorThresholdHandler`, `SustainedAnomalyHandler` (lógica simple por ahora; reciben los puertos que necesitan por constructor).
-- [ ] **Task 6.2** — `feat(chain): add HandlerChainBuilder`
-- [ ] **Task 6.3** — `feat(state): add HealthState and the four states`
-- [ ] **Task 6.4** — `feat(state): add GuineaPigHealthContext`
-- [ ] **Task 6.5** — `feat(composite): add HealthComponent, leaves and CageHealth`
-- [ ] **Task 6.6** — `feat(application): add EventProcessingService implementing ProcessEventUseCase`
+- [x] **Task 6.2** — `feat(chain): add HandlerChainBuilder`
+- [x] **Task 6.3** — `feat(state): add HealthState and the four states`
+- [x] **Task 6.4** — `feat(state): add GuineaPigHealthContext`
+- [x] **Task 6.5** — `feat(composite): add HealthComponent, leaves and CageHealth`
+- [x] **Task 6.6** — `feat(application): add EventProcessingService implementing ProcessEventUseCase`
   Orquesta cadena → estado → composite → `AlertPublisher`.
   🔗 Depende de: Task 5.4
-- [ ] **Task 6.7** — `feat(config): add DomainConfig wiring the chain and domain beans`
-- [ ] **Task 6.8** — `test(health): cover each handler, each transition and cage aggregation with plain JUnit`
+- [x] **Task 6.7** — `feat(config): add DomainConfig wiring the chain and domain beans`
+- [x] **Task 6.8** — `test(health): cover each handler, each transition and cage aggregation with plain JUnit`
   Con fakes en memoria de los puertos; sin Spring ni base de datos.
 
 ### Task 7 — Observer + WebSocket
@@ -116,7 +116,7 @@
 - [x] **Task 7.3** — `feat(websocket): add STOMP config on /ws`
   Se hizo en la rama de la Task 20 (`feature/task-20-websocket-jwt`) porque el interceptor la necesita.
 - [x] **Task 7.4** — `feat(observer): add WebSocketAlertObserver publishing to /topic/cages/{id}`
-- [ ] **Task 7.5** — `feat(state): publish alerts on transitions to ALERT and CRITICAL` *(el State llama a `AlertPublisher`)*
+- [x] **Task 7.5** — `feat(state): publish alerts on transitions to ALERT and CRITICAL` *(el State llama a `AlertPublisher`)*
 
 🔓 **Desbloquea:** `cuy-monitor-dashboard` Task 6
 
