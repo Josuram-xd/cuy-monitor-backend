@@ -115,10 +115,22 @@ class SecurityConfigTest {
     }
 
     @Test
+    void anotherTokenOfARevokedSessionIsRejectedToo() throws Exception {
+        UUID sid = UUID.randomUUID();
+        given(revokedTokenRepository.isRevoked(sid)).willReturn(true);
+
+        // a brand new token (new jti), but it belongs to the revoked session
+        mvc.perform(get("/api/v1/system/status")
+                        .cookie(new Cookie("access_token", token("cuy-monitor-backend", UUID.randomUUID(), sid))))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void aTokenWithoutJtiIsRejected() throws Exception {
         Instant now = Instant.now();
         JwtClaimsSet claims = JwtClaimsSet.builder().issuer("cuy-monitor-backend")
-                .subject(UUID.randomUUID().toString()).issuedAt(now).expiresAt(now.plusSeconds(600)).build();
+                .subject(UUID.randomUUID().toString()).claim("sid", UUID.randomUUID().toString())
+                .issuedAt(now).expiresAt(now.plusSeconds(600)).build();
         String noJti = jwtEncoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims))
                 .getTokenValue();
 
@@ -174,11 +186,16 @@ class SecurityConfigTest {
     }
 
     private String token(String issuer, UUID jti) {
+        return token(issuer, jti, UUID.randomUUID());
+    }
+
+    private String token(String issuer, UUID jti, UUID sid) {
         Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(issuer)
                 .subject(UUID.randomUUID().toString())
                 .id(jti.toString())
+                .claim("sid", sid.toString())
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(600))
                 .build();

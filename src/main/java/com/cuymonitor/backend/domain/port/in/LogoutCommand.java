@@ -7,5 +7,5 @@ import java.util.UUID;
  * What the web adapter could read from the request cookies. Every field may be null:
  * logging out must work even when the access token already expired.
  */
-public record LogoutCommand(UUID accessTokenId, Instant accessTokenExpiresAt, String refreshToken) {
+public record LogoutCommand(UUID accessTokenId, UUID sessionId, Instant accessTokenExpiresAt, String refreshToken) {
 }

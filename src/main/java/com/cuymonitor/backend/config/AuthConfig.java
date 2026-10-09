@@ -35,7 +35,7 @@ public class AuthConfig {
                                          RevokedTokenRepository revokedTokenRepository, UserRepository userRepository,
                                          Clock clock, AuthProperties properties) {
         return new SessionService(tokenIssuer, refreshTokenRepository, revokedTokenRepository, userRepository, clock,
-                properties.refresh().ttl());
+                properties.refresh().ttl(), properties.jwt().ttl());
     }
 
     @Bean

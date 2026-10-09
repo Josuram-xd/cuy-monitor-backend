@@ -42,17 +42,20 @@ public class SessionService implements RefreshSessionUseCase, LogoutUseCase, Pur
     private final UserRepository userRepository;
     private final Clock clock;
     private final Duration refreshTtl;
+    // how long an access token can still be alive: a revoked session has to be remembered that long
+    private final Duration accessTtl;
     private final SecureRandom random = new SecureRandom();
 
     public SessionService(TokenIssuer tokenIssuer, RefreshTokenRepository refreshTokens,
                           RevokedTokenRepository revokedTokens, UserRepository userRepository, Clock clock,
-                          Duration refreshTtl) {
+                          Duration refreshTtl, Duration accessTtl) {
         this.tokenIssuer = tokenIssuer;
         this.refreshTokens = refreshTokens;
         this.revokedTokens = revokedTokens;
         this.userRepository = userRepository;
         this.clock = clock;
         this.refreshTtl = refreshTtl;
+        this.accessTtl = accessTtl;
     }
 
     /** Called after the OTP is verified: a brand new family. */
@@ -75,7 +78,7 @@ public class SessionService implements RefreshSessionUseCase, LogoutUseCase, Pur
         if (stored.isRevoked()) {
             boolean justRotated = stored.getRevokedAt().orElseThrow().plus(REUSE_GRACE).isAfter(now);
             if (!justRotated) {
-                refreshTokens.revokeFamily(stored.getFamilyId(), now);
+                endSession(stored.getFamilyId(), now);
             }
             throw new InvalidRefreshTokenException();
         }
@@ -98,11 +101,19 @@ public class SessionService implements RefreshSessionUseCase, LogoutUseCase, Pur
         if (command.accessTokenId() != null && command.accessTokenExpiresAt() != null) {
             revokedTokens.revoke(command.accessTokenId(), command.accessTokenExpiresAt());
         }
+        // the whole session: the refresh family dies and so do the access tokens that carry its sid
+        if (command.sessionId() != null) {
+            endSession(command.sessionId(), now);
+        }
         String raw = command.refreshToken();
         if (raw != null && !raw.isBlank()) {
-            refreshTokens.findByTokenHash(hash(raw))
-                    .ifPresent(token -> refreshTokens.revokeFamily(token.getFamilyId(), now));
+            refreshTokens.findByTokenHash(hash(raw)).ifPresent(token -> endSession(token.getFamilyId(), now));
         }
+    }
+
+    private void endSession(UUID sessionId, Instant now) {
+        refreshTokens.revokeFamily(sessionId, now);
+        revokedTokens.revoke(sessionId, now.plus(accessTtl));
     }
 
     @Override
@@ -115,7 +126,7 @@ public class SessionService implements RefreshSessionUseCase, LogoutUseCase, Pur
 
     private AuthSession issueSession(User user, UUID familyId) {
         Instant now = clock.instant();
-        AuthToken access = tokenIssuer.issueToken(user);
+        AuthToken access = tokenIssuer.issueToken(user, familyId);
         String raw = newRawToken();
         RefreshToken refresh = refreshTokens.save(
                 RefreshToken.issue(user.getId(), familyId, hash(raw), now, now.plus(refreshTtl)));

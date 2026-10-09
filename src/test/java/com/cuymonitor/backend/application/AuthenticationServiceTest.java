@@ -51,7 +51,7 @@ class AuthenticationServiceTest {
         sender = new RecordingOtpSender();
         clock = new MutableClock(NOW);
         SessionService sessions = new SessionService(new FakeTokenIssuer(), new InMemoryRefreshTokenRepository(),
-                new InMemoryRevokedTokenRepository(), users, clock, Duration.ofDays(7));
+                new InMemoryRevokedTokenRepository(), users, clock, Duration.ofDays(7), Duration.ofMinutes(15));
         service = new AuthenticationService(users, challenges, new FakePasswordHasher(), sender,
                 sessions, clock, OTP_TTL, MAX_ATTEMPTS, MAX_REQUESTS, REQUEST_WINDOW);
     }

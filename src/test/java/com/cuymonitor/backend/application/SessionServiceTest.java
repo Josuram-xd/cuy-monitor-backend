@@ -26,6 +26,7 @@ class SessionServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-10-01T10:00:00Z");
     private static final Duration REFRESH_TTL = Duration.ofDays(7);
+    private static final Duration ACCESS_TTL = Duration.ofMinutes(15);
 
     private InMemoryUserRepository users;
     private InMemoryRefreshTokenRepository refreshTokens;
@@ -40,7 +41,7 @@ class SessionServiceTest {
         refreshTokens = new InMemoryRefreshTokenRepository();
         revokedTokens = new InMemoryRevokedTokenRepository();
         clock = new MutableClock(NOW);
-        service = new SessionService(new FakeTokenIssuer(), refreshTokens, revokedTokens, users, clock, REFRESH_TTL);
+        service = new SessionService(new FakeTokenIssuer(), refreshTokens, revokedTokens, users, clock, REFRESH_TTL, ACCESS_TTL);
         user = users.save(User.restore(UUID.randomUUID(), "juan", "Juan", "juan@mail.com", "hash",
                 UserStatus.ACTIVE, NOW, NOW));
     }
@@ -128,25 +129,57 @@ class SessionServiceTest {
         AuthSession session = service.start(user);
         UUID jti = UUID.randomUUID();
 
-        service.logout(new LogoutCommand(jti, NOW.plusSeconds(900), session.refreshToken()));
+        UUID sessionId = refreshTokens.findByTokenHash(SessionService.hash(session.refreshToken()))
+                .orElseThrow().getFamilyId();
+
+        service.logout(new LogoutCommand(jti, sessionId, NOW.plusSeconds(900), session.refreshToken()));
 
         assertThat(revokedTokens.isRevoked(jti)).isTrue();
+        // every access token of this login dies too, not only the one that was in the cookie
+        assertThat(revokedTokens.isRevoked(sessionId)).isTrue();
         assertThatThrownBy(() -> service.refresh(session.refreshToken())).isInstanceOf(InvalidRefreshTokenException.class);
+    }
+
+    @Test
+    void theSessionStaysRevokedAsLongAsAnAccessTokenCouldLive() {
+        AuthSession session = service.start(user);
+        UUID sessionId = refreshTokens.findByTokenHash(SessionService.hash(session.refreshToken()))
+                .orElseThrow().getFamilyId();
+        service.logout(new LogoutCommand(null, sessionId, null, session.refreshToken()));
+
+        clock.advance(ACCESS_TTL.plusSeconds(1));
+        service.purgeExpired();
+
+        // past the access lifetime nothing issued for that session can be valid anymore
+        assertThat(revokedTokens.isRevoked(sessionId)).isFalse();
+    }
+
+    @Test
+    void reuseOfARotatedTokenKillsTheAccessTokensOfTheSessionToo() {
+        AuthSession first = service.start(user);
+        UUID sessionId = refreshTokens.findByTokenHash(SessionService.hash(first.refreshToken()))
+                .orElseThrow().getFamilyId();
+        service.refresh(first.refreshToken());
+        clock.advance(SessionService.REUSE_GRACE.plusSeconds(1));
+
+        assertThatThrownBy(() -> service.refresh(first.refreshToken())).isInstanceOf(InvalidRefreshTokenException.class);
+
+        assertThat(revokedTokens.isRevoked(sessionId)).isTrue();
     }
 
     @Test
     void logoutWorksWithOnlyTheRefreshToken() {
         AuthSession session = service.start(user);
 
-        service.logout(new LogoutCommand(null, null, session.refreshToken()));
+        service.logout(new LogoutCommand(null, null, null, session.refreshToken()));
 
         assertThatThrownBy(() -> service.refresh(session.refreshToken())).isInstanceOf(InvalidRefreshTokenException.class);
     }
 
     @Test
     void logoutWithNothingToRevokeDoesNotFail() {
-        assertThatCode(() -> service.logout(new LogoutCommand(null, null, null))).doesNotThrowAnyException();
-        assertThatCode(() -> service.logout(new LogoutCommand(null, null, "unknown"))).doesNotThrowAnyException();
+        assertThatCode(() -> service.logout(new LogoutCommand(null, null, null, null))).doesNotThrowAnyException();
+        assertThatCode(() -> service.logout(new LogoutCommand(null, null, null, "unknown"))).doesNotThrowAnyException();
     }
 
     @Test

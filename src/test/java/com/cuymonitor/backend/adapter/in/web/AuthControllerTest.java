@@ -202,7 +202,8 @@ class AuthControllerTest {
     @Test
     void logoutRevokesTheTokensInTheCookiesAndClearsThem() throws Exception {
         UUID jti = UUID.randomUUID();
-        String accessToken = accessToken(jti);
+        UUID sid = UUID.randomUUID();
+        String accessToken = accessToken(jti, sid);
 
         mvc.perform(post("/api/v1/auth/logout")
                         .cookie(new Cookie("access_token", accessToken), new Cookie("refresh_token", "the-refresh")))
@@ -212,7 +213,7 @@ class AuthControllerTest {
                 .andExpect(cookie().path("refresh_token", "/api/v1/auth"));
 
         verify(logoutUseCase).logout(argThat(command -> jti.equals(command.accessTokenId())
-                && command.accessTokenExpiresAt() != null && "the-refresh".equals(command.refreshToken())));
+                && sid.equals(command.sessionId()) && command.accessTokenExpiresAt() != null && "the-refresh".equals(command.refreshToken())));
     }
 
     @Test
@@ -264,12 +265,13 @@ class AuthControllerTest {
         return new AuthSession(new AuthToken(accessToken, NOW.plusSeconds(900)), refreshToken, NOW.plusSeconds(604_800));
     }
 
-    private String accessToken(UUID jti) {
+    private String accessToken(UUID jti, UUID sid) {
         Instant now = Instant.now();
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("cuy-monitor-backend")
                 .subject(UUID.randomUUID().toString())
                 .id(jti.toString())
+                .claim("sid", sid.toString())
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(600))
                 .build();

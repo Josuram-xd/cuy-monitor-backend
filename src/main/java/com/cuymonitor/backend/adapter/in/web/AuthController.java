@@ -4,6 +4,7 @@ import com.cuymonitor.backend.adapter.in.web.dto.ChallengeResponse;
 import com.cuymonitor.backend.adapter.in.web.dto.LoginRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.RegisterRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.VerifyOtpRequest;
+import com.cuymonitor.backend.adapter.out.security.JwtTokenIssuer;
 import com.cuymonitor.backend.domain.model.auth.AuthSession;
 import com.cuymonitor.backend.domain.port.in.LoginCommand;
 import com.cuymonitor.backend.domain.port.in.LoginUseCase;
@@ -86,7 +87,9 @@ public class AuthController {
             @CookieValue(name = AuthCookies.REFRESH, required = false) String refreshToken) {
         Jwt jwt = readLeniently(accessToken);
         UUID tokenId = jwt == null ? null : UUID.fromString(jwt.getId());
-        logoutUseCase.logout(new LogoutCommand(tokenId, jwt == null ? null : jwt.getExpiresAt(), refreshToken));
+        UUID sessionId = jwt == null ? null : UUID.fromString(jwt.getClaimAsString(JwtTokenIssuer.SESSION_CLAIM));
+        logoutUseCase.logout(
+                new LogoutCommand(tokenId, sessionId, jwt == null ? null : jwt.getExpiresAt(), refreshToken));
         return ResponseEntity.noContent().headers(cookies.clear()).build();
     }
 

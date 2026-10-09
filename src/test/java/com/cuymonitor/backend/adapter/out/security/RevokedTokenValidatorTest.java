@@ -16,7 +16,8 @@ class RevokedTokenValidatorTest {
 
     @Test
     void aTokenThatWasNotRevokedPasses() {
-        assertThat(validator.validate(jwt(UUID.randomUUID().toString())).hasErrors()).isFalse();
+        assertThat(validator.validate(jwt(UUID.randomUUID().toString(), UUID.randomUUID().toString())).hasErrors())
+                .isFalse();
     }
 
     @Test
@@ -24,24 +25,39 @@ class RevokedTokenValidatorTest {
         UUID jti = UUID.randomUUID();
         revoked.revoke(jti, Instant.now().plusSeconds(600));
 
-        assertThat(validator.validate(jwt(jti.toString())).hasErrors()).isTrue();
+        assertThat(validator.validate(jwt(jti.toString(), UUID.randomUUID().toString())).hasErrors()).isTrue();
     }
 
     @Test
-    void aTokenWithoutJtiFails() {
-        assertThat(validator.validate(jwt(null)).hasErrors()).isTrue();
+    void everyTokenOfARevokedSessionFails() {
+        UUID sid = UUID.randomUUID();
+        revoked.revoke(sid, Instant.now().plusSeconds(600));
+
+        // two different tokens (jti) of the same login
+        assertThat(validator.validate(jwt(UUID.randomUUID().toString(), sid.toString())).hasErrors()).isTrue();
+        assertThat(validator.validate(jwt(UUID.randomUUID().toString(), sid.toString())).hasErrors()).isTrue();
     }
 
     @Test
-    void aJtiThatIsNotAUuidFails() {
-        assertThat(validator.validate(jwt("not-a-uuid")).hasErrors()).isTrue();
+    void aTokenWithoutJtiOrSidFails() {
+        assertThat(validator.validate(jwt(null, UUID.randomUUID().toString())).hasErrors()).isTrue();
+        assertThat(validator.validate(jwt(UUID.randomUUID().toString(), null)).hasErrors()).isTrue();
     }
 
-    private static Jwt jwt(String jti) {
+    @Test
+    void aJtiOrSidThatIsNotAUuidFails() {
+        assertThat(validator.validate(jwt("not-a-uuid", UUID.randomUUID().toString())).hasErrors()).isTrue();
+        assertThat(validator.validate(jwt(UUID.randomUUID().toString(), "not-a-uuid")).hasErrors()).isTrue();
+    }
+
+    private static Jwt jwt(String jti, String sid) {
         Jwt.Builder builder = Jwt.withTokenValue("token").header("alg", "HS256").subject("user")
                 .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(600));
         if (jti != null) {
             builder.jti(jti);
+        }
+        if (sid != null) {
+            builder.claim("sid", sid);
         }
         return builder.build();
     }
