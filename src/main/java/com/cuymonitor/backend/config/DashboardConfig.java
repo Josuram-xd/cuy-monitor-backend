@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.config;
 
+import com.cuymonitor.backend.application.AlertService;
 import com.cuymonitor.backend.application.CageHealthService;
 import com.cuymonitor.backend.application.GuineaPigService;
 import com.cuymonitor.backend.domain.port.out.AlertRepository;
@@ -19,6 +20,11 @@ public class DashboardConfig {
     @Bean
     public GuineaPigService guineaPigService(CageRepository cages, GuineaPigRepository guineaPigs, Clock clock) {
         return new GuineaPigService(cages, guineaPigs, clock);
+    }
+
+    @Bean
+    public AlertService alertService(AlertRepository alerts, Clock clock) {
+        return new AlertService(alerts, clock);
     }
 
     @Bean
