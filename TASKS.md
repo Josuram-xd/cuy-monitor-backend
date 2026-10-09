@@ -82,7 +82,7 @@
 
 - [x] **Task 5.1** — `feat(ingestion): add EventSourceAdapter target interface`
   `adapter/in/ingestion/adapter/`.
-- [ ] **Task 5.2** — `feat(ingestion): add camera, audio and weight adapters`
+- [x] **Task 5.2** — `feat(ingestion): add camera, audio and weight adapters`
   `CameraBehaviorAdapter`, `AudioClassificationAdapter`, `WeightReadingAdapter` → `HealthEvent`.
 - [ ] **Task 5.3** — `feat(ingestion): add AdapterFactory and concrete factories`
   `adapter/in/ingestion/factory/`.
