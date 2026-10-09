@@ -2,6 +2,7 @@ package com.cuymonitor.backend.config;
 
 import com.cuymonitor.backend.application.AlertService;
 import com.cuymonitor.backend.application.CageHealthService;
+import com.cuymonitor.backend.application.EventIngestionService;
 import com.cuymonitor.backend.application.GuineaPigService;
 import com.cuymonitor.backend.domain.port.out.AlertRepository;
 import com.cuymonitor.backend.domain.port.out.CageRepository;
@@ -20,6 +21,13 @@ public class DashboardConfig {
     @Bean
     public GuineaPigService guineaPigService(CageRepository cages, GuineaPigRepository guineaPigs, Clock clock) {
         return new GuineaPigService(cages, guineaPigs, clock);
+    }
+
+    // Stores events only. Replace it with the health core's EventProcessingService when that is merged.
+    @Bean
+    public EventIngestionService eventIngestionService(CageRepository cages, GuineaPigRepository guineaPigs,
+                                                       EventRepository events, WeightReadingRepository weights) {
+        return new EventIngestionService(cages, guineaPigs, events, weights);
     }
 
     @Bean
