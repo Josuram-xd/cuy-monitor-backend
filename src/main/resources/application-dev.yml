@@ -1,0 +1,5 @@
+# Local development only (profile "dev").
+app:
+  ws:
+    # the dashboard runs on the Vite dev server; in production it is served from the backend's own origin
+    allowed-origins: http://localhost:5173
