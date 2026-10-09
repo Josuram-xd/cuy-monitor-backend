@@ -30,6 +30,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -117,6 +118,19 @@ class SecurityConfigTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("unauthorized"))
                 .andExpect(jsonPath("$.message").value("invalid api key"));
+    }
+
+    @Test
+    void ingestionRejectsInvalidPayloadWithoutCallingTheHealthCore() throws Exception {
+        given(eventSourceAdapter.adapt(any())).willThrow(new IllegalArgumentException("invalid weight payload"));
+
+        mvc.perform(post("/api/v1/ingestion/events").header("X-API-Key", "test-key")
+                        .contentType(MediaType.APPLICATION_JSON).content(EVENT))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("bad_request"))
+                .andExpect(jsonPath("$.message").value("invalid weight payload"));
+
+        verify(processEventUseCase, never()).process(any(HealthEvent.class));
     }
 
     private String token(String issuer) {
