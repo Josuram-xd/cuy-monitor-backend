@@ -12,8 +12,17 @@ register / login  ──►  { challengeId, expiresAt }  ──►  email with 6
 otp/verify { challengeId, code }  ◄───────────────────────────┘
         │
         ▼
-{ accessToken, tokenType: "Bearer", expiresAt }  ──►  Authorization: Bearer <accessToken>
+204 + two HttpOnly cookies (access_token, refresh_token)  ──►  the browser sends them by itself
 ```
+
+**The tokens never appear in a response body and JavaScript cannot read them.** They live in cookies the server sets:
+
+| Cookie | Holds | Path | Lasts |
+|---|---|---|---|
+| `access_token` | JWT (HS256) | `/` | 15 minutes |
+| `refresh_token` | random opaque value (only its SHA-256 is stored) | `/api/v1/auth` | 7 days |
+
+Both are `HttpOnly; Secure; SameSite=Strict`. Over `fetch` the dashboard needs `credentials: "include"` in development, when it runs on `localhost:5173` and the API on `localhost:8080` (in production it is the same origin).
 
 ## Endpoints
 
@@ -52,13 +61,21 @@ The account is created as `PENDING_VERIFICATION` and a code is emailed.
 { "challengeId": "6f1c…", "code": "123456" }
 ```
 
-`200 OK`
-
-```json
-{ "accessToken": "eyJhbGciOiJIUzI1NiJ9…", "tokenType": "Bearer", "expiresAt": "2026-10-01T10:35:00Z" }
-```
+`204 No Content`, no body. The response carries two `Set-Cookie` headers (`access_token` and `refresh_token`, see above). The dashboard knows it is logged in by calling `GET /api/v1/account/profile` afterwards.
 
 If the account was `PENDING_VERIFICATION` it becomes `ACTIVE`.
+
+### `POST /api/v1/auth/refresh`
+
+No body. Reads the `refresh_token` cookie (the browser only sends it to `/api/v1/auth`).
+
+`204 No Content` with a new `access_token` **and a new `refresh_token`**. Every use rotates the refresh token: the old one stops working. If an old one is presented again later, the server assumes it was stolen and revokes the whole session (all the tokens that came from that login), so the user has to log in again. Two tabs refreshing at the very same moment are tolerated for 10 seconds.
+
+`401 unauthorized` / `invalid or expired session`: cookie missing, unknown, expired, already used, or the account is `DISABLED`.
+
+### `POST /api/v1/auth/logout`
+
+No body. Always answers `204 No Content` and expires both cookies, even if the access token is already expired or no cookie was sent. It revokes the `jti` of the access token and the whole refresh-token family, so a copied token stops working immediately.
 
 ## Errors
 
@@ -72,6 +89,7 @@ Every error follows the API convention `{ "error": "<code>", "message": "..." }`
 |---|---|---|---|
 | `400` | `bad_request` | varies | Invalid body, malformed JSON, password outside 8–72 bytes, code not 6 digits |
 | `401` | `unauthorized` | `invalid credentials` | Wrong username or password, unknown user, or disabled account (same message on purpose) |
+| `401` | `unauthorized` | `invalid or expired session` | Refresh cookie missing, unknown, expired, already rotated, or the account is disabled |
 | `401` | `unauthorized` | `invalid or expired code` | Wrong, expired, already used or revoked code, or 5 failed attempts (same message on purpose) |
 | `401` | `unauthorized` | `missing, invalid or expired token` | Protected route without a valid `Authorization: Bearer` header |
 | `429` | `too_many_requests` | `too many codes requested, try again later` | More than 5 codes requested for the same account in 15 minutes (login / resend) |
@@ -80,8 +98,11 @@ Every error follows the API convention `{ "error": "<code>", "message": "..." }`
 ## Rules
 
 - Code: 6 digits, valid for **5 minutes**, single use, at most **5 attempts**. Asking for a new one (login) invalidates the previous ones. At most **5 codes per account every 15 minutes**; after that, login answers `429` until the window passes.
-- Token: JWT signed with HS256, valid for **30 minutes**. Claims: `sub` (user id, UUID), `iss` (`cuy-monitor-backend`), `iat`, `exp`. There is no refresh token: when it expires the user logs in again.
-- Logout: the API is stateless. The dashboard just deletes the token; it stops working on its own when it expires.
+- Access token: JWT signed with HS256, valid for **15 minutes**. Claims: `sub` (user id, UUID), `iss` (`cuy-monitor-backend`), `iat`, `exp`, `jti` (unique id of the token). A token without a valid `jti`, or whose `jti` was revoked, is rejected.
+- Refresh token: random 256-bit value, valid for **7 days**, rotated on every use (see `/refresh`). Stored hashed.
+- Logout revokes the tokens on the server (see `/logout`); deleting a cookie in the browser is not enough and is not what the dashboard does.
+- `/api/v1/auth/**` ignores the access token on purpose, so login, refresh and logout work when the old cookie is already expired.
+- No CSRF token: the cookies are `SameSite=Strict`, so a request that starts on another site never carries them, and the dashboard is served from the same site as the API.
 
 ## Account (`/api/v1/account`)
 
@@ -119,14 +140,14 @@ On purpose it returns only what the screen shows: no id, email, status, timestam
 { "currentPassword": "secret-pass" }
 ```
 
-`204 No Content`. Soft delete: the account becomes `DISABLED` and can no longer log in. The dashboard should delete its token right after.
+`204 No Content`. Soft delete: the account becomes `DISABLED` and can no longer log in. The dashboard should call `POST /api/v1/auth/logout` right after.
 
 ### Account errors
 
 | Status | `error` | `message` | When |
 |---|---|---|---|
 | `400` | `bad_request` | varies | Invalid body or new password outside 8–72 bytes |
-| `401` | `unauthorized` | `missing, invalid or expired token` | No token, or invalid or expired token |
+| `401` | `unauthorized` | `missing, invalid or expired token` | No access cookie, or it is invalid, expired or revoked (the dashboard then calls `/refresh` once and retries) |
 | `401` | `unauthorized` | `invalid credentials` | Wrong `currentPassword` |
 | `401` | `unauthorized` | `account is disabled` | The account was deactivated but its token has not expired yet |
 
@@ -137,20 +158,18 @@ On purpose it returns only what the screen shows: no id, email, status, timestam
 | `/api/v1/auth/**` | public |
 | `/actuator/health` | public |
 | `/api/v1/ingestion/**` | `X-API-Key` header (no JWT) |
-| everything else under `/api/v1/**` | `Authorization: Bearer <accessToken>`, otherwise `401` |
-| `/ws` (STOMP) | handshake is open; `Authorization: Bearer <accessToken>` goes on the STOMP `CONNECT` frame |
+| everything else under `/api/v1/**` | the `access_token` cookie (`Authorization: Bearer <accessToken>` also works for tools like curl), otherwise `401` |
+| `/ws` (STOMP) | the browser sends the `access_token` cookie on the handshake; it is validated on the STOMP `CONNECT` frame |
 
 ### WebSocket (`/ws`)
 
-Browsers cannot set headers on the WebSocket handshake, so the token travels as a STOMP header of the `CONNECT` frame. With `@stomp/stompjs`:
+The browser sends the `access_token` cookie on the handshake by itself (same origin), so the dashboard does not handle any token:
 
 ```js
-const client = new Client({
-  brokerURL: `wss://${location.host}/ws`,
-  connectHeaders: { Authorization: `Bearer ${accessToken}` },
-});
+const client = new Client({ brokerURL: `wss://${location.host}/ws` });
 ```
 
-- No token, a header without the `Bearer ` prefix, or an invalid, expired or foreign token: the server answers with a STOMP `ERROR` frame and closes the connection. Do not rely on the text of the `message` header.
+- The server copies the cookie to the session on the handshake and validates it on the STOMP `CONNECT` frame, like any other request (signature, issuer, expiration and revocation).
+- No cookie, or an invalid, expired, revoked or foreign token: the server answers with a STOMP `ERROR` frame and closes the connection. Do not rely on the text of the `message` header. Clients that are not browsers can still send `Authorization: Bearer <accessToken>` on the `CONNECT` frame.
 - A `SUBSCRIBE` from a session that did not authenticate on `CONNECT` is rejected the same way.
-- The token is only checked on `CONNECT`. An open connection is not closed when the token expires; after logging in again the dashboard reconnects with the new token.
+- The token is only checked on `CONNECT`. An open connection is not closed when the token expires or is revoked; the dashboard reconnects after a `/refresh` and after logging in again.

@@ -20,8 +20,8 @@
 |---|---|
 | `/actuator/health`, `/api/v1/auth/**` | Public |
 | `/api/v1/ingestion/**` | `X-API-Key` header (no JWT) |
-| everything else under `/api/v1/**` | `Authorization: Bearer <jwt>` |
-| `/ws` | JWT on the STOMP `CONNECT` frame (section 4) |
+| everything else under `/api/v1/**` | the `access_token` HttpOnly cookie (see `auth-api.md`) |
+| `/ws` | the same cookie, validated on the STOMP `CONNECT` frame (section 4) |
 
 Common errors for every JWT endpoint: `401` without a token, with an invalid or expired token, or for a `DISABLED` account.
 
@@ -184,11 +184,11 @@ Ordered by `measuredAt`, oldest first. Includes unstable readings; the client fi
 |---|---|
 | Endpoint | `wss://<domain>/ws` (same origin) |
 | Protocol | STOMP over WebSocket |
-| Auth | Header `Authorization: Bearer <jwt>` on the STOMP **`CONNECT`** frame. Browsers cannot set headers on the WebSocket handshake, so the handshake itself is open. |
+| Auth | The browser sends the `access_token` cookie on the handshake; the server validates it on the STOMP **`CONNECT`** frame. |
 | Rejection | `CONNECT` without a token, or with an invalid or expired one, is answered with an `ERROR` frame and the connection is closed. Subscriptions from unauthenticated sessions are rejected. |
 | Direction | Server → client only. The client sends nothing besides `CONNECT` and `SUBSCRIBE`. |
-| Token expiry | The token lasts 30 min. The check happens at `CONNECT`; the dashboard reconnects with a new token after logging in again. |
-| Client example | `connectHeaders: { Authorization: "Bearer <jwt>" }` in `@stomp/stompjs` (see `auth-api.md`, WebSocket section) |
+| Token expiry | The access token lasts 15 min. The check happens at `CONNECT`; the dashboard reconnects after a `/refresh` or after logging in again. |
+| Client example | `new Client({ brokerURL: "wss://<domain>/ws" })` in `@stomp/stompjs`, no headers needed (see `auth-api.md`, WebSocket section) |
 
 ### Topic `/topic/cages/{cageId}`
 

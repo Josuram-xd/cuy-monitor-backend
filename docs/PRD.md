@@ -81,10 +81,10 @@ Los productores de datos (ai-service, serial bridge) **no son usuarios**: entran
 | RF-12 | Marcar alertas como revisadas | Media | Final |
 | RF-13 | Toda la interfaz del criador en español | Alta | Avance |
 | RF-14 | Registro de usuario con verificación del correo por código OTP de 6 dígitos | Alta | Final |
-| RF-15 | Inicio de sesión en dos pasos (usuario + contraseña → código OTP al correo) que entrega un JWT de 30 min | Alta | Final |
-| RF-16 | Toda la API del dashboard (`/api/v1/**` menos `/api/v1/auth/**` y `/api/v1/ingestion/**`) y el WebSocket exigen un JWT válido | Alta | Final |
+| RF-15 | Inicio de sesión en dos pasos (usuario + contraseña → código OTP al correo) que abre la sesión con cookies HttpOnly (JWT de 15 min + token de renovación de 7 días) | Alta | Final |
+| RF-16 | Toda la API del dashboard (`/api/v1/**` menos `/api/v1/auth/**` y `/api/v1/ingestion/**`) y el WebSocket exigen un JWT válido (en cookie) | Alta | Final |
 | RF-17 | Cuenta propia: ver datos, editar nombre, cambiar contraseña, desactivar (borrado lógico) | Media | Final |
-| RF-18 | Cerrar sesión desde el dashboard (borra el token del navegador) | Alta | Final |
+| RF-18 | Cerrar sesión desde el dashboard: el servidor revoca los tokens y borra las cookies, un token copiado deja de servir | Alta | Final |
 
 ## 6. Requisitos no funcionales
 
