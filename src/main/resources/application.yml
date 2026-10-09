@@ -45,7 +45,13 @@ app:
     jwt:
       secret: ${APP_JWT_SECRET}
       issuer: cuy-monitor-backend
-      ttl: 30m
+      # short on purpose: the refresh cookie renews it without asking for the code again
+      ttl: 15m
+    refresh:
+      ttl: 7d
+    cookie:
+      # false only for plain http outside localhost
+      secure: ${APP_COOKIE_SECURE:true}
     otp:
       ttl: 5m
       max-attempts: 5

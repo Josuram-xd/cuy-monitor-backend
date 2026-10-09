@@ -4,7 +4,7 @@ import com.cuymonitor.backend.domain.exception.InvalidCredentialsException;
 import com.cuymonitor.backend.domain.exception.InvalidOtpException;
 import com.cuymonitor.backend.domain.exception.TooManyOtpRequestsException;
 import com.cuymonitor.backend.domain.exception.UserAlreadyExistsException;
-import com.cuymonitor.backend.domain.model.auth.AuthToken;
+import com.cuymonitor.backend.domain.model.auth.AuthSession;
 import com.cuymonitor.backend.domain.model.auth.LoginChallenge;
 import com.cuymonitor.backend.domain.model.auth.OtpChallenge;
 import com.cuymonitor.backend.domain.model.auth.OtpVerificationResult;
@@ -19,7 +19,6 @@ import com.cuymonitor.backend.domain.port.in.VerifyOtpUseCase;
 import com.cuymonitor.backend.domain.port.out.OtpChallengeRepository;
 import com.cuymonitor.backend.domain.port.out.OtpSender;
 import com.cuymonitor.backend.domain.port.out.PasswordHasher;
-import com.cuymonitor.backend.domain.port.out.TokenIssuer;
 import com.cuymonitor.backend.domain.port.out.UserRepository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,7 +37,7 @@ public class AuthenticationService implements RegisterUserUseCase, LoginUseCase,
     private final OtpChallengeRepository otpChallengeRepository;
     private final PasswordHasher passwordHasher;
     private final OtpSender otpSender;
-    private final TokenIssuer tokenIssuer;
+    private final SessionService sessions;
     private final Clock clock;
     private final Duration otpTtl;
     private final int otpMaxAttempts;
@@ -48,14 +47,14 @@ public class AuthenticationService implements RegisterUserUseCase, LoginUseCase,
     private final String dummyHash;
 
     public AuthenticationService(UserRepository userRepository, OtpChallengeRepository otpChallengeRepository,
-                                 PasswordHasher passwordHasher, OtpSender otpSender, TokenIssuer tokenIssuer,
+                                 PasswordHasher passwordHasher, OtpSender otpSender, SessionService sessions,
                                  Clock clock, Duration otpTtl, int otpMaxAttempts,
                                  int otpMaxRequests, Duration otpRequestWindow) {
         this.userRepository = userRepository;
         this.otpChallengeRepository = otpChallengeRepository;
         this.passwordHasher = passwordHasher;
         this.otpSender = otpSender;
-        this.tokenIssuer = tokenIssuer;
+        this.sessions = sessions;
         this.clock = clock;
         this.otpTtl = otpTtl;
         this.otpMaxAttempts = otpMaxAttempts;
@@ -100,7 +99,7 @@ public class AuthenticationService implements RegisterUserUseCase, LoginUseCase,
     // no rollback on InvalidOtpException, otherwise the failed attempt would not be counted
     @Override
     @Transactional(noRollbackFor = InvalidOtpException.class)
-    public AuthToken verify(VerifyOtpCommand command) {
+    public AuthSession verify(VerifyOtpCommand command) {
         if (command.challengeId() == null || command.code() == null) {
             throw new InvalidOtpException();
         }
@@ -118,7 +117,7 @@ public class AuthenticationService implements RegisterUserUseCase, LoginUseCase,
         }
 
         user.activate(now);
-        return tokenIssuer.issueToken(userRepository.save(user));
+        return sessions.start(userRepository.save(user));
     }
 
     private LoginChallenge issueChallenge(User user, Instant now) {

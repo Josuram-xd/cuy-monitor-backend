@@ -2,10 +2,13 @@ package com.cuymonitor.backend.config;
 
 import com.cuymonitor.backend.adapter.out.security.JwtTokenIssuer;
 import com.cuymonitor.backend.application.AuthenticationService;
+import com.cuymonitor.backend.application.SessionService;
 import com.cuymonitor.backend.application.UserAccountService;
 import com.cuymonitor.backend.domain.port.out.OtpChallengeRepository;
 import com.cuymonitor.backend.domain.port.out.OtpSender;
 import com.cuymonitor.backend.domain.port.out.PasswordHasher;
+import com.cuymonitor.backend.domain.port.out.RefreshTokenRepository;
+import com.cuymonitor.backend.domain.port.out.RevokedTokenRepository;
 import com.cuymonitor.backend.domain.port.out.TokenIssuer;
 import com.cuymonitor.backend.domain.port.out.UserRepository;
 import org.springframework.context.annotation.Bean;
@@ -28,13 +31,21 @@ public class AuthConfig {
     }
 
     @Bean
+    public SessionService sessionService(TokenIssuer tokenIssuer, RefreshTokenRepository refreshTokenRepository,
+                                         RevokedTokenRepository revokedTokenRepository, UserRepository userRepository,
+                                         Clock clock, AuthProperties properties) {
+        return new SessionService(tokenIssuer, refreshTokenRepository, revokedTokenRepository, userRepository, clock,
+                properties.refresh().ttl());
+    }
+
+    @Bean
     public AuthenticationService authenticationService(UserRepository userRepository,
                                                        OtpChallengeRepository otpChallengeRepository,
                                                        PasswordHasher passwordHasher, OtpSender otpSender,
-                                                       TokenIssuer tokenIssuer, Clock clock,
+                                                       SessionService sessionService, Clock clock,
                                                        AuthProperties properties) {
         return new AuthenticationService(userRepository, otpChallengeRepository, passwordHasher, otpSender,
-                tokenIssuer, clock, properties.otp().ttl(), properties.otp().maxAttempts(),
+                sessionService, clock, properties.otp().ttl(), properties.otp().maxAttempts(),
                 properties.otp().maxRequests(), properties.otp().requestWindow());
     }
 

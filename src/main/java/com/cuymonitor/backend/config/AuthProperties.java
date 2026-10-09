@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 @ConfigurationProperties(prefix = "app.auth")
-public record AuthProperties(Jwt jwt, Otp otp) {
+public record AuthProperties(Jwt jwt, Refresh refresh, Cookie cookie, Otp otp) {
 
     public record Jwt(String secret, String issuer, Duration ttl) {
 
@@ -25,6 +25,17 @@ public record AuthProperties(Jwt jwt, Otp otp) {
             }
             requirePositive(ttl, "app.auth.jwt.ttl");
         }
+    }
+
+    public record Refresh(Duration ttl) {
+
+        public Refresh {
+            requirePositive(ttl, "app.auth.refresh.ttl");
+        }
+    }
+
+    /** secure=false is only for plain http outside localhost; production always runs behind https. */
+    public record Cookie(boolean secure) {
     }
 
     public record Otp(Duration ttl, int maxAttempts, int maxRequests, Duration requestWindow) {

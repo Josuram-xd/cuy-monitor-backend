@@ -1,9 +1,12 @@
 package com.cuymonitor.backend.config;
 
+import com.cuymonitor.backend.adapter.out.security.RevokedTokenValidator;
+import com.cuymonitor.backend.domain.port.out.RevokedTokenRepository;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
@@ -31,12 +34,14 @@ public class JwtConfig {
     }
 
     @Bean
-    public JwtDecoder jwtDecoder() {
+    public JwtDecoder jwtDecoder(RevokedTokenRepository revokedTokens) {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(secretKey())
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
-        // default validators check exp/nbf; this also rejects tokens from another issuer
-        decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(properties.jwt().issuer()));
+        // exp/nbf and issuer, plus the tokens that were revoked on logout
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
+                JwtValidators.createDefaultWithIssuer(properties.jwt().issuer()),
+                new RevokedTokenValidator(revokedTokens)));
         return decoder;
     }
 

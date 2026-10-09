@@ -1,6 +1,7 @@
 package com.cuymonitor.backend.config;
 
 import com.cuymonitor.backend.adapter.in.web.SystemController;
+import com.cuymonitor.backend.domain.port.out.RevokedTokenRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -25,6 +26,8 @@ class CorsConfigTest {
 
     @MockitoBean
     private JdbcTemplate jdbcTemplate;
+    @MockitoBean
+    private RevokedTokenRepository revokedTokenRepository;
 
     @Test
     void viteDevServerPassesThePreflight() throws Exception {
@@ -33,7 +36,9 @@ class CorsConfigTest {
                         .header("Access-Control-Request-Method", "GET")
                         .header("Access-Control-Request-Headers", "Authorization"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"));
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"))
+                // the session is in cookies, so the browser must be told it may send them
+                .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
     }
 
     @Test

@@ -18,6 +18,8 @@ public class CorsConfig {
         config.setAllowedOrigins(List.of("http://localhost:5173"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        // the session lives in cookies, so the browser must be allowed to send them
+        config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 
         var source = new UrlBasedCorsConfigurationSource();

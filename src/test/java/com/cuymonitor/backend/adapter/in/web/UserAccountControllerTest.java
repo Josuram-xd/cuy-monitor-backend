@@ -2,6 +2,7 @@ package com.cuymonitor.backend.adapter.in.web;
 
 import com.cuymonitor.backend.config.JwtConfig;
 import com.cuymonitor.backend.config.SecurityConfig;
+import com.cuymonitor.backend.domain.port.out.RevokedTokenRepository;
 import com.cuymonitor.backend.domain.exception.AccountDisabledException;
 import com.cuymonitor.backend.domain.exception.InvalidCredentialsException;
 import com.cuymonitor.backend.domain.model.user.User;
@@ -56,6 +57,8 @@ class UserAccountControllerTest {
     private ChangePasswordUseCase changePasswordUseCase;
     @MockitoBean
     private DeactivateAccountUseCase deactivateAccountUseCase;
+    @MockitoBean
+    private RevokedTokenRepository revokedTokenRepository;
 
     @Test
     void withoutTokenReturns401() throws Exception {
