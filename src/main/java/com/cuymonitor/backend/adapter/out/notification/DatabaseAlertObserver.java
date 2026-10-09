@@ -4,9 +4,12 @@ import com.cuymonitor.backend.domain.model.Alert;
 import com.cuymonitor.backend.domain.port.out.AlertObserver;
 import com.cuymonitor.backend.domain.port.out.AlertRepository;
 import java.util.Objects;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public final class DatabaseAlertObserver implements AlertObserver {
 
     private final AlertRepository alertRepository;
@@ -17,6 +20,10 @@ public final class DatabaseAlertObserver implements AlertObserver {
 
     @Override
     public void onAlert(Alert alert) {
-        alertRepository.save(Objects.requireNonNull(alert, "alert"));
+        var nonNullAlert = Objects.requireNonNull(alert, "alert");
+        var savedAlert = Objects.requireNonNull(alertRepository.save(nonNullAlert), "savedAlert");
+        if (savedAlert.getId() != null) {
+            nonNullAlert.assignId(savedAlert.getId());
+        }
     }
 }
