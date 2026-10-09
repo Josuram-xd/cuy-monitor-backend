@@ -59,7 +59,7 @@ class UserAccountControllerTest {
 
     @Test
     void withoutTokenReturns401() throws Exception {
-        mvc.perform(get("/api/v1/users/me"))
+        mvc.perform(get("/api/v1/account/profile"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("unauthorized"));
         verifyNoInteractions(getCurrentUserUseCase);
@@ -69,7 +69,7 @@ class UserAccountControllerTest {
     void getMeReturnsTheAccountOfTheTokenSubjectWithoutTheHash() throws Exception {
         given(getCurrentUserUseCase.getCurrentUser(USER_ID)).willReturn(user("Juan Perez"));
 
-        mvc.perform(get("/api/v1/users/me").with(token()))
+        mvc.perform(get("/api/v1/account/profile").with(token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(USER_ID.toString()))
                 .andExpect(jsonPath("$.username").value("juan"))
@@ -81,7 +81,7 @@ class UserAccountControllerTest {
     void disabledAccountWithValidTokenReturns401() throws Exception {
         given(getCurrentUserUseCase.getCurrentUser(USER_ID)).willThrow(new AccountDisabledException());
 
-        mvc.perform(get("/api/v1/users/me").with(token()))
+        mvc.perform(get("/api/v1/account/profile").with(token()))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("unauthorized"))
                 .andExpect(jsonPath("$.message").value("account is disabled"));
@@ -92,7 +92,7 @@ class UserAccountControllerTest {
         given(updateProfileUseCase.updateProfile(new UpdateProfileCommand(USER_ID, "Juan Carlos")))
                 .willReturn(user("Juan Carlos"));
 
-        mvc.perform(put("/api/v1/users/me").with(token()).contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(put("/api/v1/account/profile").with(token()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"fullName\":\"Juan Carlos\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.fullName").value("Juan Carlos"));
@@ -100,7 +100,7 @@ class UserAccountControllerTest {
 
     @Test
     void updateProfileWithBlankNameReturns400() throws Exception {
-        mvc.perform(put("/api/v1/users/me").with(token()).contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(put("/api/v1/account/profile").with(token()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"fullName\":\"\"}"))
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(updateProfileUseCase);
@@ -108,7 +108,7 @@ class UserAccountControllerTest {
 
     @Test
     void changePasswordReturns204() throws Exception {
-        mvc.perform(put("/api/v1/users/me/password").with(token()).contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(put("/api/v1/account/password").with(token()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"currentPassword\":\"secret-pass\",\"newPassword\":\"new-secret-pass\"}"))
                 .andExpect(status().isNoContent());
 
@@ -120,14 +120,14 @@ class UserAccountControllerTest {
     void changePasswordWithWrongCurrentPasswordReturns401() throws Exception {
         willThrow(new InvalidCredentialsException()).given(changePasswordUseCase).changePassword(any());
 
-        mvc.perform(put("/api/v1/users/me/password").with(token()).contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(put("/api/v1/account/password").with(token()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"currentPassword\":\"wrong\",\"newPassword\":\"new-secret-pass\"}"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void deactivateReturns204() throws Exception {
-        mvc.perform(delete("/api/v1/users/me").with(token()).contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(delete("/api/v1/account").with(token()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"currentPassword\":\"secret-pass\"}"))
                 .andExpect(status().isNoContent());
 
@@ -138,7 +138,7 @@ class UserAccountControllerTest {
     void deactivateWithWrongPasswordReturns401() throws Exception {
         willThrow(new InvalidCredentialsException()).given(deactivateAccountUseCase).deactivate(any());
 
-        mvc.perform(delete("/api/v1/users/me").with(token()).contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(delete("/api/v1/account").with(token()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"currentPassword\":\"wrong\"}"))
                 .andExpect(status().isUnauthorized());
     }

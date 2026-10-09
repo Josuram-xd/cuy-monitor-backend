@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/users/me")
+@RequestMapping("/api/v1/account")
 public class UserAccountController {
 
     private final GetCurrentUserUseCase getCurrentUserUseCase;
@@ -44,12 +44,12 @@ public class UserAccountController {
         this.deactivateAccountUseCase = deactivateAccountUseCase;
     }
 
-    @GetMapping
-    public UserResponse me(@AuthenticationPrincipal Jwt jwt) {
+    @GetMapping("/profile")
+    public UserResponse getProfile(@AuthenticationPrincipal Jwt jwt) {
         return UserResponse.from(getCurrentUserUseCase.getCurrentUser(userId(jwt)));
     }
 
-    @PutMapping
+    @PutMapping("/profile")
     public UserResponse updateProfile(@AuthenticationPrincipal Jwt jwt,
                                       @Valid @RequestBody UpdateProfileRequest request) {
         return UserResponse.from(updateProfileUseCase.updateProfile(

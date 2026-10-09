@@ -123,7 +123,7 @@ AlertPublisher ◄────────────────────�
 | Verify code | `POST /api/v1/auth/otp/verify` | Account `ACTIVE` (if it was pending) + JWT valid for 30 min |
 | Use the app | any `/api/v1/**` with `Authorization: Bearer <jwt>`; STOMP `CONNECT` on `/ws` with the same header | |
 | Log out | dashboard deletes the token (stateless API) | |
-| My account | `GET/PUT /api/v1/users/me`, `PUT /api/v1/users/me/password`, `DELETE /api/v1/users/me` | Profile, password, soft-delete |
+| My account | `GET/PUT /api/v1/account/profile`, `PUT /api/v1/account/password`, `DELETE /api/v1/account` | Profile, password, soft-delete |
 
 - Passwords and codes are stored as **BCrypt** hashes. Codes are single-use, expire in 5 min, max 5 attempts.
 - JWT signed with HS256 (`APP_JWT_SECRET`, ≥ 32 bytes). No roles, no refresh tokens.
@@ -245,9 +245,9 @@ Responses: `202 Accepted` · `400` invalid envelope (don't retry) · `401` wrong
 | `POST /api/v1/auth/register` | public | dashboard | Create an account (sends a code) |
 | `POST /api/v1/auth/login` | public | dashboard | Check password (sends a code) |
 | `POST /api/v1/auth/otp/verify` | public | dashboard | Exchange the code for a JWT |
-| `GET` / `PUT /api/v1/users/me` | JWT | dashboard | View / update my profile |
-| `PUT /api/v1/users/me/password` | JWT | dashboard | Change my password |
-| `DELETE /api/v1/users/me` | JWT | dashboard | Deactivate my account |
+| `GET` / `PUT /api/v1/account/profile` | JWT | dashboard | View / update my profile |
+| `PUT /api/v1/account/password` | JWT | dashboard | Change my password |
+| `DELETE /api/v1/account` | JWT | dashboard | Deactivate my account |
 | `GET /api/v1/cages/{id}/health` | JWT | dashboard | Cage health summary (from the Composite) |
 | `GET /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | Guinea pigs with their current state |
 | `POST /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | Register a guinea pig (name + mark color) |

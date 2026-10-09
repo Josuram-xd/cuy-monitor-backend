@@ -214,7 +214,7 @@ Messages are notifications to update the screen quickly; the REST endpoints stay
 |---|---|---|
 | `GET /actuator/health` | Public | `{ "status": "UP" }`. Used by Caddy and the team. |
 | `GET /api/v1/system/status` | JWT | Temporary smoke test (counts cages). Removed in Task 17.1. Not for the dashboard. |
-| `/api/v1/auth/**`, `/api/v1/users/me/**` | see `auth-api.md` | Registration, login with OTP, own account. |
+| `/api/v1/auth/**`, `/api/v1/account/**` | see `auth-api.md` | Registration, login with OTP, own account. |
 
 ---
 
