@@ -39,7 +39,8 @@ main() {
 
 # 2 GB swap: building the Java image on a 2 GB machine needs it
 ensure_swap() {
-  if [ "$(swapon --noheadings | wc -l)" -eq 0 ]; then
+  # /proc/swaps: swapon is in /usr/sbin, not in a normal user's PATH
+  if [ "$(awk 'NR>1' /proc/swaps | wc -l)" -eq 0 ]; then
     echo "Creating a 2 GB swap file"
     sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile >/dev/null
     sudo swapon /swapfile
