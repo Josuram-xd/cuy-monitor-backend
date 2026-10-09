@@ -1,6 +1,9 @@
 package com.cuymonitor.backend.adapter.in.web;
 
 import com.cuymonitor.backend.adapter.in.ingestion.dto.IngestionEvent;
+import com.cuymonitor.backend.adapter.in.ingestion.factory.AdapterFactory;
+import com.cuymonitor.backend.domain.model.HealthEvent;
+import com.cuymonitor.backend.domain.port.in.ProcessEventUseCase;
 import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -26,9 +29,11 @@ public class IngestionController {
     private static final Logger log = LoggerFactory.getLogger(IngestionController.class);
 
     private final byte[] apiKey;
+    private final ProcessEventUseCase processEventUseCase;
 
-    public IngestionController(@Value("${app.api-key}") String apiKey) {
+    public IngestionController(@Value("${app.api-key}") String apiKey, ProcessEventUseCase processEventUseCase) {
         this.apiKey = apiKey.getBytes(StandardCharsets.UTF_8);
+        this.processEventUseCase = processEventUseCase;
     }
 
     @PostMapping("/events")
@@ -41,10 +46,11 @@ public class IngestionController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiError.body(ApiError.UNAUTHORIZED, "invalid api key"));
         }
 
-        log.info("Received event id={} type={} cage={} source={}",
+        log.debug("Received event id={} type={} cage={} source={}",
                 event.eventId(), event.type(), event.cageId(), event.source());
 
-        // TODO (Task 5.5): AdapterFactory -> EventSourceAdapter -> HealthEvent -> ProcessEventUseCase
+        HealthEvent healthEvent = AdapterFactory.forType(event.type()).toHealthEvent(event);
+        processEventUseCase.process(healthEvent);
 
         return ResponseEntity.accepted().body(Map.of("eventId", event.eventId(), "status", "ACCEPTED"));
     }
