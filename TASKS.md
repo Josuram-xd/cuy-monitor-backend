@@ -111,7 +111,7 @@
 
 - [x] **Task 7.1** — `feat(observer): add AlertObserver output port and AlertPublisher`
   `AlertObserver` en `domain/port/out/`, `AlertPublisher` en `domain/notification/`.
-- [ ] **Task 7.2** — `feat(observer): add DatabaseAlertObserver and LogAlertObserver`
+- [x] **Task 7.2** — `feat(observer): add DatabaseAlertObserver and LogAlertObserver`
   En `adapter/out/notification/`; `DatabaseAlertObserver` guarda usando el puerto `AlertRepository`.
 - [x] **Task 7.3** — `feat(websocket): add STOMP config on /ws`
   Se hizo en la rama de la Task 20 (`feature/task-20-websocket-jwt`) porque el interceptor la necesita.
