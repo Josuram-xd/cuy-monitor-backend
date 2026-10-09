@@ -1,6 +1,10 @@
 package com.cuymonitor.backend.adapter.in.web;
 
+import com.cuymonitor.backend.adapter.in.ingestion.adapter.EventSourceAdapter;
 import com.cuymonitor.backend.adapter.in.ingestion.dto.IngestionEvent;
+import com.cuymonitor.backend.adapter.in.ingestion.factory.AdapterFactorySelector;
+import com.cuymonitor.backend.domain.model.HealthEvent;
+import com.cuymonitor.backend.domain.port.in.ProcessEventUseCase;
 import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -26,9 +30,15 @@ public class IngestionController {
     private static final Logger log = LoggerFactory.getLogger(IngestionController.class);
 
     private final byte[] apiKey;
+    private final AdapterFactorySelector adapterFactorySelector;
+    private final ProcessEventUseCase processEventUseCase;
 
-    public IngestionController(@Value("${app.api-key}") String apiKey) {
+    public IngestionController(@Value("${app.api-key}") String apiKey,
+                               AdapterFactorySelector adapterFactorySelector,
+                               ProcessEventUseCase processEventUseCase) {
         this.apiKey = apiKey.getBytes(StandardCharsets.UTF_8);
+        this.adapterFactorySelector = adapterFactorySelector;
+        this.processEventUseCase = processEventUseCase;
     }
 
     @PostMapping("/events")
@@ -44,7 +54,13 @@ public class IngestionController {
         log.info("Received event id={} type={} cage={} source={}",
                 event.eventId(), event.type(), event.cageId(), event.source());
 
-        // TODO (Task 5.5): AdapterFactory -> EventSourceAdapter -> HealthEvent -> ProcessEventUseCase
+        try {
+            EventSourceAdapter adapter = adapterFactorySelector.createAdapterFor(event.type());
+            HealthEvent healthEvent = adapter.adapt(event);
+            processEventUseCase.process(healthEvent);
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().body(ApiError.body(ApiError.BAD_REQUEST, exception.getMessage()));
+        }
 
         return ResponseEntity.accepted().body(Map.of("eventId", event.eventId(), "status", "ACCEPTED"));
     }

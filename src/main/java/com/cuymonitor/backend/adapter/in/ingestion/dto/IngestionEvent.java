@@ -1,6 +1,8 @@
 package com.cuymonitor.backend.adapter.in.ingestion.dto;
 
 import com.cuymonitor.backend.domain.model.EventType;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
@@ -17,6 +19,6 @@ public record IngestionEvent(
         @NotBlank String cageId,
         @NotNull Instant timestamp,
         @NotBlank String source,
-        int schemaVersion,
+        @Min(1) @Max(1) int schemaVersion,
         @NotNull Map<String, Object> payload) {
 }

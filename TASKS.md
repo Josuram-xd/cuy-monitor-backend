@@ -80,15 +80,15 @@
 
 🔗 **Depende de:** seguir con las Task 2.3–2.4 y 4.2 de este repo
 
-- [ ] **Task 5.1** — `feat(ingestion): add EventSourceAdapter target interface`
+- [x] **Task 5.1** — `feat(ingestion): add EventSourceAdapter target interface`
   `adapter/in/ingestion/adapter/`.
-- [ ] **Task 5.2** — `feat(ingestion): add camera, audio and weight adapters`
+- [x] **Task 5.2** — `feat(ingestion): add camera, audio and weight adapters`
   `CameraBehaviorAdapter`, `AudioClassificationAdapter`, `WeightReadingAdapter` → `HealthEvent`.
-- [ ] **Task 5.3** — `feat(ingestion): add AdapterFactory and concrete factories`
+- [x] **Task 5.3** — `feat(ingestion): add AdapterFactory and concrete factories`
   `adapter/in/ingestion/factory/`.
-- [ ] **Task 5.4** — `feat(domain): add ProcessEventUseCase input port` *(contrato entre la entrada y el núcleo: revisarlo en equipo)*
-- [ ] **Task 5.5** — `feat(web): wire IngestionController to AdapterFactory and ProcessEventUseCase`
-- [ ] **Task 5.6** — `test(ingestion): cover factory selection and each adapter`
+- [x] **Task 5.4** — `feat(domain): add ProcessEventUseCase input port` *(contrato entre la entrada y el núcleo: revisarlo en equipo)*
+- [x] **Task 5.5** — `feat(web): wire IngestionController to AdapterFactory and ProcessEventUseCase`
+- [x] **Task 5.6** — `test(ingestion): cover factory selection and each adapter`
 
 ### Task 6 — Núcleo de salud
 
