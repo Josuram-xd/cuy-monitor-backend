@@ -73,7 +73,7 @@
 - [x] **Task 4.5** — `feat(domain): add Alert, WeightReading, BaselineProfile and StateTransition models`
 - [x] **Task 4.6** — `feat(persistence): add JPA entities, Spring Data repositories and mappers`
   `adapter/out/persistence/{entity,repository,mapper}/`.
-- [ ] **Task 4.7** — `feat(persistence): add persistence adapters implementing the repository ports`
+- [x] **Task 4.7** — `feat(persistence): add persistence adapters implementing the repository ports`
 - [ ] **Task 4.8** — `test(persistence): cover adapters and mappers with Testcontainers`
 
 ### Task 5 — Factory Method + Adapter (entrada)

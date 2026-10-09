@@ -3,6 +3,7 @@ package com.cuymonitor.backend.adapter.out.persistence.memory;
 import com.cuymonitor.backend.domain.model.GuineaPig;
 import com.cuymonitor.backend.domain.model.MarkColor;
 import com.cuymonitor.backend.domain.port.out.GuineaPigRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -13,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Component
+@Profile("memory")
 public class InMemoryGuineaPigRepository implements GuineaPigRepository {
 
     private final Map<Long, GuineaPig> guineaPigs = new ConcurrentHashMap<>();
