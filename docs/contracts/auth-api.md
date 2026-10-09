@@ -37,7 +37,7 @@ Both are `HttpOnly; Secure; SameSite=Strict`. Over `fetch` the dashboard needs `
 | `username` | required, max 50. Stored trimmed and lowercase |
 | `fullName` | required, max 150 |
 | `email` | required, valid email, max 254. Stored lowercase |
-| `password` | 8 to 72 bytes (UTF-8) |
+| `password` | 10 to 64 characters with at least one lowercase letter, one uppercase letter, one digit and one special character (anything that is not a letter, digit or space). No spaces, not a well-known password (`Password123!` counts) and not containing the username or a part of the email. |
 
 `201 Created`
 
@@ -46,6 +46,22 @@ Both are `HttpOnly; Secure; SameSite=Strict`. Over `fetch` the dashboard needs `
 ```
 
 The account is created as `PENDING_VERIFICATION` and a code is emailed.
+
+A password that breaks the rules answers `400` with the broken ones, so the form can tick its checklist:
+
+```json
+{ "error": "bad_request", "message": "password does not meet the requirements", "fields": { "password": "MIN_LENGTH,SPECIAL" } }
+```
+
+| Code | Rule |
+|---|---|
+| `MIN_LENGTH` / `MAX_LENGTH` | fewer than 10 or more than 64 characters (also more than 72 bytes: BCrypt would cut it) |
+| `LOWERCASE`, `UPPERCASE`, `DIGIT`, `SPECIAL` | missing that kind of character |
+| `NO_SPACES` | contains a space |
+| `NOT_COMMON` | a well-known password, even decorated (`Password123!`) |
+| `NOT_PERSONAL` | contains the username or a part of the email |
+
+Existing accounts keep working with the password they have: the rules apply when a password is created or changed.
 
 ### `POST /api/v1/auth/login`
 
@@ -87,7 +103,7 @@ Every error follows the API convention `{ "error": "<code>", "message": "..." }`
 
 | Status | `error` | `message` | When |
 |---|---|---|---|
-| `400` | `bad_request` | varies | Invalid body, malformed JSON, password outside 8–72 bytes, code not 6 digits |
+| `400` | `bad_request` | varies | Invalid body, malformed JSON, code not 6 digits. A password that breaks the rules also carries `fields.password` with the broken rules as codes (see below) |
 | `401` | `unauthorized` | `invalid credentials` | Wrong username or password, unknown user, or disabled account (same message on purpose) |
 | `401` | `unauthorized` | `invalid or expired session` | Refresh cookie missing, unknown, expired, already rotated, or the account is disabled |
 | `401` | `unauthorized` | `invalid or expired code` | Wrong, expired, already used or revoked code, or 5 failed attempts (same message on purpose) |
@@ -132,7 +148,7 @@ On purpose it returns only what the screen shows: no id, email, status, timestam
 { "currentPassword": "secret-pass", "newPassword": "new-secret-pass" }
 ```
 
-`204 No Content`. The new password follows the same 8–72 bytes rule. Tokens already issued keep working until they expire.
+`204 No Content`. The new password follows the same rules as in registration. Tokens already issued keep working until they expire.
 
 ### `DELETE /api/v1/account`
 
@@ -146,7 +162,7 @@ On purpose it returns only what the screen shows: no id, email, status, timestam
 
 | Status | `error` | `message` | When |
 |---|---|---|---|
-| `400` | `bad_request` | varies | Invalid body or new password outside 8–72 bytes |
+| `400` | `bad_request` | varies | Invalid body or a new password that breaks the rules (with `fields.password`) |
 | `401` | `unauthorized` | `missing, invalid or expired token` | No access cookie, or it is invalid, expired or revoked (the dashboard then calls `/refresh` once and retries) |
 | `401` | `unauthorized` | `invalid credentials` | Wrong `currentPassword` |
 | `401` | `unauthorized` | `account is disabled` | The account was deactivated but its token has not expired yet |

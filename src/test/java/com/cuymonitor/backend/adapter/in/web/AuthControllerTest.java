@@ -92,7 +92,7 @@ class AuthControllerTest {
                 .willReturn(new LoginChallenge(CHALLENGE_ID, EXPIRES_AT));
 
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
-                        {"username":"juan","fullName":"Juan Perez","email":"juan@mail.com","password":"secret-pass"}
+                        {"username":"juan","fullName":"Juan Perez","email":"juan@mail.com","password":"Secret-pass-1"}
                         """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.challengeId").value(CHALLENGE_ID.toString()))
@@ -102,7 +102,7 @@ class AuthControllerTest {
     @Test
     void registerWithInvalidBodyReturns400() throws Exception {
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
-                        {"username":"","fullName":"Juan","email":"not-an-email","password":"secret-pass"}
+                        {"username":"","fullName":"Juan","email":"not-an-email","password":"Secret-pass-1"}
                         """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("bad_request"))
@@ -124,11 +124,24 @@ class AuthControllerTest {
     }
 
     @Test
+    void aWeakPasswordListsTheBrokenRulesForTheDashboard() throws Exception {
+        given(registerUserUseCase.register(any())).willThrow(new WeakPasswordException(
+                "password does not meet the requirements", java.util.List.of("MIN_LENGTH", "SPECIAL")));
+
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"username":"juan","fullName":"Juan","email":"juan@mail.com","password":"Short1"}
+                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("password does not meet the requirements"))
+                .andExpect(jsonPath("$.fields.password").value("MIN_LENGTH,SPECIAL"));
+    }
+
+    @Test
     void registerWithTakenUsernameReturns409() throws Exception {
         given(registerUserUseCase.register(any())).willThrow(new UserAlreadyExistsException());
 
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
-                        {"username":"juan","fullName":"Juan","email":"juan@mail.com","password":"secret-pass"}
+                        {"username":"juan","fullName":"Juan","email":"juan@mail.com","password":"Secret-pass-1"}
                         """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("conflict"));
@@ -139,7 +152,7 @@ class AuthControllerTest {
         given(loginUseCase.login(any())).willReturn(new LoginChallenge(CHALLENGE_ID, EXPIRES_AT));
 
         mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON).content("""
-                        {"username":"juan","password":"secret-pass"}
+                        {"username":"juan","password":"Secret-pass-1"}
                         """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.challengeId").value(CHALLENGE_ID.toString()));
@@ -233,7 +246,7 @@ class AuthControllerTest {
 
         mvc.perform(post("/api/v1/auth/login").cookie(new Cookie("access_token", "expired-or-garbage"))
                         .contentType(MediaType.APPLICATION_JSON).content("""
-                                {"username":"juan","password":"secret-pass"}
+                                {"username":"juan","password":"Secret-pass-1"}
                                 """))
                 .andExpect(status().isOk());
     }

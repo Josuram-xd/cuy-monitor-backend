@@ -10,21 +10,21 @@ class BCryptPasswordHasherTest {
 
     @Test
     void hashIsNotThePlainPasswordAndMatchesIt() {
-        String hash = hasher.hashPassword("secret-pass");
+        String hash = hasher.hashPassword("Secret-pass-1");
 
-        assertThat(hash).isNotEqualTo("secret-pass").startsWith("$2");
-        assertThat(hasher.matches("secret-pass", hash)).isTrue();
+        assertThat(hash).isNotEqualTo("Secret-pass-1").startsWith("$2");
+        assertThat(hasher.matches("Secret-pass-1", hash)).isTrue();
     }
 
     @Test
     void wrongPasswordDoesNotMatch() {
-        String hash = hasher.hashPassword("secret-pass");
+        String hash = hasher.hashPassword("Secret-pass-1");
 
         assertThat(hasher.matches("other-pass", hash)).isFalse();
     }
 
     @Test
     void samePasswordGivesDifferentHashesBecauseOfTheSalt() {
-        assertThat(hasher.hashPassword("secret-pass")).isNotEqualTo(hasher.hashPassword("secret-pass"));
+        assertThat(hasher.hashPassword("Secret-pass-1")).isNotEqualTo(hasher.hashPassword("Secret-pass-1"));
     }
 }

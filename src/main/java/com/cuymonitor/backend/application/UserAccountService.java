@@ -50,7 +50,7 @@ public class UserAccountService implements GetCurrentUserUseCase, UpdateProfileU
     public void changePassword(ChangePasswordCommand command) {
         User user = loadActiveUser(command.userId());
         checkCurrentPassword(user, command.currentPassword());
-        PasswordPolicy.validate(command.newPassword());
+        PasswordPolicy.validate(command.newPassword(), user.getUsername(), user.getEmail());
 
         user.changePassword(passwordHasher.hashPassword(command.newPassword()), clock.instant());
         userRepository.save(user);

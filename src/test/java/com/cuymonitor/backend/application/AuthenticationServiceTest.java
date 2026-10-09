@@ -63,7 +63,7 @@ class AuthenticationServiceTest {
         assertThat(challenge.expiresAt()).isEqualTo(NOW.plus(OTP_TTL));
         User saved = users.findByUsername("juan").orElseThrow();
         assertThat(saved.getStatus()).isEqualTo(UserStatus.PENDING_VERIFICATION);
-        assertThat(saved.getPasswordHash()).isEqualTo("hashed:secret-pass");
+        assertThat(saved.getPasswordHash()).isEqualTo("hashed:Secret-pass-1");
         assertThat(sender.sent()).hasSize(1);
         assertThat(sender.sent().getFirst().email()).isEqualTo("juan@mail.com");
         assertThat(sender.lastCode()).matches("\\d{6}");
@@ -92,10 +92,21 @@ class AuthenticationServiceTest {
     }
 
     @Test
+    void registerRejectsAPasswordThatHasNoSpecialCharacterOrContainsTheUsername() {
+        assertThatThrownBy(() -> service.register(
+                new RegisterUserCommand("juan", "Juan", "juan@mail.com", "NoSpecial12345")))
+                .isInstanceOfSatisfying(WeakPasswordException.class, e -> assertThat(e.getRules()).containsExactly("SPECIAL"));
+        assertThatThrownBy(() -> service.register(
+                new RegisterUserCommand("juan", "Juan", "juan@mail.com", "Mi-juan-2026!!")))
+                .isInstanceOfSatisfying(WeakPasswordException.class, e -> assertThat(e.getRules()).containsExactly("NOT_PERSONAL"));
+        assertThat(users.count()).isZero();
+    }
+
+    @Test
     void loginWithCorrectPasswordSendsNewCode() {
         register("juan", "juan@mail.com");
 
-        LoginChallenge challenge = service.login(new LoginCommand(" Juan ", "secret-pass"));
+        LoginChallenge challenge = service.login(new LoginCommand(" Juan ", "Secret-pass-1"));
 
         assertThat(challenge.challengeId()).isNotNull();
         assertThat(sender.sent()).hasSize(2);
@@ -105,7 +116,7 @@ class AuthenticationServiceTest {
     void loginRevokesPreviousCodes() {
         LoginChallenge first = register("juan", "juan@mail.com");
         String firstCode = sender.lastCode();
-        service.login(new LoginCommand("juan", "secret-pass"));
+        service.login(new LoginCommand("juan", "Secret-pass-1"));
 
         assertThatThrownBy(() -> service.verify(new VerifyOtpCommand(first.challengeId(), firstCode)))
                 .isInstanceOf(InvalidOtpException.class);
@@ -114,10 +125,10 @@ class AuthenticationServiceTest {
     @Test
     void loginIsRejectedAfterTooManyCodesInTheWindow() {
         register("juan", "juan@mail.com");
-        service.login(new LoginCommand("juan", "secret-pass"));
-        service.login(new LoginCommand("juan", "secret-pass"));
+        service.login(new LoginCommand("juan", "Secret-pass-1"));
+        service.login(new LoginCommand("juan", "Secret-pass-1"));
 
-        assertThatThrownBy(() -> service.login(new LoginCommand("juan", "secret-pass")))
+        assertThatThrownBy(() -> service.login(new LoginCommand("juan", "Secret-pass-1")))
                 .isInstanceOf(TooManyOtpRequestsException.class);
         assertThat(sender.sent()).hasSize(3);
     }
@@ -125,11 +136,11 @@ class AuthenticationServiceTest {
     @Test
     void loginWorksAgainOnceTheWindowHasPassed() {
         register("juan", "juan@mail.com");
-        service.login(new LoginCommand("juan", "secret-pass"));
-        service.login(new LoginCommand("juan", "secret-pass"));
+        service.login(new LoginCommand("juan", "Secret-pass-1"));
+        service.login(new LoginCommand("juan", "Secret-pass-1"));
         clock.advance(REQUEST_WINDOW.plusSeconds(1));
 
-        LoginChallenge challenge = service.login(new LoginCommand("juan", "secret-pass"));
+        LoginChallenge challenge = service.login(new LoginCommand("juan", "Secret-pass-1"));
 
         assertThat(challenge.challengeId()).isNotNull();
     }
@@ -144,16 +155,16 @@ class AuthenticationServiceTest {
 
     @Test
     void loginWithUnknownUserFailsWithSameError() {
-        assertThatThrownBy(() -> service.login(new LoginCommand("ghost", "secret-pass")))
+        assertThatThrownBy(() -> service.login(new LoginCommand("ghost", "Secret-pass-1")))
                 .isInstanceOf(InvalidCredentialsException.class);
     }
 
     @Test
     void loginWithDisabledAccountFails() {
-        users.save(User.restore(UUID.randomUUID(), "juan", "Juan", "juan@mail.com", "hashed:secret-pass",
+        users.save(User.restore(UUID.randomUUID(), "juan", "Juan", "juan@mail.com", "hashed:Secret-pass-1",
                 UserStatus.DISABLED, NOW, NOW));
 
-        assertThatThrownBy(() -> service.login(new LoginCommand("juan", "secret-pass")))
+        assertThatThrownBy(() -> service.login(new LoginCommand("juan", "Secret-pass-1")))
                 .isInstanceOf(InvalidCredentialsException.class);
         assertThat(sender.sent()).isEmpty();
     }
@@ -218,7 +229,7 @@ class AuthenticationServiceTest {
     }
 
     private LoginChallenge register(String username, String email) {
-        return service.register(new RegisterUserCommand(username, "Juan Perez", email, "secret-pass"));
+        return service.register(new RegisterUserCommand(username, "Juan Perez", email, "Secret-pass-1"));
     }
 
     private String wrongCode() {

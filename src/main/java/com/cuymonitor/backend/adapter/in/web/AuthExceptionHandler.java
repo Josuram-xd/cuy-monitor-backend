@@ -39,7 +39,12 @@ public class AuthExceptionHandler {
 
     @ExceptionHandler(WeakPasswordException.class)
     public ResponseEntity<Map<String, Object>> handleWeakPassword(WeakPasswordException ex) {
-        return error(HttpStatus.BAD_REQUEST, ApiError.BAD_REQUEST, ex.getMessage());
+        Map<String, Object> body = ApiError.body(ApiError.BAD_REQUEST, ex.getMessage());
+        if (!ex.getRules().isEmpty()) {
+            // the broken rules as codes, e.g. "MIN_LENGTH,SPECIAL": the dashboard ticks its checklist with them
+            body.put("fields", Map.of("password", String.join(",", ex.getRules())));
+        }
+        return ResponseEntity.badRequest().body(body);
     }
 
     @ExceptionHandler({InvalidCredentialsException.class, InvalidOtpException.class, AccountDisabledException.class,

@@ -8,7 +8,8 @@ public record RegisterRequest(
         @NotBlank @Size(max = 50) String username,
         @NotBlank @Size(max = 150) String fullName,
         @NotBlank @Email @Size(max = 254) String email,
-        @NotBlank String password) {
+        // the real rules are in PasswordPolicy; the cap only stops a huge body from reaching it
+        @NotBlank @Size(max = 200) String password) {
 
     @Override
     public String toString() {

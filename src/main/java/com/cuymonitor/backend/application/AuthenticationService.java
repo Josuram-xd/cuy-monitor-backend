@@ -66,7 +66,7 @@ public class AuthenticationService implements RegisterUserUseCase, LoginUseCase,
     @Override
     @Transactional
     public LoginChallenge register(RegisterUserCommand command) {
-        PasswordPolicy.validate(command.password());
+        PasswordPolicy.validate(command.password(), command.username(), command.email());
         Instant now = clock.instant();
         User user = User.register(command.username(), command.fullName(), command.email(),
                 passwordHasher.hashPassword(command.password()), now);

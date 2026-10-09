@@ -230,7 +230,7 @@ Session `STATELESS`. CORS and the WebSocket origin only for `http://localhost:51
 
 ### 4.3 Security rules
 
-- Password hashed with **BCrypt**; policy 8–72 characters. OTP code also stored **hashed**.
+- Password hashed with **BCrypt**; policy: 10–64 characters, lowercase + uppercase + digit + special character, no spaces, not a well-known password, not made of the username or email (`PasswordPolicy`). The dashboard shows the same checklist while typing; the backend decides. OTP code also stored **hashed**.
 - OTP: single use, expires in 5 min, max 5 attempts; requesting a new code revokes the previous ones of that user.
 - Access JWT HS256, secret ≥ 32 bytes from `APP_JWT_SECRET`, **15 min**. Claims `sub` (user id), `iat`, `exp`, `iss`, `jti`, `sid` (session id = refresh family). It travels only in an `HttpOnly` cookie, so DevTools storage and JavaScript never see it.
 - Logout and revocation: the `jti` and the `sid` go to `revoked_token` and `RevokedTokenValidator` (part of the `JwtDecoder`, so REST and WebSocket) rejects them. Revoking the `sid` also kills the access tokens issued before the last refresh; it is remembered for one access lifetime (15 min), after that nothing of that session can be valid.
