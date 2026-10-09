@@ -109,7 +109,7 @@
 
 ### Task 7 — Observer + WebSocket
 
-- [ ] **Task 7.1** — `feat(observer): add AlertObserver output port and AlertPublisher`
+- [x] **Task 7.1** — `feat(observer): add AlertObserver output port and AlertPublisher`
   `AlertObserver` en `domain/port/out/`, `AlertPublisher` en `domain/notification/`.
 - [ ] **Task 7.2** — `feat(observer): add DatabaseAlertObserver and LogAlertObserver`
   En `adapter/out/notification/`; `DatabaseAlertObserver` guarda usando el puerto `AlertRepository`.
