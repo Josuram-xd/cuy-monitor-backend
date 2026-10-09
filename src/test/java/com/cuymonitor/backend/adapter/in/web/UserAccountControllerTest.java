@@ -71,9 +71,11 @@ class UserAccountControllerTest {
 
         mvc.perform(get("/api/v1/account/profile").with(token()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(USER_ID.toString()))
                 .andExpect(jsonPath("$.username").value("juan"))
-                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.fullName").exists())
+                .andExpect(jsonPath("$.id").doesNotExist())
+                .andExpect(jsonPath("$.email").doesNotExist())
+                .andExpect(jsonPath("$.status").doesNotExist())
                 .andExpect(jsonPath("$.passwordHash").doesNotExist());
     }
 

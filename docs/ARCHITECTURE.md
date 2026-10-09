@@ -369,7 +369,7 @@ Producers: `ai-service` (`BEHAVIOR`, `AUDIO`) calls `http://backend:8080` inside
 | `POST /api/v1/auth/register` | `{ username, fullName, email, password }` | `201 { challengeId, expiresAt }` · `400` invalid / weak password · `409` username or email taken |
 | `POST /api/v1/auth/login` | `{ username, password }` | `200 { challengeId, expiresAt }` · `401` invalid credentials |
 | `POST /api/v1/auth/otp/verify` | `{ challengeId, code }` | `200 { accessToken, tokenType: "Bearer", expiresAt }` · `401` invalid / expired / used code |
-| `GET /api/v1/account/profile` | — | `200 { id, username, fullName, email, status, createdAt }` |
+| `GET /api/v1/account/profile` | — | `200 { username, fullName }` |
 | `PUT /api/v1/account/profile` | `{ fullName }` | `200` user |
 | `PUT /api/v1/account/password` | `{ currentPassword, newPassword }` | `204` · `401` wrong current password |
 | `DELETE /api/v1/account` | `{ currentPassword }` | `204` (account `DISABLED`) · `401` wrong current password |

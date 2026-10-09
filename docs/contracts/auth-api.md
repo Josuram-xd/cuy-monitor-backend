@@ -92,13 +92,10 @@ All these routes need `Authorization: Bearer <accessToken>`. The account is alwa
 `200 OK`
 
 ```json
-{
-  "id": "3f2a…", "username": "juan", "fullName": "Juan Perez", "email": "juan@mail.com",
-  "status": "ACTIVE", "createdAt": "2026-10-01T10:00:00Z", "updatedAt": "2026-10-01T10:00:00Z"
-}
+{ "username": "juan", "fullName": "Juan Perez" }
 ```
 
-The password hash is never returned.
+On purpose it returns only what the screen shows: no id, email, status, timestamps or password hash.
 
 ### `PUT /api/v1/account/profile`
 
