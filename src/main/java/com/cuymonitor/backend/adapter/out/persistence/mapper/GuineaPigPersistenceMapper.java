@@ -3,6 +3,7 @@ package com.cuymonitor.backend.adapter.out.persistence.mapper;
 import com.cuymonitor.backend.adapter.out.persistence.entity.CageJpaEntity;
 import com.cuymonitor.backend.adapter.out.persistence.entity.GuineaPigJpaEntity;
 import com.cuymonitor.backend.domain.model.GuineaPig;
+import com.cuymonitor.backend.domain.model.GuineaPigProfile;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -16,7 +17,11 @@ public class GuineaPigPersistenceMapper {
                 guineaPig.getStatus(),
                 guineaPig.getStatusSince(),
                 guineaPig.isActive(),
-                guineaPig.getCreatedAt());
+                guineaPig.getCreatedAt(),
+                guineaPig.getProfile().breed(),
+                guineaPig.getProfile().coatColor(),
+                guineaPig.getProfile().initialWeightGrams(),
+                guineaPig.getProfile().notes());
     }
 
     public GuineaPig toDomain(GuineaPigJpaEntity entity) {
@@ -28,6 +33,8 @@ public class GuineaPigPersistenceMapper {
                 entity.getStatus(),
                 entity.getStatusSince(),
                 entity.isActive(),
-                entity.getCreatedAt());
+                entity.getCreatedAt(),
+                new GuineaPigProfile(entity.getBreed(), entity.getCoatColor(), entity.getInitialWeightGrams(),
+                        entity.getNotes()));
     }
 }

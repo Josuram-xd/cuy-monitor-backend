@@ -40,7 +40,8 @@ public class GuineaPigService implements ListGuineaPigsUseCase, RegisterGuineaPi
             throw new ColorAlreadyUsedException();
         }
         return guineaPigs.save(
-                GuineaPig.register(command.cageCode(), command.name(), command.markColor(), clock.instant()));
+                GuineaPig.register(command.cageCode(), command.name(), command.markColor(), command.profile(),
+                        clock.instant()));
     }
 
     private void requireCage(String cageCode) {

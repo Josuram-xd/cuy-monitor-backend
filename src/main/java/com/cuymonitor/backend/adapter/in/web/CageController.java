@@ -49,6 +49,6 @@ public class CageController {
     public GuineaPigResponse registerGuineaPig(@PathVariable String cageId,
                                                @Valid @RequestBody RegisterGuineaPigRequest request) {
         return GuineaPigResponse.from(registerGuineaPigUseCase.register(
-                new RegisterGuineaPigCommand(cageId, request.name(), request.markColor())));
+                new RegisterGuineaPigCommand(cageId, request.name(), request.markColor(), request.profile())));
     }
 }

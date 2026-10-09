@@ -49,6 +49,6 @@ public class InMemoryGuineaPigRepository implements GuineaPigRepository {
 
     private static GuineaPig copy(GuineaPig g, long id) {
         return GuineaPig.restore(id, g.getCageCode(), g.getName(), g.getMarkColor(), g.getStatus(),
-                g.getStatusSince(), g.isActive(), g.getCreatedAt());
+                g.getStatusSince(), g.isActive(), g.getCreatedAt(), g.getProfile());
     }
 }

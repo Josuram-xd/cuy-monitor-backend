@@ -5,7 +5,10 @@ import com.cuymonitor.backend.config.SecurityConfig;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
 import com.cuymonitor.backend.domain.exception.ColorAlreadyUsedException;
 import com.cuymonitor.backend.domain.model.CageHealthSummary;
+import com.cuymonitor.backend.domain.model.CoatColor;
 import com.cuymonitor.backend.domain.model.GuineaPig;
+import com.cuymonitor.backend.domain.model.GuineaPigBreed;
+import com.cuymonitor.backend.domain.model.GuineaPigProfile;
 import com.cuymonitor.backend.domain.model.HealthStatus;
 import com.cuymonitor.backend.domain.model.MarkColor;
 import com.cuymonitor.backend.domain.port.in.GetCageHealthUseCase;
@@ -25,6 +28,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import java.time.Instant;
 import java.util.List;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
@@ -87,6 +91,55 @@ class CageControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(7))
                 .andExpect(jsonPath("$.status").value("NORMAL"));
+    }
+
+    @Test
+    void registersAGuineaPigWithItsProfile() throws Exception {
+        GuineaPigProfile profile = new GuineaPigProfile(GuineaPigBreed.TEDDY, CoatColor.CREAM, 850, "tranquila");
+        given(registerGuineaPigUseCase.register(argThat(c -> "Canela".equals(c.name()) && profile.equals(c.profile()))))
+                .willReturn(GuineaPig.restore(7L, "cage-1", "Canela", MarkColor.RED, HealthStatus.NORMAL, NOW, true,
+                        NOW, profile));
+
+        mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Canela\",\"markColor\":\"RED\",\"breed\":\"TEDDY\","
+                                + "\"coatColor\":\"CREAM\",\"initialWeightGrams\":850,\"notes\":\"  tranquila \"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.breed").value("TEDDY"))
+                .andExpect(jsonPath("$.coatColor").value("CREAM"))
+                .andExpect(jsonPath("$.initialWeightGrams").value(850))
+                .andExpect(jsonPath("$.notes").value("tranquila"));
+    }
+
+    @Test
+    void theProfileIsNullWhenTheGuineaPigHasNone() throws Exception {
+        given(listGuineaPigsUseCase.list("cage-1")).willReturn(List.of(pig(1, "Canela", MarkColor.RED)));
+
+        mvc.perform(get("/api/v1/cages/cage-1/guinea-pigs").with(token()))
+                .andExpect(jsonPath("$[0].breed").value(nullValue()))
+                .andExpect(jsonPath("$[0].notes").value(nullValue()));
+    }
+
+    @Test
+    void rejectsAnInvalidProfileWith400() throws Exception {
+        String base = "{\"name\":\"Canela\",\"markColor\":\"RED\",";
+        mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
+                        .content(base + "\"breed\":\"DRAGON\"}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
+                        .content(base + "\"coatColor\":\"PINK\"}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
+                        .content(base + "\"initialWeightGrams\":5}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.initialWeightGrams").exists());
+        mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
+                        .content(base + "\"initialWeightGrams\":5000}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
+                        .content(base + "\"notes\":\"" + "a".repeat(501) + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.notes").exists());
+        verifyNoInteractions(registerGuineaPigUseCase);
     }
 
     @Test

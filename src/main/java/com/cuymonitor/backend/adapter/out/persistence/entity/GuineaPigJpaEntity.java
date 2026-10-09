@@ -1,5 +1,7 @@
 package com.cuymonitor.backend.adapter.out.persistence.entity;
 
+import com.cuymonitor.backend.domain.model.CoatColor;
+import com.cuymonitor.backend.domain.model.GuineaPigBreed;
 import com.cuymonitor.backend.domain.model.HealthStatus;
 import com.cuymonitor.backend.domain.model.MarkColor;
 import jakarta.persistence.Column;
@@ -47,11 +49,31 @@ public class GuineaPigJpaEntity {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "breed", length = 20)
+    private GuineaPigBreed breed;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "coat_color", length = 20)
+    private CoatColor coatColor;
+
+    @Column(name = "initial_weight_grams")
+    private Integer initialWeightGrams;
+
+    @Column(name = "notes", length = 500)
+    private String notes;
+
     protected GuineaPigJpaEntity() {
     }
 
     public GuineaPigJpaEntity(Long id, CageJpaEntity cage, String name, MarkColor markColor, HealthStatus status,
                               Instant statusSince, boolean active, Instant createdAt) {
+        this(id, cage, name, markColor, status, statusSince, active, createdAt, null, null, null, null);
+    }
+
+    public GuineaPigJpaEntity(Long id, CageJpaEntity cage, String name, MarkColor markColor, HealthStatus status,
+                              Instant statusSince, boolean active, Instant createdAt, GuineaPigBreed breed,
+                              CoatColor coatColor, Integer initialWeightGrams, String notes) {
         this.id = id;
         this.cage = cage;
         this.name = name;
@@ -60,6 +82,10 @@ public class GuineaPigJpaEntity {
         this.statusSince = statusSince;
         this.active = active;
         this.createdAt = createdAt;
+        this.breed = breed;
+        this.coatColor = coatColor;
+        this.initialWeightGrams = initialWeightGrams;
+        this.notes = notes;
     }
 
     public Long getId() {
@@ -92,5 +118,21 @@ public class GuineaPigJpaEntity {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public GuineaPigBreed getBreed() {
+        return breed;
+    }
+
+    public CoatColor getCoatColor() {
+        return coatColor;
+    }
+
+    public Integer getInitialWeightGrams() {
+        return initialWeightGrams;
+    }
+
+    public String getNotes() {
+        return notes;
     }
 }

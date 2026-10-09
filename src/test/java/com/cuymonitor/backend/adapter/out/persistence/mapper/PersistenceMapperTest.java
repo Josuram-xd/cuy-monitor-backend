@@ -12,7 +12,10 @@ import com.cuymonitor.backend.domain.model.Cage;
 import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.HealthEvent;
 import com.cuymonitor.backend.domain.model.HealthStatus;
+import com.cuymonitor.backend.domain.model.CoatColor;
 import com.cuymonitor.backend.domain.model.GuineaPig;
+import com.cuymonitor.backend.domain.model.GuineaPigBreed;
+import com.cuymonitor.backend.domain.model.GuineaPigProfile;
 import com.cuymonitor.backend.domain.model.MarkColor;
 import com.cuymonitor.backend.domain.model.StateTransition;
 import com.cuymonitor.backend.domain.model.WeightReading;
@@ -49,6 +52,29 @@ class PersistenceMapperTest {
 
         assertThat(mapper.toDomain(mapper.toEntity(guineaPig, CAGE_ENTITY)).getName()).isEqualTo("Canela");
         assertThat(mapper.toDomain(mapper.toEntity(guineaPig, CAGE_ENTITY)).getId()).isEqualTo(8L);
+    }
+
+    @Test
+    void mapsTheGuineaPigProfileBothWays() {
+        GuineaPigPersistenceMapper mapper = new GuineaPigPersistenceMapper();
+        GuineaPigProfile profile = new GuineaPigProfile(GuineaPigBreed.ABYSSINIAN, CoatColor.BICOLOR, 920, "activo");
+        GuineaPig guineaPig = GuineaPig.restore(
+                8L, "cage-1", "Canela", MarkColor.RED, HealthStatus.NORMAL, NOW, true, NOW, profile);
+
+        GuineaPigJpaEntity entity = mapper.toEntity(guineaPig, CAGE_ENTITY);
+
+        assertThat(entity.getBreed()).isEqualTo(GuineaPigBreed.ABYSSINIAN);
+        assertThat(entity.getCoatColor()).isEqualTo(CoatColor.BICOLOR);
+        assertThat(entity.getInitialWeightGrams()).isEqualTo(920);
+        assertThat(entity.getNotes()).isEqualTo("activo");
+        assertThat(mapper.toDomain(entity).getProfile()).isEqualTo(profile);
+    }
+
+    @Test
+    void aGuineaPigStoredWithoutProfileComesBackWithAnEmptyOne() {
+        GuineaPigPersistenceMapper mapper = new GuineaPigPersistenceMapper();
+
+        assertThat(mapper.toDomain(GUINEA_PIG_ENTITY).getProfile()).isEqualTo(GuineaPigProfile.EMPTY);
     }
 
     @Test

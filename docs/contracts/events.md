@@ -122,6 +122,8 @@ Values are `UPPER_SNAKE_CASE` strings, identical in JSON, Java and PostgreSQL (`
 |---|---|---|
 | `EventType` | `BEHAVIOR`, `AUDIO`, `WEIGHT` | envelope `type` |
 | `MarkColor` | `RED`, `BLUE`, `GREEN`, `YELLOW`, `ORANGE`, `PURPLE`, `BLACK`, `WHITE` | `BEHAVIOR.color`; guinea pig registration |
+| `GuineaPigBreed` | `AMERICAN`, `PERUVIAN`, `ABYSSINIAN`, `TEDDY`, `SILKIE`, `SKINNY`, `CRESTED`, `OTHER` | guinea pig registration (not sent by producers) |
+| `CoatColor` | `WHITE`, `BLACK`, `BROWN`, `CREAM`, `GRAY`, `CINNAMON`, `BICOLOR`, `TRICOLOR` | guinea pig registration (not sent by producers) |
 | `HealthStatus` | `NORMAL`, `OBSERVED`, `ALERT`, `CRITICAL` | REST API and WebSocket (not sent by producers) |
 | `AlertStatus` | `OPEN`, `REVIEWED` | REST API and WebSocket (not sent by producers) |
 | `UserStatus` | `PENDING_VERIFICATION`, `ACTIVE`, `DISABLED` | auth API |
