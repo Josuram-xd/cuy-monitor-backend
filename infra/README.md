@@ -26,13 +26,13 @@ ssh -i cuy-key-pair.pem admin@<IP o dominio>
 BACKEND_REF=feature/x AI_REF=feature/y ~/cuy-monitor-backend/infra/deploy.sh   # probar ramas
 ```
 
-`deploy.sh` crea el swap de 2 GB si falta, actualiza los 4 repos (`git reset` exacto a `origin/<rama>`: el servidor no se edita), toma la contraseña vigente de la base, instala la tarea nocturna y hace `docker compose up -d --build --remove-orphans`. Termina esperando `https://<dominio>/actuator/health` y `/ai/health`.
+`deploy.sh` crea el swap de 2 GB si falta, actualiza los 4 repos (`git reset` exacto a `origin/<rama>`: el servidor no se edita), toma la contraseña vigente de la base, instala el temporizador nocturno y hace `docker compose up -d --build --remove-orphans`. Termina esperando `https://<dominio>/actuator/health` y `/ai/health`.
 
 ### `infra/.env` (en el servidor, nunca en git; ver `.env.example`)
 
 `DOMAIN`, datos de la base (`DB_*`, `DB_SECRET_ID`), `API_KEY`, `APP_JWT_SECRET`, y para los correos del código de verificación `MAIL_*` (cuenta de Gmail con **contraseña de aplicación**). Sin `MAIL_*` válidos nadie puede registrarse ni entrar: el código no llega.
 
-La contraseña del usuario maestro de RDS **rota sola cada 7 días**; `refresh-db-password.sh` (cron a las 04:17) la copia de Secrets Manager al `.env` y reinicia el backend si cambió.
+La contraseña del usuario maestro de RDS **rota sola cada 7 días**; `refresh-db-password.sh` (temporizador de systemd `cuy-refresh-db.timer`, 04:17) la copia de Secrets Manager al `.env` y reinicia el backend si cambió.
 
 ## Base de datos pública (solo para la demo)
 

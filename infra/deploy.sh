@@ -29,7 +29,7 @@ main() {
 
   cd "$infra_dir"
   "$infra_dir/refresh-db-password.sh" --no-restart
-  install_cron "$infra_dir"
+  install_timer "$infra_dir"
 
   docker compose up -d --build --remove-orphans
   docker compose ps
@@ -59,10 +59,31 @@ sync_repo() {
   echo "$name -> $ref ($(git -C "$base/$name" rev-parse --short HEAD))"
 }
 
-install_cron() {
+install_timer() {
   # the RDS master password rotates by itself every 7 days: pick the new one up every night
-  local line="17 4 * * * $1/refresh-db-password.sh >> \$HOME/refresh-db-password.log 2>&1"
-  ( crontab -l 2>/dev/null | grep -v refresh-db-password.sh || true; echo "$line" ) | crontab -
+  # (a systemd timer: a minimal Debian has no cron)
+  sudo tee /etc/systemd/system/cuy-refresh-db.service >/dev/null <<UNIT
+[Unit]
+Description=Copy the rotated RDS password into the stack .env
+
+[Service]
+Type=oneshot
+User=$USER
+ExecStart=$1/refresh-db-password.sh
+UNIT
+  sudo tee /etc/systemd/system/cuy-refresh-db.timer >/dev/null <<UNIT
+[Unit]
+Description=Daily RDS password refresh
+
+[Timer]
+OnCalendar=*-*-* 04:17:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+UNIT
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now cuy-refresh-db.timer >/dev/null
 }
 
 wait_for_health() {
