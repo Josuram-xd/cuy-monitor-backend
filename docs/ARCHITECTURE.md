@@ -224,7 +224,7 @@ LOGOUT     POST /api/v1/auth/logout                                 → 204; jti
 | `/ws` (HTTP handshake) | Open; `CookieHandshakeInterceptor` copies the access cookie to the session and the JWT is checked on the STOMP `CONNECT` frame by a `ChannelInterceptor` |
 | everything else under `/api/v1/**` | `access_token` cookie, or `Authorization: Bearer <jwt>` for tools (OAuth2 resource server, HS256; `CookieBearerTokenResolver`) |
 
-Session `STATELESS`. CORS only for `http://localhost:5173` in the `dev` profile, with credentials (in prod the dashboard is served from the same domain).
+Session `STATELESS`. CORS and the WebSocket origin only for `http://localhost:5173` in the `dev` profile (`app.ws.allowed-origins` in `application-dev.yml`), with credentials; in prod the dashboard is served from the same domain.
 
 **CSRF decision:** no CSRF token. Both cookies are `HttpOnly; Secure; SameSite=Strict`, so the browser never attaches them to a request that starts on another site, and the dashboard and the API share one site behind Caddy. A forged cross-site request therefore arrives without credentials and gets `401`. If the dashboard were ever served from a different site, this decision must be revisited (CSRF token or `SameSite=Lax` plus a token).
 
@@ -390,9 +390,9 @@ Producers: `ai-service` (`BEHAVIOR`, `AUDIO`) calls `http://backend:8080` inside
 | `POST /api/v1/ingestion/events` | `X-API-Key` | ai-service, serial_bridge | ✅ (receives and logs; pipeline pending) |
 | `/api/v1/auth/**` | public | dashboard | planned (Task 18) |
 | `/api/v1/account/**` | JWT | dashboard | planned (Task 19) |
-| `GET /api/v1/cages/{id}/health` | JWT | dashboard | planned |
-| `GET /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | planned |
-| `POST /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | planned |
+| `GET /api/v1/cages/{id}/health` | JWT | dashboard | ✅ |
+| `GET /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | ✅ |
+| `POST /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | ✅ |
 | `GET /api/v1/guinea-pigs/{id}/history?from=&to=` | JWT | dashboard | planned |
 | `GET /api/v1/alerts?status=OPEN` | JWT | dashboard | planned |
 | `PATCH /api/v1/alerts/{id}` | JWT | dashboard | planned |

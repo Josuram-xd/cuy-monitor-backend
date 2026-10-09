@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -29,6 +30,11 @@ public class InMemoryAlertRepository implements AlertRepository {
         }
         alerts.put(alert.getId(), copy(alert));
         return alert;
+    }
+
+    @Override
+    public Optional<Alert> findById(long id) {
+        return Optional.ofNullable(alerts.get(id)).map(InMemoryAlertRepository::copy);
     }
 
     @Override

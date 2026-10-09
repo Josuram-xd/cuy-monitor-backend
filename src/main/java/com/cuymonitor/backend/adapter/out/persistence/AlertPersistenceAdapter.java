@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @Profile("!memory")
@@ -40,6 +41,12 @@ public class AlertPersistenceAdapter implements AlertRepository {
                 : PersistenceEntityResolver.requireGuineaPig(
                         guineaPigJpaRepository, alert.getGuineaPigId(), alert.getCageCode());
         return mapper.toDomain(alertJpaRepository.save(mapper.toEntity(alert, cage, guineaPig)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Alert> findById(long id) {
+        return alertJpaRepository.findById(id).map(mapper::toDomain);
     }
 
     @Override
