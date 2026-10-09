@@ -98,7 +98,7 @@
   `domain/health/chain/`: `ValidationHandler`, `IdentificationHandler`, `BehaviorThresholdHandler`, `SustainedAnomalyHandler` (lógica simple por ahora; reciben los puertos que necesitan por constructor).
 - [x] **Task 6.2** — `feat(chain): add HandlerChainBuilder`
 - [x] **Task 6.3** — `feat(state): add HealthState and the four states`
-- [ ] **Task 6.4** — `feat(state): add GuineaPigHealthContext`
+- [x] **Task 6.4** — `feat(state): add GuineaPigHealthContext`
 - [ ] **Task 6.5** — `feat(composite): add HealthComponent, leaves and CageHealth`
 - [ ] **Task 6.6** — `feat(application): add EventProcessingService implementing ProcessEventUseCase`
   Orquesta cadena → estado → composite → `AlertPublisher`.
