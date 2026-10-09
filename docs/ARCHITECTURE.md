@@ -394,6 +394,7 @@ Producers: `ai-service` (`BEHAVIOR`, `AUDIO`) calls `http://backend:8080` inside
 | `GET /api/v1/cages/{id}/health` | JWT | dashboard | ✅ |
 | `GET /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | ✅ |
 | `POST /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | ✅ |
+| `DELETE /api/v1/cages/{id}/guinea-pigs/{guineaPigId}` | JWT | dashboard | ✅ |
 | `GET /api/v1/guinea-pigs/{id}/history?from=&to=` | JWT | dashboard | planned |
 | `GET /api/v1/alerts?status=OPEN` | JWT | dashboard | planned |
 | `PATCH /api/v1/alerts/{id}` | JWT | dashboard | planned |

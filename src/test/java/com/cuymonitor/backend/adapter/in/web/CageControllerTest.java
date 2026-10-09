@@ -1,5 +1,11 @@
 package com.cuymonitor.backend.adapter.in.web;
 
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.mockito.Mockito.verify;
+import static org.mockito.BDDMockito.willThrow;
+import com.cuymonitor.backend.domain.port.in.DeleteGuineaPigUseCase;
+import com.cuymonitor.backend.domain.exception.GuineaPigNotFoundException;
 import com.cuymonitor.backend.config.JwtConfig;
 import com.cuymonitor.backend.config.SecurityConfig;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
@@ -55,6 +61,8 @@ class CageControllerTest {
     private ListGuineaPigsUseCase listGuineaPigsUseCase;
     @MockitoBean
     private RegisterGuineaPigUseCase registerGuineaPigUseCase;
+    @MockitoBean
+    private DeleteGuineaPigUseCase deleteGuineaPigUseCase;
     @MockitoBean
     private RevokedTokenRepository revokedTokenRepository;
 
@@ -140,6 +148,39 @@ class CageControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fields.notes").exists());
         verifyNoInteractions(registerGuineaPigUseCase);
+    }
+
+    @Test
+    void deletesAGuineaPigAndAnswers204() throws Exception {
+        mvc.perform(delete("/api/v1/cages/cage-1/guinea-pigs/7").with(token()))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
+
+        verify(deleteGuineaPigUseCase).delete("cage-1", 7L);
+    }
+
+    @Test
+    void answers404WhenTheGuineaPigOrTheCageIsUnknown() throws Exception {
+        willThrow(new GuineaPigNotFoundException()).given(deleteGuineaPigUseCase).delete("cage-1", 99L);
+        willThrow(new CageNotFoundException()).given(deleteGuineaPigUseCase).delete("nope", 1L);
+
+        mvc.perform(delete("/api/v1/cages/cage-1/guinea-pigs/99").with(token()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("not_found"))
+                .andExpect(jsonPath("$.message").value("guinea pig not found"));
+        mvc.perform(delete("/api/v1/cages/nope/guinea-pigs/1").with(token())).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void rejectsAnIdThatIsNotANumberWith400() throws Exception {
+        mvc.perform(delete("/api/v1/cages/cage-1/guinea-pigs/abc").with(token())).andExpect(status().isBadRequest());
+        verifyNoInteractions(deleteGuineaPigUseCase);
+    }
+
+    @Test
+    void deletingNeedsASession() throws Exception {
+        mvc.perform(delete("/api/v1/cages/cage-1/guinea-pigs/7")).andExpect(status().isUnauthorized());
+        verifyNoInteractions(deleteGuineaPigUseCase);
     }
 
     @Test

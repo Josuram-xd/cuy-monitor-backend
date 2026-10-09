@@ -57,6 +57,7 @@ Summary:
 | `GET /api/v1/cages/{cageId}/health` | Cage status summary | `200` |
 | `GET /api/v1/cages/{cageId}/guinea-pigs` | Guinea pigs with current status | `200` |
 | `POST /api/v1/cages/{cageId}/guinea-pigs` | Register a guinea pig | `201` |
+| `DELETE /api/v1/cages/{cageId}/guinea-pigs/{id}` | Delete a guinea pig (soft delete) | `204` |
 | `GET /api/v1/guinea-pigs/{id}/history?from=&to=` | State changes and behavior windows | `200` |
 | `GET /api/v1/alerts?status=` | List alerts | `200` |
 | `PATCH /api/v1/alerts/{id}` | Mark an alert as reviewed | `200` |
@@ -118,6 +119,10 @@ Active guinea pigs only.
 | `notes` | Optional, up to 500 characters (trimmed; blank is stored as `null`). |
 
 `201` returns the created guinea pig (same shape as an item of 3.2, `status: "NORMAL"`). `400` invalid body · `409` color already used in the cage · `404` unknown cage.
+
+### 3.3b `DELETE /api/v1/cages/{cageId}/guinea-pigs/{id}`
+
+No body. `204 No Content`. **Soft delete**: the guinea pig stops appearing in the list and in the cage health, and its mark color is free again; its events, alerts and history are kept. `404` if the cage does not exist, or the id is not an **active** guinea pig of that cage (another cage's id, unknown, or already deleted). Deleting twice answers `404` the second time.
 
 ### 3.4 `GET /api/v1/guinea-pigs/{id}/history?from=&to=`
 

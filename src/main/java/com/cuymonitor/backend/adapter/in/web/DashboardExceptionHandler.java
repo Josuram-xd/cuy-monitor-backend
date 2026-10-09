@@ -2,6 +2,7 @@ package com.cuymonitor.backend.adapter.in.web;
 
 import com.cuymonitor.backend.domain.exception.AlertNotFoundException;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
+import com.cuymonitor.backend.domain.exception.GuineaPigNotFoundException;
 import com.cuymonitor.backend.domain.exception.ColorAlreadyUsedException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,11 @@ public class DashboardExceptionHandler {
 
     @ExceptionHandler(CageNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(CageNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, ApiError.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(GuineaPigNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleGuineaPigNotFound(GuineaPigNotFoundException ex) {
         return error(HttpStatus.NOT_FOUND, ApiError.NOT_FOUND, ex.getMessage());
     }
 
