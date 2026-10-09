@@ -1,7 +1,14 @@
 package com.cuymonitor.backend.config;
 
+import com.cuymonitor.backend.adapter.in.ingestion.adapter.EventSourceAdapter;
+import com.cuymonitor.backend.adapter.in.ingestion.factory.AdapterFactorySelector;
 import com.cuymonitor.backend.adapter.in.web.IngestionController;
 import com.cuymonitor.backend.adapter.in.web.SystemController;
+import com.cuymonitor.backend.domain.model.EventType;
+import com.cuymonitor.backend.domain.model.HealthEvent;
+import com.cuymonitor.backend.domain.model.WeightSignal;
+import com.cuymonitor.backend.domain.port.in.ProcessEventUseCase;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -23,6 +30,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -36,7 +44,7 @@ class SecurityConfigTest {
 
     private static final String EVENT = """
             {"eventId":"%s","type":"WEIGHT","cageId":"cage-1","timestamp":"2026-10-01T10:00:00Z",
-             "source":"arduino","schemaVersion":1,"payload":{"grams":1200}}
+             "source":"arduino","schemaVersion":1,"payload":{"grams":1200,"stable":true}}
             """.formatted(UUID.randomUUID());
 
     @Autowired
@@ -47,6 +55,23 @@ class SecurityConfigTest {
 
     @MockitoBean
     private JdbcTemplate jdbcTemplate;
+
+    @MockitoBean
+    private AdapterFactorySelector adapterFactorySelector;
+
+    @MockitoBean
+    private EventSourceAdapter eventSourceAdapter;
+
+    @MockitoBean
+    private ProcessEventUseCase processEventUseCase;
+
+    @BeforeEach
+    void configureIngestion() {
+        given(adapterFactorySelector.createAdapterFor(EventType.WEIGHT)).willReturn(eventSourceAdapter);
+        given(eventSourceAdapter.adapt(any())).willReturn(new HealthEvent(
+                UUID.randomUUID(), "cage-1", Instant.parse("2026-10-01T10:00:00Z"), "arduino",
+                new WeightSignal(1200, true)));
+    }
 
     @Test
     void protectedRouteWithoutTokenReturns401() throws Exception {
@@ -82,6 +107,7 @@ class SecurityConfigTest {
         mvc.perform(post("/api/v1/ingestion/events").header("X-API-Key", "test-key")
                         .contentType(MediaType.APPLICATION_JSON).content(EVENT))
                 .andExpect(status().isAccepted());
+        verify(processEventUseCase).process(any(HealthEvent.class));
     }
 
     @Test
