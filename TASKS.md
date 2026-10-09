@@ -84,7 +84,7 @@
   `adapter/in/ingestion/adapter/`.
 - [x] **Task 5.2** — `feat(ingestion): add camera, audio and weight adapters`
   `CameraBehaviorAdapter`, `AudioClassificationAdapter`, `WeightReadingAdapter` → `HealthEvent`.
-- [ ] **Task 5.3** — `feat(ingestion): add AdapterFactory and concrete factories`
+- [x] **Task 5.3** — `feat(ingestion): add AdapterFactory and concrete factories`
   `adapter/in/ingestion/factory/`.
 - [ ] **Task 5.4** — `feat(domain): add ProcessEventUseCase input port` *(contrato entre la entrada y el núcleo: revisarlo en equipo)*
 - [ ] **Task 5.5** — `feat(web): wire IngestionController to AdapterFactory and ProcessEventUseCase`
