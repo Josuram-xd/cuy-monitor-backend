@@ -2,3 +2,8 @@ spring:
   datasource:
     # RDS only takes encrypted connections
     url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME}?sslmode=require
+
+server:
+  # Caddy terminates HTTPS and talks plain http to the backend. Trusting its X-Forwarded-* headers makes the
+  # WebSocket origin check (https://domain vs the request) pass. Safe: no port of the backend is published.
+  forward-headers-strategy: framework
