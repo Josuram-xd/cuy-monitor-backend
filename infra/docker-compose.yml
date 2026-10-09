@@ -53,6 +53,8 @@ services:
       context: ../../cuy-monitor-dashboard
       args:
         VITE_USE_MOCKS: "false"
+        # public id of the Google OAuth client; empty hides "Continuar con Google"
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     image: cuy-monitor-dashboard:local
     restart: unless-stopped
     # No ports published: only reachable through Caddy
