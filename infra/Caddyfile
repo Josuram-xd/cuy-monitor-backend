@@ -15,8 +15,12 @@
 		reverse_proxy backend:8080
 	}
 
+	# Caddy sends Host: backend:8080 to the upstream by default, and the WebSocket origin check compares the
+	# browser's Origin with the Host: keep the original one, or the handshake is refused (403)
 	handle /ws* {
-		reverse_proxy backend:8080
+		reverse_proxy backend:8080 {
+			header_up Host {host}
+		}
 	}
 
 	handle /actuator/health* {
