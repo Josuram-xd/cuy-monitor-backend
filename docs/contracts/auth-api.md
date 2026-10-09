@@ -75,7 +75,7 @@ No body. Reads the `refresh_token` cookie (the browser only sends it to `/api/v1
 
 ### `POST /api/v1/auth/logout`
 
-No body. Always answers `204 No Content` and expires both cookies, even if the access token is already expired or no cookie was sent. It revokes the `jti` of the access token and the whole refresh-token family, so a copied token stops working immediately.
+No body. Always answers `204 No Content` and expires both cookies, even if the access token is already expired or no cookie was sent. It revokes the `jti` of the access token, the whole session (`sid`) and the refresh-token family, so a copied token stops working immediately, including the ones issued before the last refresh.
 
 ## Errors
 
@@ -98,7 +98,7 @@ Every error follows the API convention `{ "error": "<code>", "message": "..." }`
 ## Rules
 
 - Code: 6 digits, valid for **5 minutes**, single use, at most **5 attempts**. Asking for a new one (login) invalidates the previous ones. At most **5 codes per account every 15 minutes**; after that, login answers `429` until the window passes.
-- Access token: JWT signed with HS256, valid for **15 minutes**. Claims: `sub` (user id, UUID), `iss` (`cuy-monitor-backend`), `iat`, `exp`, `jti` (unique id of the token). A token without a valid `jti`, or whose `jti` was revoked, is rejected.
+- Access token: JWT signed with HS256, valid for **15 minutes**. Claims: `sub` (user id, UUID), `iss` (`cuy-monitor-backend`), `iat`, `exp`, `jti` (unique id of the token), `sid` (id of the session: every access token born from one login shares it). A token without a valid `jti` or `sid`, or whose `jti` or `sid` was revoked, is rejected.
 - Refresh token: random 256-bit value, valid for **7 days**, rotated on every use (see `/refresh`). Stored hashed.
 - Logout revokes the tokens on the server (see `/logout`); deleting a cookie in the browser is not enough and is not what the dashboard does.
 - `/api/v1/auth/**` ignores the access token on purpose, so login, refresh and logout work when the old cookie is already expired.

@@ -232,8 +232,8 @@ Session `STATELESS`. CORS only for `http://localhost:5173` in the `dev` profile,
 
 - Password hashed with **BCrypt**; policy 8–72 characters. OTP code also stored **hashed**.
 - OTP: single use, expires in 5 min, max 5 attempts; requesting a new code revokes the previous ones of that user.
-- Access JWT HS256, secret ≥ 32 bytes from `APP_JWT_SECRET`, **15 min**. Claims `sub` (user id), `iat`, `exp`, `iss`, `jti`. It travels only in an `HttpOnly` cookie, so DevTools storage and JavaScript never see it.
-- Logout and revocation: the `jti` goes to `revoked_token` and `RevokedTokenValidator` (part of the `JwtDecoder`, so REST and WebSocket) rejects it until it would have expired anyway.
+- Access JWT HS256, secret ≥ 32 bytes from `APP_JWT_SECRET`, **15 min**. Claims `sub` (user id), `iat`, `exp`, `iss`, `jti`, `sid` (session id = refresh family). It travels only in an `HttpOnly` cookie, so DevTools storage and JavaScript never see it.
+- Logout and revocation: the `jti` and the `sid` go to `revoked_token` and `RevokedTokenValidator` (part of the `JwtDecoder`, so REST and WebSocket) rejects them. Revoking the `sid` also kills the access tokens issued before the last refresh; it is remembered for one access lifetime (15 min), after that nothing of that session can be valid.
 - Refresh token: 256 random bits, 7 days, cookie only sent to `/api/v1/auth`, stored as SHA-256 in `refresh_token`. Rotated on every use inside a family; reusing a rotated token (outside a 10 s grace for parallel tabs) revokes the family. `SessionService` owns all of this.
 - A daily job (`TokenCleanupJob`, 03:00) deletes expired rows of both tables.
 - Generic `401 invalid credentials` on login (hash is computed even when the user doesn't exist). `DISABLED` accounts get the same answer.
