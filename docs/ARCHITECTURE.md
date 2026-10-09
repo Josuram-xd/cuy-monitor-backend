@@ -390,9 +390,9 @@ Producers: `ai-service` (`BEHAVIOR`, `AUDIO`) calls `http://backend:8080` inside
 | `POST /api/v1/ingestion/events` | `X-API-Key` | ai-service, serial_bridge | ✅ (receives and logs; pipeline pending) |
 | `/api/v1/auth/**` | public | dashboard | planned (Task 18) |
 | `/api/v1/account/**` | JWT | dashboard | planned (Task 19) |
-| `GET /api/v1/cages/{id}/health` | JWT | dashboard | planned |
-| `GET /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | planned |
-| `POST /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | planned |
+| `GET /api/v1/cages/{id}/health` | JWT | dashboard | ✅ |
+| `GET /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | ✅ |
+| `POST /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | ✅ |
 | `GET /api/v1/guinea-pigs/{id}/history?from=&to=` | JWT | dashboard | planned |
 | `GET /api/v1/alerts?status=OPEN` | JWT | dashboard | planned |
 | `PATCH /api/v1/alerts/{id}` | JWT | dashboard | planned |
