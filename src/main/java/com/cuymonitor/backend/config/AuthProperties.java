@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 @ConfigurationProperties(prefix = "app.auth")
-public record AuthProperties(Jwt jwt, Refresh refresh, Cookie cookie, Otp otp) {
+public record AuthProperties(Jwt jwt, Refresh refresh, Cookie cookie, Otp otp, Google google) {
 
     public record Jwt(String secret, String issuer, Duration ttl) {
 
@@ -36,6 +36,10 @@ public record AuthProperties(Jwt jwt, Refresh refresh, Cookie cookie, Otp otp) {
 
     /** secure=false is only for plain http outside localhost; production always runs behind https. */
     public record Cookie(boolean secure) {
+    }
+
+    /** Public OAuth client id of the web app (Google Cloud Console). Empty = sign in with Google is off. */
+    public record Google(String clientId) {
     }
 
     public record Otp(Duration ttl, int maxAttempts, int maxRequests, Duration requestWindow) {

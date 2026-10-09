@@ -9,11 +9,13 @@ public class UserPersistenceMapper {
 
     public UserJpaEntity toEntity(User user) {
         return new UserJpaEntity(user.getId(), user.getUsername(), user.getFullName(), user.getEmail(),
-                user.getPasswordHash(), user.getStatus(), user.getCreatedAt(), user.getUpdatedAt());
+                user.getPasswordHash(), user.getGoogleSubject(), user.getStatus(), user.getCreatedAt(),
+                user.getUpdatedAt());
     }
 
     public User toDomain(UserJpaEntity entity) {
         return User.restore(entity.getId(), entity.getUsername(), entity.getFullName(), entity.getEmail(),
-                entity.getPasswordHash(), entity.getStatus(), entity.getCreatedAt(), entity.getUpdatedAt());
+                entity.getPasswordHash(), entity.getGoogleSubject(), entity.getStatus(), entity.getCreatedAt(),
+                entity.getUpdatedAt());
     }
 }

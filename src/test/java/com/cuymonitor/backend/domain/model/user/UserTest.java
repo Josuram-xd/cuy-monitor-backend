@@ -14,6 +14,62 @@ class UserTest {
     private static final Instant NOW = Instant.parse("2026-10-01T10:00:00Z");
 
     @Test
+    void anAccountMadeWithGoogleIsActiveAndHasNoPassword() {
+        User user = User.registerWithGoogle("Ana.Ruiz", " Ana Ruiz ", "Ana@Gmail.com", "google-sub-1", NOW);
+
+        assertThat(user.getStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(user.hasPassword()).isFalse();
+        assertThat(user.getPasswordHash()).isNull();
+        assertThat(user.getGoogleSubject()).isEqualTo("google-sub-1");
+        assertThat(user.getEmail()).isEqualTo("ana@gmail.com");
+        assertThat(user.canLogIn()).isTrue();
+    }
+
+    @Test
+    void anAccountNeedsAPasswordOrAGoogleLogin() {
+        assertThatThrownBy(() -> User.restore(UUID.randomUUID(), "juan", "Juan", "j@mail.com", null, null,
+                UserStatus.ACTIVE, NOW, NOW)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void linkingGoogleToAVerifiedAccountKeepsItsPassword() {
+        User user = User.restore(UUID.randomUUID(), "juan", "Juan", "j@mail.com", "hash", UserStatus.ACTIVE, NOW, NOW);
+
+        user.linkGoogle("sub-1", NOW.plusSeconds(60));
+
+        assertThat(user.getGoogleSubject()).isEqualTo("sub-1");
+        assertThat(user.hasPassword()).isTrue();
+        assertThat(user.getStatus()).isEqualTo(UserStatus.ACTIVE);
+    }
+
+    @Test
+    void linkingGoogleToAnUnverifiedAccountWipesThePasswordSomeoneElseChose() {
+        // pre-hijacking: an attacker registers the victim's email with a password only the attacker knows
+        User user = User.register("victim", "Victim", "victim@mail.com", "attacker-hash", NOW);
+
+        user.linkGoogle("sub-1", NOW.plusSeconds(60));
+
+        assertThat(user.getStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(user.hasPassword()).isFalse();
+        assertThat(user.getPasswordHash()).isNull();
+    }
+
+    @Test
+    void anAccountCannotBeTiedToTwoGoogleIdentities() {
+        User user = User.registerWithGoogle("ana", "Ana", "ana@gmail.com", "sub-1", NOW);
+
+        user.linkGoogle("sub-1", NOW);
+        assertThatThrownBy(() -> user.linkGoogle("sub-2", NOW)).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void aDisabledAccountCannotBeLinked() {
+        User user = User.restore(UUID.randomUUID(), "juan", "Juan", "j@mail.com", "hash", UserStatus.DISABLED, NOW, NOW);
+
+        assertThatThrownBy(() -> user.linkGoogle("sub-1", NOW)).isInstanceOf(AccountDisabledException.class);
+    }
+
+    @Test
     void registerCreatesPendingUserWithNormalizedUsernameAndEmail() {
         User user = User.register("  Juan.Perez ", " Juan Perez ", "Juan@Mail.COM", "hash", NOW);
 

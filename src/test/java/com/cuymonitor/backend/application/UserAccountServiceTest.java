@@ -64,27 +64,56 @@ class UserAccountServiceTest {
 
     @Test
     void changePasswordWithCorrectCurrentPassword() {
-        service.changePassword(new ChangePasswordCommand(userId, "secret-pass", "new-secret-pass"));
+        service.changePassword(new ChangePasswordCommand(userId, "Secret-pass-1", "new-Secret-pass-1"));
 
-        assertThat(users.findById(userId).orElseThrow().getPasswordHash()).isEqualTo("hashed:new-secret-pass");
+        assertThat(users.findById(userId).orElseThrow().getPasswordHash()).isEqualTo("hashed:new-Secret-pass-1");
+    }
+
+    @Test
+    void anAccountMadeWithGoogleCanSetItsFirstPasswordWithoutAnOldOne() {
+        UUID googleUser = users.save(User.registerWithGoogle("ana", "Ana", "ana@gmail.com", "sub-1", CREATED)).getId();
+
+        service.changePassword(new ChangePasswordCommand(googleUser, null, "Brand-new-pass-9"));
+
+        User stored = users.findById(googleUser).orElseThrow();
+        assertThat(stored.hasPassword()).isTrue();
+        assertThat(stored.getPasswordHash()).isEqualTo("hashed:Brand-new-pass-9");
+    }
+
+    @Test
+    void thePasswordPolicyAlsoAppliesToTheFirstPasswordOfAGoogleAccount() {
+        UUID googleUser = users.save(User.registerWithGoogle("ana", "Ana", "ana@gmail.com", "sub-1", CREATED)).getId();
+
+        assertThatThrownBy(() -> service.changePassword(new ChangePasswordCommand(googleUser, null, "weak")))
+                .isInstanceOf(WeakPasswordException.class);
+        assertThat(users.findById(googleUser).orElseThrow().hasPassword()).isFalse();
+    }
+
+    @Test
+    void anAccountMadeWithGoogleCanBeDeactivatedWithoutAPassword() {
+        UUID googleUser = users.save(User.registerWithGoogle("ana", "Ana", "ana@gmail.com", "sub-1", CREATED)).getId();
+
+        service.deactivate(new DeactivateAccountCommand(googleUser, null));
+
+        assertThat(users.findById(googleUser).orElseThrow().getStatus()).isEqualTo(UserStatus.DISABLED);
     }
 
     @Test
     void changePasswordWithWrongCurrentPasswordFails() {
-        assertThatThrownBy(() -> service.changePassword(new ChangePasswordCommand(userId, "wrong", "new-secret-pass")))
+        assertThatThrownBy(() -> service.changePassword(new ChangePasswordCommand(userId, "wrong", "new-Secret-pass-1")))
                 .isInstanceOf(InvalidCredentialsException.class);
-        assertThat(users.findById(userId).orElseThrow().getPasswordHash()).isEqualTo("hashed:secret-pass");
+        assertThat(users.findById(userId).orElseThrow().getPasswordHash()).isEqualTo("hashed:Secret-pass-1");
     }
 
     @Test
     void changePasswordRejectsWeakNewPassword() {
-        assertThatThrownBy(() -> service.changePassword(new ChangePasswordCommand(userId, "secret-pass", "short")))
+        assertThatThrownBy(() -> service.changePassword(new ChangePasswordCommand(userId, "Secret-pass-1", "short")))
                 .isInstanceOf(WeakPasswordException.class);
     }
 
     @Test
     void deactivateWithCorrectPasswordDisablesTheAccount() {
-        service.deactivate(new DeactivateAccountCommand(userId, "secret-pass"));
+        service.deactivate(new DeactivateAccountCommand(userId, "Secret-pass-1"));
 
         User stored = users.findById(userId).orElseThrow();
         assertThat(stored.getStatus()).isEqualTo(UserStatus.DISABLED);
@@ -107,16 +136,16 @@ class UserAccountServiceTest {
         assertThatThrownBy(() -> service.updateProfile(new UpdateProfileCommand(disabledId, "Other")))
                 .isInstanceOf(AccountDisabledException.class);
         assertThatThrownBy(() -> service.changePassword(
-                new ChangePasswordCommand(disabledId, "secret-pass", "new-secret-pass")))
+                new ChangePasswordCommand(disabledId, "Secret-pass-1", "new-Secret-pass-1")))
                 .isInstanceOf(AccountDisabledException.class);
-        assertThatThrownBy(() -> service.deactivate(new DeactivateAccountCommand(disabledId, "secret-pass")))
+        assertThatThrownBy(() -> service.deactivate(new DeactivateAccountCommand(disabledId, "Secret-pass-1")))
                 .isInstanceOf(AccountDisabledException.class);
     }
 
     private UUID saveUser(UserStatus status) {
         UUID id = UUID.randomUUID();
         String name = status == UserStatus.ACTIVE ? "juan" : "pedro";
-        users.save(User.restore(id, name, "Juan", name + "@mail.com", "hashed:secret-pass", status, CREATED, CREATED));
+        users.save(User.restore(id, name, "Juan", name + "@mail.com", "hashed:Secret-pass-1", status, CREATED, CREATED));
         return id;
     }
 }

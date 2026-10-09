@@ -1,8 +1,8 @@
 package com.cuymonitor.backend.adapter.in.web.dto;
 
-import jakarta.validation.constraints.NotBlank;
 
-public record DeactivateAccountRequest(@NotBlank String currentPassword) {
+// currentPassword may be missing only for an account that has no password (made with Google)
+public record DeactivateAccountRequest(String currentPassword) {
 
     @Override
     public String toString() {

@@ -66,7 +66,7 @@ public class AuthenticationService implements RegisterUserUseCase, LoginUseCase,
     @Override
     @Transactional
     public LoginChallenge register(RegisterUserCommand command) {
-        PasswordPolicy.validate(command.password());
+        PasswordPolicy.validate(command.password(), command.username(), command.email());
         Instant now = clock.instant();
         User user = User.register(command.username(), command.fullName(), command.email(),
                 passwordHasher.hashPassword(command.password()), now);
@@ -90,6 +90,11 @@ public class AuthenticationService implements RegisterUserUseCase, LoginUseCase,
             throw new InvalidCredentialsException();
         }
         User user = found.get();
+        if (!user.hasPassword()) {
+            // an account that only uses Google: same answer and same cost as a wrong password
+            passwordHasher.matches(command.password(), dummyHash);
+            throw new InvalidCredentialsException();
+        }
         if (!passwordHasher.matches(command.password(), user.getPasswordHash()) || !user.canLogIn()) {
             throw new InvalidCredentialsException();
         }

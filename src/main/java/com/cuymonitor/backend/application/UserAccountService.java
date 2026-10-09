@@ -50,7 +50,7 @@ public class UserAccountService implements GetCurrentUserUseCase, UpdateProfileU
     public void changePassword(ChangePasswordCommand command) {
         User user = loadActiveUser(command.userId());
         checkCurrentPassword(user, command.currentPassword());
-        PasswordPolicy.validate(command.newPassword());
+        PasswordPolicy.validate(command.newPassword(), user.getUsername(), user.getEmail());
 
         user.changePassword(passwordHasher.hashPassword(command.newPassword()), clock.instant());
         userRepository.save(user);
@@ -74,6 +74,10 @@ public class UserAccountService implements GetCurrentUserUseCase, UpdateProfileU
     }
 
     private void checkCurrentPassword(User user, String currentPassword) {
+        // an account made with Google has no password to type: its open session is the proof
+        if (!user.hasPassword()) {
+            return;
+        }
         if (currentPassword == null || !passwordHasher.matches(currentPassword, user.getPasswordHash())) {
             throw new InvalidCredentialsException();
         }

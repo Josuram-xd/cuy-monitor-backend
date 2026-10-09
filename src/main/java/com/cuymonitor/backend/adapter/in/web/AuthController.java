@@ -1,11 +1,13 @@
 package com.cuymonitor.backend.adapter.in.web;
 
 import com.cuymonitor.backend.adapter.in.web.dto.ChallengeResponse;
+import com.cuymonitor.backend.adapter.in.web.dto.GoogleLoginRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.LoginRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.RegisterRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.VerifyOtpRequest;
 import com.cuymonitor.backend.adapter.out.security.JwtTokenIssuer;
 import com.cuymonitor.backend.domain.model.auth.AuthSession;
+import com.cuymonitor.backend.domain.port.in.GoogleSignInUseCase;
 import com.cuymonitor.backend.domain.port.in.LoginCommand;
 import com.cuymonitor.backend.domain.port.in.LoginUseCase;
 import com.cuymonitor.backend.domain.port.in.LogoutCommand;
@@ -39,17 +41,20 @@ public class AuthController {
     private final VerifyOtpUseCase verifyOtpUseCase;
     private final RefreshSessionUseCase refreshSessionUseCase;
     private final LogoutUseCase logoutUseCase;
+    private final GoogleSignInUseCase googleSignInUseCase;
     private final AuthCookies cookies;
     private final JwtDecoder jwtDecoder;
 
     public AuthController(RegisterUserUseCase registerUserUseCase, LoginUseCase loginUseCase,
                           VerifyOtpUseCase verifyOtpUseCase, RefreshSessionUseCase refreshSessionUseCase,
-                          LogoutUseCase logoutUseCase, AuthCookies cookies, JwtDecoder jwtDecoder) {
+                          LogoutUseCase logoutUseCase, GoogleSignInUseCase googleSignInUseCase,
+                          AuthCookies cookies, JwtDecoder jwtDecoder) {
         this.registerUserUseCase = registerUserUseCase;
         this.loginUseCase = loginUseCase;
         this.verifyOtpUseCase = verifyOtpUseCase;
         this.refreshSessionUseCase = refreshSessionUseCase;
         this.logoutUseCase = logoutUseCase;
+        this.googleSignInUseCase = googleSignInUseCase;
         this.cookies = cookies;
         this.jwtDecoder = jwtDecoder;
     }
@@ -70,6 +75,13 @@ public class AuthController {
     @PostMapping("/otp/verify")
     public ResponseEntity<Void> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
         AuthSession session = verifyOtpUseCase.verify(new VerifyOtpCommand(request.challengeId(), request.code()));
+        return ResponseEntity.noContent().headers(cookies.issue(session)).build();
+    }
+
+    /** Sign in or sign up with Google: no code to type, Google already proved the email. Same cookies as /otp/verify. */
+    @PostMapping("/google")
+    public ResponseEntity<Void> google(@Valid @RequestBody GoogleLoginRequest request) {
+        AuthSession session = googleSignInUseCase.signIn(request.idToken());
         return ResponseEntity.noContent().headers(cookies.issue(session)).build();
     }
 

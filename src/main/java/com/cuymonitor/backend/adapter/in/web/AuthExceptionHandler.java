@@ -1,7 +1,9 @@
 package com.cuymonitor.backend.adapter.in.web;
 
 import com.cuymonitor.backend.domain.exception.AccountDisabledException;
+import com.cuymonitor.backend.domain.exception.GoogleSignInDisabledException;
 import com.cuymonitor.backend.domain.exception.InvalidCredentialsException;
+import com.cuymonitor.backend.domain.exception.InvalidGoogleTokenException;
 import com.cuymonitor.backend.domain.exception.InvalidOtpException;
 import com.cuymonitor.backend.domain.exception.InvalidRefreshTokenException;
 import com.cuymonitor.backend.domain.exception.TooManyOtpRequestsException;
@@ -39,13 +41,23 @@ public class AuthExceptionHandler {
 
     @ExceptionHandler(WeakPasswordException.class)
     public ResponseEntity<Map<String, Object>> handleWeakPassword(WeakPasswordException ex) {
-        return error(HttpStatus.BAD_REQUEST, ApiError.BAD_REQUEST, ex.getMessage());
+        Map<String, Object> body = ApiError.body(ApiError.BAD_REQUEST, ex.getMessage());
+        if (!ex.getRules().isEmpty()) {
+            // the broken rules as codes, e.g. "MIN_LENGTH,SPECIAL": the dashboard ticks its checklist with them
+            body.put("fields", Map.of("password", String.join(",", ex.getRules())));
+        }
+        return ResponseEntity.badRequest().body(body);
     }
 
     @ExceptionHandler({InvalidCredentialsException.class, InvalidOtpException.class, AccountDisabledException.class,
-            InvalidRefreshTokenException.class})
+            InvalidRefreshTokenException.class, InvalidGoogleTokenException.class})
     public ResponseEntity<Map<String, Object>> handleUnauthorized(RuntimeException ex) {
         return error(HttpStatus.UNAUTHORIZED, ApiError.UNAUTHORIZED, ex.getMessage());
+    }
+
+    @ExceptionHandler(GoogleSignInDisabledException.class)
+    public ResponseEntity<Map<String, Object>> handleGoogleDisabled(GoogleSignInDisabledException ex) {
+        return error(HttpStatus.NOT_FOUND, ApiError.NOT_FOUND, ex.getMessage());
     }
 
     @ExceptionHandler(UserAlreadyExistsException.class)

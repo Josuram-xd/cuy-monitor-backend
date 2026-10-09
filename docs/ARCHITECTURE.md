@@ -230,7 +230,7 @@ Session `STATELESS`. CORS and the WebSocket origin only for `http://localhost:51
 
 ### 4.3 Security rules
 
-- Password hashed with **BCrypt**; policy 8–72 characters. OTP code also stored **hashed**.
+- Password hashed with **BCrypt**; policy: 10–64 characters, lowercase + uppercase + digit + special character, no spaces, not a well-known password, not made of the username or email (`PasswordPolicy`). The dashboard shows the same checklist while typing; the backend decides. OTP code also stored **hashed**.
 - OTP: single use, expires in 5 min, max 5 attempts; requesting a new code revokes the previous ones of that user.
 - Access JWT HS256, secret ≥ 32 bytes from `APP_JWT_SECRET`, **15 min**. Claims `sub` (user id), `iat`, `exp`, `iss`, `jti`, `sid` (session id = refresh family). It travels only in an `HttpOnly` cookie, so DevTools storage and JavaScript never see it.
 - Logout and revocation: the `jti` and the `sid` go to `revoked_token` and `RevokedTokenValidator` (part of the `JwtDecoder`, so REST and WebSocket) rejects them. Revoking the `sid` also kills the access tokens issued before the last refresh; it is remembered for one access lifetime (15 min), after that nothing of that session can be valid.
@@ -373,12 +373,13 @@ Producers: `ai-service` (`BEHAVIOR`, `AUDIO`) calls `http://backend:8080` inside
 |---|---|---|
 | `POST /api/v1/auth/register` | `{ username, fullName, email, password }` | `201 { challengeId, expiresAt }` · `400` invalid / weak password · `409` username or email taken |
 | `POST /api/v1/auth/login` | `{ username, password }` | `200 { challengeId, expiresAt }` · `401` invalid credentials |
+| `POST /api/v1/auth/google` | `{ idToken }` (Google ID token) | `204` + `Set-Cookie` access_token and refresh_token, creating the account on the first visit · `401` invalid token / unverified email · `404` not configured |
 | `POST /api/v1/auth/refresh` | cookie `refresh_token` | `204` + new cookies · `401` invalid / expired / reused |
 | `POST /api/v1/auth/logout` | cookies | `204` + expired cookies (never fails) |
 | `POST /api/v1/auth/otp/verify` | `{ challengeId, code }` | `204` + `Set-Cookie` access_token and refresh_token · `401` invalid / expired / used code |
-| `GET /api/v1/account/profile` | — | `200 { username, fullName }` |
+| `GET /api/v1/account/profile` | — | `200 { username, fullName, hasPassword }` |
 | `PUT /api/v1/account/profile` | `{ fullName }` | `200` user |
-| `PUT /api/v1/account/password` | `{ currentPassword, newPassword }` | `204` · `401` wrong current password |
+| `PUT /api/v1/account/password` | `{ currentPassword?, newPassword }` (no `currentPassword` for a Google account without password) | `204` · `401` wrong current password |
 | `DELETE /api/v1/account` | `{ currentPassword }` | `204` (account `DISABLED`) · `401` wrong current password |
 
 ### REST API

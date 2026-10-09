@@ -334,6 +334,7 @@ The application reads its configuration from environment variables (with local d
 | `DB_USER` / `DB_PASSWORD` | Database credentials | `cuymonitor` / `cuymonitor` |
 | `APP_API_KEY` | Key required in the `X-API-Key` header for the ingestion endpoint | `dev-key` |
 | `APP_JWT_SECRET` | HS256 secret, ≥ 32 bytes | dev-only value |
+| `GOOGLE_CLIENT_ID` | Public client id of the Google OAuth web client for "Continuar con Google" (not a secret) | empty = off |
 | `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` / `MAIL_FROM` | SMTP for the OTP emails (SES or Gmail) | not needed with profile `dev` |
 | `SPRING_PROFILES_ACTIVE` | `dev` locally, `prod` on the EC2 | — |
 

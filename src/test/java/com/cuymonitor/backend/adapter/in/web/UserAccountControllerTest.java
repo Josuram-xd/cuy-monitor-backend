@@ -114,11 +114,11 @@ class UserAccountControllerTest {
     @Test
     void changePasswordReturns204() throws Exception {
         mvc.perform(put("/api/v1/account/password").with(token()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"currentPassword\":\"secret-pass\",\"newPassword\":\"new-secret-pass\"}"))
+                        .content("{\"currentPassword\":\"Secret-pass-1\",\"newPassword\":\"new-Secret-pass-1\"}"))
                 .andExpect(status().isNoContent());
 
         verify(changePasswordUseCase).changePassword(
-                new ChangePasswordCommand(USER_ID, "secret-pass", "new-secret-pass"));
+                new ChangePasswordCommand(USER_ID, "Secret-pass-1", "new-Secret-pass-1"));
     }
 
     @Test
@@ -126,17 +126,17 @@ class UserAccountControllerTest {
         willThrow(new InvalidCredentialsException()).given(changePasswordUseCase).changePassword(any());
 
         mvc.perform(put("/api/v1/account/password").with(token()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"currentPassword\":\"wrong\",\"newPassword\":\"new-secret-pass\"}"))
+                        .content("{\"currentPassword\":\"wrong\",\"newPassword\":\"new-Secret-pass-1\"}"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void deactivateReturns204() throws Exception {
         mvc.perform(delete("/api/v1/account").with(token()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"currentPassword\":\"secret-pass\"}"))
+                        .content("{\"currentPassword\":\"Secret-pass-1\"}"))
                 .andExpect(status().isNoContent());
 
-        verify(deactivateAccountUseCase).deactivate(new DeactivateAccountCommand(USER_ID, "secret-pass"));
+        verify(deactivateAccountUseCase).deactivate(new DeactivateAccountCommand(USER_ID, "Secret-pass-1"));
     }
 
     @Test

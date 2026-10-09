@@ -13,18 +13,24 @@ public class User {
     private final String username;
     private String fullName;
     private final String email;
+    // null for an account that only signs in with Google
     private String passwordHash;
+    private String googleSubject;
     private UserStatus status;
     private final Instant createdAt;
     private Instant updatedAt;
 
     private User(UUID id, String username, String fullName, String email, String passwordHash,
-                 UserStatus status, Instant createdAt, Instant updatedAt) {
+                 String googleSubject, UserStatus status, Instant createdAt, Instant updatedAt) {
         this.id = Objects.requireNonNull(id, "id");
         this.username = requireText(username, "username");
         this.fullName = requireText(fullName, "fullName");
         this.email = requireText(email, "email");
-        this.passwordHash = requireText(passwordHash, "passwordHash");
+        if (passwordHash == null && googleSubject == null) {
+            throw new IllegalArgumentException("an account needs a password or a Google login");
+        }
+        this.passwordHash = passwordHash;
+        this.googleSubject = googleSubject;
         this.status = Objects.requireNonNull(status, "status");
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
         this.updatedAt = Objects.requireNonNull(updatedAt, "updatedAt");
@@ -32,12 +38,48 @@ public class User {
 
     public static User register(String username, String fullName, String email, String passwordHash, Instant now) {
         return new User(UUID.randomUUID(), normalize(username, "username"), requireText(fullName, "fullName").trim(),
-                normalize(email, "email"), passwordHash, UserStatus.PENDING_VERIFICATION, now, now);
+                normalize(email, "email"), requireText(passwordHash, "passwordHash"), null,
+                UserStatus.PENDING_VERIFICATION, now, now);
+    }
+
+    /** Google already proved the email, so the account is active from the start and has no password. */
+    public static User registerWithGoogle(String username, String fullName, String email, String googleSubject,
+                                          Instant now) {
+        return new User(UUID.randomUUID(), normalize(username, "username"), requireText(fullName, "fullName").trim(),
+                normalize(email, "email"), null, requireText(googleSubject, "googleSubject"), UserStatus.ACTIVE,
+                now, now);
     }
 
     public static User restore(UUID id, String username, String fullName, String email, String passwordHash,
                                UserStatus status, Instant createdAt, Instant updatedAt) {
-        return new User(id, username, fullName, email, passwordHash, status, createdAt, updatedAt);
+        return new User(id, username, fullName, email, passwordHash, null, status, createdAt, updatedAt);
+    }
+
+    public static User restore(UUID id, String username, String fullName, String email, String passwordHash,
+                               String googleSubject, UserStatus status, Instant createdAt, Instant updatedAt) {
+        return new User(id, username, fullName, email, passwordHash, googleSubject, status, createdAt, updatedAt);
+    }
+
+    /**
+     * Ties this account to a Google identity. An account that was never verified by email may have been created
+     * by someone else with a password only they know, so that password is wiped: only Google opens it now.
+     */
+    public void linkGoogle(String subject, Instant now) {
+        ensureNotDisabled();
+        requireText(subject, "googleSubject");
+        if (googleSubject != null && !googleSubject.equals(subject)) {
+            throw new IllegalStateException("the account is already linked to another Google identity");
+        }
+        googleSubject = subject;
+        if (status == UserStatus.PENDING_VERIFICATION) {
+            passwordHash = null;
+            status = UserStatus.ACTIVE;
+        }
+        updatedAt = Objects.requireNonNull(now, "now");
+    }
+
+    public boolean hasPassword() {
+        return passwordHash != null;
     }
 
     public void activate(Instant now) {
@@ -96,6 +138,10 @@ public class User {
 
     public String getPasswordHash() {
         return passwordHash;
+    }
+
+    public String getGoogleSubject() {
+        return googleSubject;
     }
 
     public UserStatus getStatus() {

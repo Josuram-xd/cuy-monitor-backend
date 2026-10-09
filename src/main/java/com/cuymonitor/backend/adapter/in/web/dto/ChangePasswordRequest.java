@@ -2,7 +2,8 @@ package com.cuymonitor.backend.adapter.in.web.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
-public record ChangePasswordRequest(@NotBlank String currentPassword, @NotBlank String newPassword) {
+// currentPassword may be missing only for an account that has no password yet (made with Google)
+public record ChangePasswordRequest(String currentPassword, @NotBlank String newPassword) {
 
     @Override
     public String toString() {
