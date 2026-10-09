@@ -27,13 +27,17 @@ public record AuthProperties(Jwt jwt, Otp otp) {
         }
     }
 
-    public record Otp(Duration ttl, int maxAttempts) {
+    public record Otp(Duration ttl, int maxAttempts, int maxRequests, Duration requestWindow) {
 
         public Otp {
             requirePositive(ttl, "app.auth.otp.ttl");
             if (maxAttempts <= 0) {
                 throw new IllegalArgumentException("app.auth.otp.max-attempts must be positive");
             }
+            if (maxRequests <= 0) {
+                throw new IllegalArgumentException("app.auth.otp.max-requests must be positive");
+            }
+            requirePositive(requestWindow, "app.auth.otp.request-window");
         }
     }
 

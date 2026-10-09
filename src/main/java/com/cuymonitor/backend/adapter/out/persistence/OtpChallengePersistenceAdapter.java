@@ -6,6 +6,7 @@ import com.cuymonitor.backend.domain.model.auth.OtpChallenge;
 import com.cuymonitor.backend.domain.port.out.OtpChallengeRepository;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,5 +38,10 @@ public class OtpChallengePersistenceAdapter implements OtpChallengeRepository {
         return otpChallengeJpaRepository.findByUserIdAndUsedAtIsNullAndRevokedAtIsNull(userId).stream()
                 .map(mapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    public long countIssuedSince(UUID userId, Instant since) {
+        return otpChallengeJpaRepository.countByUserIdAndCreatedAtGreaterThanEqual(userId, since);
     }
 }

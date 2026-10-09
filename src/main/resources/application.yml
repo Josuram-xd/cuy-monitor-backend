@@ -48,5 +48,8 @@ app:
     otp:
       ttl: 5m
       max-attempts: 5
+      # at most 5 codes per account every 15 minutes
+      max-requests: 5
+      request-window: 15m
   mail:
     from: ${MAIL_FROM:no-reply@cuymonitor.local}

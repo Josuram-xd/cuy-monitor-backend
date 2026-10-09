@@ -2,6 +2,7 @@ package com.cuymonitor.backend.application;
 
 import com.cuymonitor.backend.domain.exception.InvalidCredentialsException;
 import com.cuymonitor.backend.domain.exception.InvalidOtpException;
+import com.cuymonitor.backend.domain.exception.TooManyOtpRequestsException;
 import com.cuymonitor.backend.domain.exception.UserAlreadyExistsException;
 import com.cuymonitor.backend.domain.model.auth.AuthToken;
 import com.cuymonitor.backend.domain.model.auth.LoginChallenge;
@@ -41,12 +42,15 @@ public class AuthenticationService implements RegisterUserUseCase, LoginUseCase,
     private final Clock clock;
     private final Duration otpTtl;
     private final int otpMaxAttempts;
+    private final int otpMaxRequests;
+    private final Duration otpRequestWindow;
     private final SecureRandom random = new SecureRandom();
     private final String dummyHash;
 
     public AuthenticationService(UserRepository userRepository, OtpChallengeRepository otpChallengeRepository,
                                  PasswordHasher passwordHasher, OtpSender otpSender, TokenIssuer tokenIssuer,
-                                 Clock clock, Duration otpTtl, int otpMaxAttempts) {
+                                 Clock clock, Duration otpTtl, int otpMaxAttempts,
+                                 int otpMaxRequests, Duration otpRequestWindow) {
         this.userRepository = userRepository;
         this.otpChallengeRepository = otpChallengeRepository;
         this.passwordHasher = passwordHasher;
@@ -55,6 +59,8 @@ public class AuthenticationService implements RegisterUserUseCase, LoginUseCase,
         this.clock = clock;
         this.otpTtl = otpTtl;
         this.otpMaxAttempts = otpMaxAttempts;
+        this.otpMaxRequests = otpMaxRequests;
+        this.otpRequestWindow = otpRequestWindow;
         this.dummyHash = passwordHasher.hashPassword("dummy-password-for-timing");
     }
 
@@ -116,6 +122,10 @@ public class AuthenticationService implements RegisterUserUseCase, LoginUseCase,
     }
 
     private LoginChallenge issueChallenge(User user, Instant now) {
+        // caps how many emails one account can trigger (resend abuse)
+        if (otpChallengeRepository.countIssuedSince(user.getId(), now.minus(otpRequestWindow)) >= otpMaxRequests) {
+            throw new TooManyOtpRequestsException();
+        }
         for (OtpChallenge pending : otpChallengeRepository.findPendingByUserId(user.getId())) {
             pending.revoke(now);
             otpChallengeRepository.save(pending);

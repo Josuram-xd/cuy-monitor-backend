@@ -34,7 +34,8 @@ public class AuthConfig {
                                                        TokenIssuer tokenIssuer, Clock clock,
                                                        AuthProperties properties) {
         return new AuthenticationService(userRepository, otpChallengeRepository, passwordHasher, otpSender,
-                tokenIssuer, clock, properties.otp().ttl(), properties.otp().maxAttempts());
+                tokenIssuer, clock, properties.otp().ttl(), properties.otp().maxAttempts(),
+                properties.otp().maxRequests(), properties.otp().requestWindow());
     }
 
     @Bean

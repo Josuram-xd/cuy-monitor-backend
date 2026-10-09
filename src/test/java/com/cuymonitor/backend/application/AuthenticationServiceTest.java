@@ -8,6 +8,7 @@ import com.cuymonitor.backend.application.fake.MutableClock;
 import com.cuymonitor.backend.application.fake.RecordingOtpSender;
 import com.cuymonitor.backend.domain.exception.InvalidCredentialsException;
 import com.cuymonitor.backend.domain.exception.InvalidOtpException;
+import com.cuymonitor.backend.domain.exception.TooManyOtpRequestsException;
 import com.cuymonitor.backend.domain.exception.UserAlreadyExistsException;
 import com.cuymonitor.backend.domain.exception.WeakPasswordException;
 import com.cuymonitor.backend.domain.model.auth.AuthToken;
@@ -32,6 +33,8 @@ class AuthenticationServiceTest {
     private static final Instant NOW = Instant.parse("2026-10-01T10:00:00Z");
     private static final Duration OTP_TTL = Duration.ofMinutes(5);
     private static final int MAX_ATTEMPTS = 5;
+    private static final int MAX_REQUESTS = 3;
+    private static final Duration REQUEST_WINDOW = Duration.ofMinutes(15);
 
     private InMemoryUserRepository users;
     private InMemoryOtpChallengeRepository challenges;
@@ -46,7 +49,7 @@ class AuthenticationServiceTest {
         sender = new RecordingOtpSender();
         clock = new MutableClock(NOW);
         service = new AuthenticationService(users, challenges, new FakePasswordHasher(), sender,
-                new FakeTokenIssuer(), clock, OTP_TTL, MAX_ATTEMPTS);
+                new FakeTokenIssuer(), clock, OTP_TTL, MAX_ATTEMPTS, MAX_REQUESTS, REQUEST_WINDOW);
     }
 
     @Test
@@ -102,6 +105,29 @@ class AuthenticationServiceTest {
 
         assertThatThrownBy(() -> service.verify(new VerifyOtpCommand(first.challengeId(), firstCode)))
                 .isInstanceOf(InvalidOtpException.class);
+    }
+
+    @Test
+    void loginIsRejectedAfterTooManyCodesInTheWindow() {
+        register("juan", "juan@mail.com");
+        service.login(new LoginCommand("juan", "secret-pass"));
+        service.login(new LoginCommand("juan", "secret-pass"));
+
+        assertThatThrownBy(() -> service.login(new LoginCommand("juan", "secret-pass")))
+                .isInstanceOf(TooManyOtpRequestsException.class);
+        assertThat(sender.sent()).hasSize(3);
+    }
+
+    @Test
+    void loginWorksAgainOnceTheWindowHasPassed() {
+        register("juan", "juan@mail.com");
+        service.login(new LoginCommand("juan", "secret-pass"));
+        service.login(new LoginCommand("juan", "secret-pass"));
+        clock.advance(REQUEST_WINDOW.plusSeconds(1));
+
+        LoginChallenge challenge = service.login(new LoginCommand("juan", "secret-pass"));
+
+        assertThat(challenge.challengeId()).isNotNull();
     }
 
     @Test
