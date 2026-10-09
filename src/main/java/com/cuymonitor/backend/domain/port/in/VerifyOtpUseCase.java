@@ -1,7 +1,7 @@
 package com.cuymonitor.backend.domain.port.in;
 
-import com.cuymonitor.backend.domain.model.auth.AuthToken;
+import com.cuymonitor.backend.domain.model.auth.AuthSession;
 
 public interface VerifyOtpUseCase {
-    AuthToken verify(VerifyOtpCommand verifyOtpCommand);
+    AuthSession verify(VerifyOtpCommand verifyOtpCommand);
 }

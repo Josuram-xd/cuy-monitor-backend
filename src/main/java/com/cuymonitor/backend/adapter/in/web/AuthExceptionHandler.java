@@ -3,6 +3,8 @@ package com.cuymonitor.backend.adapter.in.web;
 import com.cuymonitor.backend.domain.exception.AccountDisabledException;
 import com.cuymonitor.backend.domain.exception.InvalidCredentialsException;
 import com.cuymonitor.backend.domain.exception.InvalidOtpException;
+import com.cuymonitor.backend.domain.exception.InvalidRefreshTokenException;
+import com.cuymonitor.backend.domain.exception.TooManyOtpRequestsException;
 import com.cuymonitor.backend.domain.exception.UserAlreadyExistsException;
 import com.cuymonitor.backend.domain.exception.WeakPasswordException;
 import org.springframework.http.HttpStatus;
@@ -40,7 +42,8 @@ public class AuthExceptionHandler {
         return error(HttpStatus.BAD_REQUEST, ApiError.BAD_REQUEST, ex.getMessage());
     }
 
-    @ExceptionHandler({InvalidCredentialsException.class, InvalidOtpException.class, AccountDisabledException.class})
+    @ExceptionHandler({InvalidCredentialsException.class, InvalidOtpException.class, AccountDisabledException.class,
+            InvalidRefreshTokenException.class})
     public ResponseEntity<Map<String, Object>> handleUnauthorized(RuntimeException ex) {
         return error(HttpStatus.UNAUTHORIZED, ApiError.UNAUTHORIZED, ex.getMessage());
     }
@@ -48,6 +51,11 @@ public class AuthExceptionHandler {
     @ExceptionHandler(UserAlreadyExistsException.class)
     public ResponseEntity<Map<String, Object>> handleConflict(UserAlreadyExistsException ex) {
         return error(HttpStatus.CONFLICT, ApiError.CONFLICT, ex.getMessage());
+    }
+
+    @ExceptionHandler(TooManyOtpRequestsException.class)
+    public ResponseEntity<Map<String, Object>> handleTooManyRequests(TooManyOtpRequestsException ex) {
+        return error(HttpStatus.TOO_MANY_REQUESTS, ApiError.TOO_MANY_REQUESTS, ex.getMessage());
     }
 
     private static ResponseEntity<Map<String, Object>> error(HttpStatus status, String code, String message) {

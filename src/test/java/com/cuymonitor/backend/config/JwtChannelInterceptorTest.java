@@ -25,6 +25,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -47,6 +49,20 @@ class JwtChannelInterceptorTest {
         Principal user = MessageHeaderAccessor.getAccessor(result, StompHeaderAccessor.class).getUser();
         assertThat(user).isNotNull();
         assertThat(user.getName()).isEqualTo(userId);
+    }
+
+    @Test
+    void connectWithTheTokenFromTheHandshakeCookieAttachesTheUser() {
+        String userId = UUID.randomUUID().toString();
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
+        accessor.setSessionAttributes(new HashMap<>(Map.of("accessToken", token(KEY, ISSUER, userId, 600))));
+        accessor.setLeaveMutable(true);
+        Message<byte[]> connect = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+
+        Message<?> result = interceptor.preSend(connect, null);
+
+        assertThat(MessageHeaderAccessor.getAccessor(result, StompHeaderAccessor.class).getUser().getName())
+                .isEqualTo(userId);
     }
 
     @Test

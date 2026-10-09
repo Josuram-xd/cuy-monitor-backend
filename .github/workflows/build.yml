@@ -28,11 +28,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # the schema lives in its own repo (ADR-008); the tests run against it
+      - uses: actions/checkout@v4
+        with:
+          repository: Josuram-xd/cuy-monitor-db
+          ref: main
+          path: cuy-monitor-db
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '25'
           cache: maven
+
+      - name: Apply database migrations
+        run: |
+          docker run --rm --network host             -v "${{ github.workspace }}/cuy-monitor-db/migrations:/flyway/sql:ro"             flyway/flyway:11.20.3-alpine             -url=jdbc:postgresql://localhost:5432/cuymonitor -user=cuymonitor -password=cuymonitor             -locations=filesystem:/flyway/sql migrate
 
       # test-only value; the real secret lives in infra/.env on the EC2
       - name: Build and test

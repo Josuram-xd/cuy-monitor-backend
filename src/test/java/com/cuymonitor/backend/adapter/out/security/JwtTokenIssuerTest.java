@@ -29,6 +29,7 @@ class JwtTokenIssuerTest {
 
     private static final SecretKey KEY = key("test-secret-with-at-least-32-bytes!!");
     private static final Duration TTL = Duration.ofMinutes(30);
+    private static final UUID SESSION = UUID.randomUUID();
 
     private final Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
     private final JwtTokenIssuer issuer = new JwtTokenIssuer(new NimbusJwtEncoder(new ImmutableSecret<>(KEY)),
@@ -38,7 +39,7 @@ class JwtTokenIssuerTest {
     void issuedTokenIsValidAndHasTheExpectedClaims() {
         User user = user();
 
-        AuthToken token = issuer.issueToken(user);
+        AuthToken token = issuer.issueToken(user, SESSION);
         Jwt jwt = decoder(KEY).decode(token.accessToken());
 
         assertThat(jwt.getSubject()).isEqualTo(user.getId().toString());
@@ -50,10 +51,35 @@ class JwtTokenIssuerTest {
 
     @Test
     void tokenSignedWithAnotherKeyIsRejected() {
-        AuthToken token = issuer.issueToken(user());
+        AuthToken token = issuer.issueToken(user(), SESSION);
 
         assertThatThrownBy(() -> decoder(key("another-secret-with-at-least-32-bytes")).decode(token.accessToken()))
                 .isInstanceOf(JwtException.class);
+    }
+
+    @Test
+    void issuedTokenCarriesAJtiThatIsAUuid() {
+        Jwt jwt = decoder(KEY).decode(issuer.issueToken(user(), SESSION).accessToken());
+
+        assertThat(jwt.getId()).isNotBlank();
+        assertThat(UUID.fromString(jwt.getId())).isNotNull();
+    }
+
+    @Test
+    void issuedTokenCarriesTheSessionIdItWasGiven() {
+        Jwt jwt = decoder(KEY).decode(issuer.issueToken(user(), SESSION).accessToken());
+
+        assertThat(jwt.getClaimAsString("sid")).isEqualTo(SESSION.toString());
+    }
+
+    @Test
+    void everyTokenGetsItsOwnJti() {
+        User user = user();
+
+        Jwt first = decoder(KEY).decode(issuer.issueToken(user, SESSION).accessToken());
+        Jwt second = decoder(KEY).decode(issuer.issueToken(user, SESSION).accessToken());
+
+        assertThat(first.getId()).isNotEqualTo(second.getId());
     }
 
     private static JwtDecoder decoder(SecretKey key) {

@@ -12,8 +12,11 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.UUID;
 
 public class JwtTokenIssuer implements TokenIssuer {
+
+    public static final String SESSION_CLAIM = "sid";
 
     private final JwtEncoder encoder;
     private final String issuer;
@@ -28,7 +31,7 @@ public class JwtTokenIssuer implements TokenIssuer {
     }
 
     @Override
-    public AuthToken issueToken(User user) {
+    public AuthToken issueToken(User user, UUID sessionId) {
         Instant now = clock.instant();
         Instant expiresAt = now.plus(ttl);
         JwtClaimsSet claims = JwtClaimsSet.builder()
@@ -36,6 +39,8 @@ public class JwtTokenIssuer implements TokenIssuer {
                 .subject(user.getId().toString())
                 .issuedAt(now)
                 .expiresAt(expiresAt)
+                .id(UUID.randomUUID().toString())
+                .claim(SESSION_CLAIM, sessionId.toString())
                 .build();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
 

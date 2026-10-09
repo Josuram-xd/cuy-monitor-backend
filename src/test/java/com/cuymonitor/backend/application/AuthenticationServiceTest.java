@@ -3,14 +3,17 @@ package com.cuymonitor.backend.application;
 import com.cuymonitor.backend.application.fake.FakePasswordHasher;
 import com.cuymonitor.backend.application.fake.FakeTokenIssuer;
 import com.cuymonitor.backend.application.fake.InMemoryOtpChallengeRepository;
+import com.cuymonitor.backend.application.fake.InMemoryRefreshTokenRepository;
+import com.cuymonitor.backend.application.fake.InMemoryRevokedTokenRepository;
 import com.cuymonitor.backend.application.fake.InMemoryUserRepository;
 import com.cuymonitor.backend.application.fake.MutableClock;
 import com.cuymonitor.backend.application.fake.RecordingOtpSender;
 import com.cuymonitor.backend.domain.exception.InvalidCredentialsException;
 import com.cuymonitor.backend.domain.exception.InvalidOtpException;
+import com.cuymonitor.backend.domain.exception.TooManyOtpRequestsException;
 import com.cuymonitor.backend.domain.exception.UserAlreadyExistsException;
 import com.cuymonitor.backend.domain.exception.WeakPasswordException;
-import com.cuymonitor.backend.domain.model.auth.AuthToken;
+import com.cuymonitor.backend.domain.model.auth.AuthSession;
 import com.cuymonitor.backend.domain.model.auth.LoginChallenge;
 import com.cuymonitor.backend.domain.model.user.User;
 import com.cuymonitor.backend.domain.model.user.UserStatus;
@@ -32,6 +35,8 @@ class AuthenticationServiceTest {
     private static final Instant NOW = Instant.parse("2026-10-01T10:00:00Z");
     private static final Duration OTP_TTL = Duration.ofMinutes(5);
     private static final int MAX_ATTEMPTS = 5;
+    private static final int MAX_REQUESTS = 3;
+    private static final Duration REQUEST_WINDOW = Duration.ofMinutes(15);
 
     private InMemoryUserRepository users;
     private InMemoryOtpChallengeRepository challenges;
@@ -45,8 +50,10 @@ class AuthenticationServiceTest {
         challenges = new InMemoryOtpChallengeRepository();
         sender = new RecordingOtpSender();
         clock = new MutableClock(NOW);
+        SessionService sessions = new SessionService(new FakeTokenIssuer(), new InMemoryRefreshTokenRepository(),
+                new InMemoryRevokedTokenRepository(), users, clock, Duration.ofDays(7), Duration.ofMinutes(15));
         service = new AuthenticationService(users, challenges, new FakePasswordHasher(), sender,
-                new FakeTokenIssuer(), clock, OTP_TTL, MAX_ATTEMPTS);
+                sessions, clock, OTP_TTL, MAX_ATTEMPTS, MAX_REQUESTS, REQUEST_WINDOW);
     }
 
     @Test
@@ -105,6 +112,29 @@ class AuthenticationServiceTest {
     }
 
     @Test
+    void loginIsRejectedAfterTooManyCodesInTheWindow() {
+        register("juan", "juan@mail.com");
+        service.login(new LoginCommand("juan", "secret-pass"));
+        service.login(new LoginCommand("juan", "secret-pass"));
+
+        assertThatThrownBy(() -> service.login(new LoginCommand("juan", "secret-pass")))
+                .isInstanceOf(TooManyOtpRequestsException.class);
+        assertThat(sender.sent()).hasSize(3);
+    }
+
+    @Test
+    void loginWorksAgainOnceTheWindowHasPassed() {
+        register("juan", "juan@mail.com");
+        service.login(new LoginCommand("juan", "secret-pass"));
+        service.login(new LoginCommand("juan", "secret-pass"));
+        clock.advance(REQUEST_WINDOW.plusSeconds(1));
+
+        LoginChallenge challenge = service.login(new LoginCommand("juan", "secret-pass"));
+
+        assertThat(challenge.challengeId()).isNotNull();
+    }
+
+    @Test
     void loginWithWrongPasswordFails() {
         register("juan", "juan@mail.com");
 
@@ -132,10 +162,11 @@ class AuthenticationServiceTest {
     void correctCodeReturnsTokenAndActivatesAccount() {
         LoginChallenge challenge = register("juan", "juan@mail.com");
 
-        AuthToken token = service.verify(new VerifyOtpCommand(challenge.challengeId(), sender.lastCode()));
+        AuthSession session = service.verify(new VerifyOtpCommand(challenge.challengeId(), sender.lastCode()));
 
         User user = users.findByUsername("juan").orElseThrow();
-        assertThat(token.accessToken()).isEqualTo("token-for-" + user.getId());
+        assertThat(session.accessToken().accessToken()).isEqualTo("token-for-" + user.getId());
+        assertThat(session.refreshToken()).isNotBlank();
         assertThat(user.getStatus()).isEqualTo(UserStatus.ACTIVE);
     }
 

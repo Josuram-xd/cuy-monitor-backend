@@ -216,7 +216,7 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 
 ## 🔐 Autenticación y cuentas de usuario
 
-Un solo tipo de usuario (básico, sin roles ni admin). Cualquiera puede registrarse desde la pantalla de login ("¿No tienes cuenta?"). Cada usuario solo ve y modifica **su propia cuenta** (`/api/v1/users/me`); no hay listado de usuarios.
+Un solo tipo de usuario (básico, sin roles ni admin). Cualquiera puede registrarse desde la pantalla de login ("¿No tienes cuenta?"). Cada usuario solo ve y modifica **su propia cuenta** (`/api/v1/account`); no hay listado de usuarios.
 
 Se divide en tres tareas, cada una con su rama y su PR: la Task 19 (CRUD) y la Task 20 (WebSocket con JWT) necesitan el modelo `User`, la seguridad y el JWT de la Task 18, así que sus ramas salen de `main` cuando la 18 ya esté mergeada.
 
@@ -319,10 +319,10 @@ Rama: `feature/task-19-user-account-crud`, creada desde `main` después de merge
 
 **Endpoints** (todos con `Authorization: Bearer <jwt>`; el id sale del `sub` del token, nunca de la URL)
 
-- `GET /api/v1/users/me` → datos de la cuenta (nunca el hash).
-- `PUT /api/v1/users/me` `{ fullName }` → actualiza el perfil.
-- `PUT /api/v1/users/me/password` `{ currentPassword, newPassword }` → cambia la contraseña.
-- `DELETE /api/v1/users/me` `{ currentPassword }` → **desactiva** la cuenta (`DISABLED`, soft delete). Ya no puede iniciar sesión.
+- `GET /api/v1/account/profile` → datos de la cuenta (nunca el hash).
+- `PUT /api/v1/account/profile` `{ fullName }` → actualiza el perfil.
+- `PUT /api/v1/account/password` `{ currentPassword, newPassword }` → cambia la contraseña.
+- `DELETE /api/v1/account` `{ currentPassword }` → **desactiva** la cuenta (`DISABLED`, soft delete). Ya no puede iniciar sesión.
 
 Estas rutas cargan el usuario en cada petición y rechazan cuentas `DISABLED` aunque el JWT siga vigente.
 
@@ -344,7 +344,7 @@ adapter/in/web/             UserAccountController, dto/
 - [x] **Task 19.4** — `feat(application): add UserAccountService for the account CRUD`
 - [x] **Task 19.5** — `test(application): cover UserAccountService with in-memory fakes`
   Ver perfil, actualizar, cambiar contraseña (actual correcta e incorrecta), desactivar (contraseña correcta e incorrecta), operar sobre una cuenta `DISABLED`.
-- [x] **Task 19.6** — `feat(web): add UserAccountController for /api/users/me`
+- [x] **Task 19.6** — `feat(web): add UserAccountController for /api/v1/account`
 - [x] **Task 19.7** — `test(web): cover user account endpoints`
   `401` sin token, `200` con token, `401` con contraseña actual incorrecta, `204` al desactivar.
 - [x] **Task 19.8** — `docs(contracts): add user account endpoints to auth API contract`

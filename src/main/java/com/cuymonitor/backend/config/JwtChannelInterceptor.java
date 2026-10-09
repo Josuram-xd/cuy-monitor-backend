@@ -15,8 +15,11 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 
+import java.util.Map;
+
 /**
- * Browsers can't send headers on the WebSocket handshake, so the JWT travels on the STOMP CONNECT frame.
+ * Validates the JWT on the STOMP CONNECT frame. Browsers bring it in the access cookie (copied to the session
+ * attributes by CookieHandshakeInterceptor); other clients can send an Authorization header on the frame.
  * Throwing here makes Spring answer with an ERROR frame and close the connection.
  */
 public class JwtChannelInterceptor implements ChannelInterceptor {
@@ -36,7 +39,7 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
         if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
             // the user stays attached to the session, so later frames carry it too
-            accessor.setUser(authenticate(accessor.getFirstNativeHeader(AUTHORIZATION)));
+            accessor.setUser(authenticate(tokenFrom(accessor)));
         } else if (accessor != null && StompCommand.SUBSCRIBE.equals(accessor.getCommand())
                 && accessor.getUser() == null) {
             throw new AccessDeniedException("subscription requires an authenticated session");
@@ -44,14 +47,26 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
         return message;
     }
 
-    private Authentication authenticate(String header) {
-        if (header == null || !header.startsWith(BEARER) || header.length() == BEARER.length()) {
+    private static String tokenFrom(StompHeaderAccessor accessor) {
+        Map<String, Object> session = accessor.getSessionAttributes();
+        if (session != null && session.get(CookieHandshakeInterceptor.ACCESS_TOKEN_ATTRIBUTE) instanceof String cookie) {
+            return cookie;
+        }
+        String header = accessor.getFirstNativeHeader(AUTHORIZATION);
+        if (header != null && header.startsWith(BEARER) && header.length() > BEARER.length()) {
+            return header.substring(BEARER.length());
+        }
+        return null;
+    }
+
+    private Authentication authenticate(String token) {
+        if (token == null) {
             throw new AuthenticationCredentialsNotFoundException("missing token");
         }
         Jwt jwt;
         try {
-            // same decoder as the REST API: checks signature, issuer and expiration
-            jwt = decoder.decode(header.substring(BEARER.length()));
+            // same decoder as the REST API: checks signature, issuer, expiration and revocation
+            jwt = decoder.decode(token);
         } catch (JwtException e) {
             throw new BadCredentialsException("invalid or expired token", e);
         }

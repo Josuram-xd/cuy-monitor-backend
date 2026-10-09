@@ -8,6 +8,8 @@ import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.HealthEvent;
 import com.cuymonitor.backend.domain.model.WeightSignal;
 import com.cuymonitor.backend.domain.port.in.ProcessEventUseCase;
+import com.cuymonitor.backend.domain.port.out.RevokedTokenRepository;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,6 +68,9 @@ class SecurityConfigTest {
     @MockitoBean
     private ProcessEventUseCase processEventUseCase;
 
+    @MockitoBean
+    private RevokedTokenRepository revokedTokenRepository;
+
     @BeforeEach
     void configureIngestion() {
         given(adapterFactorySelector.createAdapterFor(EventType.WEIGHT)).willReturn(eventSourceAdapter);
@@ -88,6 +93,49 @@ class SecurityConfigTest {
 
         mvc.perform(get("/api/v1/system/status").header("Authorization", "Bearer " + token("cuy-monitor-backend")))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void theAccessCookieAuthenticatesProtectedRoutes() throws Exception {
+        given(jdbcTemplate.queryForObject(anyString(), any(Class.class))).willReturn(1);
+
+        mvc.perform(get("/api/v1/system/status").cookie(new Cookie("access_token", token("cuy-monitor-backend"))))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void aRevokedTokenIsRejectedEvenIfItHasNotExpired() throws Exception {
+        UUID jti = UUID.randomUUID();
+        given(revokedTokenRepository.isRevoked(jti)).willReturn(true);
+
+        mvc.perform(get("/api/v1/system/status")
+                        .cookie(new Cookie("access_token", token("cuy-monitor-backend", jti))))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("unauthorized"));
+    }
+
+    @Test
+    void anotherTokenOfARevokedSessionIsRejectedToo() throws Exception {
+        UUID sid = UUID.randomUUID();
+        given(revokedTokenRepository.isRevoked(sid)).willReturn(true);
+
+        // a brand new token (new jti), but it belongs to the revoked session
+        mvc.perform(get("/api/v1/system/status")
+                        .cookie(new Cookie("access_token", token("cuy-monitor-backend", UUID.randomUUID(), sid))))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void aTokenWithoutJtiIsRejected() throws Exception {
+        Instant now = Instant.now();
+        JwtClaimsSet claims = JwtClaimsSet.builder().issuer("cuy-monitor-backend")
+                .subject(UUID.randomUUID().toString()).claim("sid", UUID.randomUUID().toString())
+                .issuedAt(now).expiresAt(now.plusSeconds(600)).build();
+        String noJti = jwtEncoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims))
+                .getTokenValue();
+
+        mvc.perform(get("/api/v1/system/status").cookie(new Cookie("access_token", noJti)))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -134,10 +182,20 @@ class SecurityConfigTest {
     }
 
     private String token(String issuer) {
+        return token(issuer, UUID.randomUUID());
+    }
+
+    private String token(String issuer, UUID jti) {
+        return token(issuer, jti, UUID.randomUUID());
+    }
+
+    private String token(String issuer, UUID jti, UUID sid) {
         Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(issuer)
                 .subject(UUID.randomUUID().toString())
+                .id(jti.toString())
+                .claim("sid", sid.toString())
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(600))
                 .build();

@@ -13,7 +13,8 @@ spring:
       ddl-auto: validate
 
   flyway:
-    enabled: true
+    # cuy-monitor-db owns the schema (ADR-008); the backend only validates it
+    enabled: false
 
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
@@ -44,9 +45,18 @@ app:
     jwt:
       secret: ${APP_JWT_SECRET}
       issuer: cuy-monitor-backend
-      ttl: 30m
+      # short on purpose: the refresh cookie renews it without asking for the code again
+      ttl: 15m
+    refresh:
+      ttl: 7d
+    cookie:
+      # false only for plain http outside localhost
+      secure: ${APP_COOKIE_SECURE:true}
     otp:
       ttl: 5m
       max-attempts: 5
+      # at most 5 codes per account every 15 minutes
+      max-requests: 5
+      request-window: 15m
   mail:
     from: ${MAIL_FROM:no-reply@cuymonitor.local}

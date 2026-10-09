@@ -10,6 +10,7 @@ public final class ApiError {
     public static final String UNAUTHORIZED = "unauthorized";
     public static final String NOT_FOUND = "not_found";
     public static final String CONFLICT = "conflict";
+    public static final String TOO_MANY_REQUESTS = "too_many_requests";
 
     private ApiError() {
     }

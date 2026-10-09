@@ -3,6 +3,7 @@ package com.cuymonitor.backend.application.fake;
 import com.cuymonitor.backend.domain.model.auth.OtpChallenge;
 import com.cuymonitor.backend.domain.port.out.OtpChallengeRepository;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,14 @@ public class InMemoryOtpChallengeRepository implements OtpChallengeRepository {
                 .filter(c -> c.getUsedAt().isEmpty() && c.getRevokedAt().isEmpty())
                 .map(InMemoryOtpChallengeRepository::copy)
                 .toList();
+    }
+
+    @Override
+    public long countIssuedSince(UUID userId, Instant since) {
+        return challenges.values().stream()
+                .filter(c -> c.getUserId().equals(userId))
+                .filter(c -> !c.getCreatedAt().isBefore(since))
+                .count();
     }
 
     private static OtpChallenge copy(OtpChallenge c) {

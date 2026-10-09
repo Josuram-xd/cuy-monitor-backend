@@ -13,7 +13,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // plain WebSocket, no SockJS; the dashboard is served from the same origin behind Caddy
-        registry.addEndpoint("/ws");
+        registry.addEndpoint("/ws").addInterceptors(new CookieHandshakeInterceptor());
     }
 
     @Override

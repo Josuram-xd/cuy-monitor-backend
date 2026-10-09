@@ -64,7 +64,7 @@ The **database schema** is not in this repo: it lives in [`cuy-monitor-db`](http
 │ Arduino + HX711 load cell    │       │  Amazon RDS for PostgreSQL 18 (private, no public IP)    │
 └──────────────────────────────┘       └──────────────────────────────────────────────────────────┘
                                                         ▲
-              Farmer's browser ── HTTPS: dashboard + REST (Bearer JWT) + WSS /ws (JWT on CONNECT)
+              Farmer's browser ── HTTPS: dashboard + REST (session cookie) + WSS /ws (same cookie)
 ```
 
 **Key architectural decisions** (full ADRs in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md))
@@ -120,13 +120,14 @@ AlertPublisher ◄────────────────────�
 |---|---|---|
 | Register | `POST /api/v1/auth/register` | Account `PENDING_VERIFICATION`, 6-digit code emailed |
 | Log in | `POST /api/v1/auth/login` | Password checked, new code emailed |
-| Verify code | `POST /api/v1/auth/otp/verify` | Account `ACTIVE` (if it was pending) + JWT valid for 30 min |
-| Use the app | any `/api/v1/**` with `Authorization: Bearer <jwt>`; STOMP `CONNECT` on `/ws` with the same header | |
-| Log out | dashboard deletes the token (stateless API) | |
-| My account | `GET/PUT /api/v1/users/me`, `PUT /api/v1/users/me/password`, `DELETE /api/v1/users/me` | Profile, password, soft-delete |
+| Verify code | `POST /api/v1/auth/otp/verify` | Account `ACTIVE` (if it was pending) + session cookies (`access_token` 15 min, `refresh_token` 7 days), both `HttpOnly` |
+| Use the app | any `/api/v1/**` and the `/ws` handshake: the browser sends the cookie by itself | |
+| Stay in | `POST /api/v1/auth/refresh` rotates both cookies | |
+| Log out | `POST /api/v1/auth/logout` revokes the tokens on the server and expires the cookies | |
+| My account | `GET/PUT /api/v1/account/profile`, `PUT /api/v1/account/password`, `DELETE /api/v1/account` | Profile, password, soft-delete |
 
 - Passwords and codes are stored as **BCrypt** hashes. Codes are single-use, expire in 5 min, max 5 attempts.
-- JWT signed with HS256 (`APP_JWT_SECRET`, ≥ 32 bytes). No roles, no refresh tokens.
+- JWT signed with HS256 (`APP_JWT_SECRET`, ≥ 32 bytes) with a `jti`; revoked ones are rejected. The refresh token rotates on every use and is stored hashed. No roles.
 - Ingestion (`/api/v1/ingestion/**`) keeps using `X-API-Key`: producers are not users.
 - Not in this version: password recovery, email change, rate limiting.
 
@@ -177,7 +178,7 @@ cuy-monitor-backend/
     └── test/java/com/cuymonitor/backend/
 ```
 
-`src/main/resources/db/migration/` still holds `V1` and `V2` until Task 21 moves them to `cuy-monitor-db`.
+The backend has no migrations: Flyway is off at runtime and the schema comes from `cuy-monitor-db`.
 
 ## Event contracts
 
@@ -244,10 +245,12 @@ Responses: `202 Accepted` · `400` invalid envelope (don't retry) · `401` wrong
 | `POST /api/v1/ingestion/events` | `X-API-Key` | ai-service, serial bridge | Ingest any event |
 | `POST /api/v1/auth/register` | public | dashboard | Create an account (sends a code) |
 | `POST /api/v1/auth/login` | public | dashboard | Check password (sends a code) |
-| `POST /api/v1/auth/otp/verify` | public | dashboard | Exchange the code for a JWT |
-| `GET` / `PUT /api/v1/users/me` | JWT | dashboard | View / update my profile |
-| `PUT /api/v1/users/me/password` | JWT | dashboard | Change my password |
-| `DELETE /api/v1/users/me` | JWT | dashboard | Deactivate my account |
+| `POST /api/v1/auth/otp/verify` | public | dashboard | Exchange the code for the session cookies |
+| `POST /api/v1/auth/refresh` | refresh cookie | dashboard | Rotate the session cookies |
+| `POST /api/v1/auth/logout` | cookies | dashboard | End the session on the server |
+| `GET` / `PUT /api/v1/account/profile` | JWT | dashboard | View / update my profile |
+| `PUT /api/v1/account/password` | JWT | dashboard | Change my password |
+| `DELETE /api/v1/account` | JWT | dashboard | Deactivate my account |
 | `GET /api/v1/cages/{id}/health` | JWT | dashboard | Cage health summary (from the Composite) |
 | `GET /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | Guinea pigs with their current state |
 | `POST /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | Register a guinea pig (name + mark color) |
@@ -304,7 +307,7 @@ Compose and the integration tests rely on `../cuy-monitor-db` (and `../cuy-monit
 docker compose -f ../cuy-monitor-db/docker-compose.yml up -d   # Postgres 18 on localhost:5432 + migrations + dev seeds
 ```
 
-> Until Task 21 is merged, the old way still works: `docker compose -f infra/docker-compose.dev.yml up -d` and Flyway runs inside the backend.
+> `infra/docker-compose.dev.yml` starts an **empty** Postgres (no tables); use it only if you apply the migrations of `cuy-monitor-db` yourself.
 
 ### 3. Run the backend
 

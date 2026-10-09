@@ -48,14 +48,14 @@ All producers send the **same event envelope** to the **same endpoint**. The bac
 - Decide health: per guinea pig state machine + cage-level aggregation.
 - Persist events, state transitions, alerts, weight readings, baselines, users and OTP challenges (through JPA, on the schema owned by `cuy-monitor-db`).
 - Notify: WebSocket push, database, application log.
-- User accounts: register, verify email with an OTP, login with password + OTP, issue and validate JWTs, account CRUD on `/api/v1/users/me`.
+- User accounts: register, verify email with an OTP, login with password + OTP, issue and validate JWTs, account CRUD on `/api/v1/account`.
 - Expose the REST API and WebSocket for the dashboard, protected by JWT.
 - Own `infra/` (Compose, Caddy, env template) and `docs/contracts/`.
 
 **Out of scope:**
 - Object detection, tracking, feature extraction, ML inference (all in `cuy-monitor-ai-service`).
 - Creating or changing tables (all in `cuy-monitor-db`).
-- Roles, admin users, password recovery, rate limiting (not in this version).
+- Roles, admin users, password recovery, general rate limiting (only the OTP request limit exists).
 
 ---
 
@@ -209,10 +209,10 @@ REGISTER   POST /api/v1/auth/register {username, fullName, email, password}
 LOGIN      POST /api/v1/auth/login {username, password}
              → password OK (and not DISABLED), new code emailed     → 200 {challengeId, expiresAt}
 VERIFY     POST /api/v1/auth/otp/verify {challengeId, code}
-             → code OK; PENDING_VERIFICATION becomes ACTIVE         → 200 {accessToken, tokenType: "Bearer", expiresAt}
-USE        any /api/v1/** with  Authorization: Bearer <jwt>
-           STOMP CONNECT on /ws with header  Authorization: Bearer <jwt>
-LOGOUT     the dashboard deletes the token (stateless API; the token expires by itself after 30 min)
+             → code OK; PENDING_VERIFICATION becomes ACTIVE         → 204 + Set-Cookie access_token, refresh_token (HttpOnly)
+USE        any /api/v1/** and the /ws handshake: the browser sends the access_token cookie by itself
+REFRESH    POST /api/v1/auth/refresh (refresh_token cookie)         → 204 + both cookies rotated
+LOGOUT     POST /api/v1/auth/logout                                 → 204; jti revoked, refresh family revoked, cookies expired
 ```
 
 ### 4.2 Access rules (`config/SecurityConfig`)
@@ -221,20 +221,25 @@ LOGOUT     the dashboard deletes the token (stateless API; the token expires by 
 |---|---|
 | `/api/v1/auth/**`, `/actuator/health` | Public |
 | `/api/v1/ingestion/**` | `X-API-Key` filter (no JWT) |
-| `/ws` (HTTP handshake) | Open; the JWT is checked on the STOMP `CONNECT` frame by a `ChannelInterceptor` (browsers can't set headers on the WebSocket handshake) |
-| everything else under `/api/v1/**` | `Authorization: Bearer <jwt>` (OAuth2 resource server, HS256) |
+| `/ws` (HTTP handshake) | Open; `CookieHandshakeInterceptor` copies the access cookie to the session and the JWT is checked on the STOMP `CONNECT` frame by a `ChannelInterceptor` |
+| everything else under `/api/v1/**` | `access_token` cookie, or `Authorization: Bearer <jwt>` for tools (OAuth2 resource server, HS256; `CookieBearerTokenResolver`) |
 
-Session `STATELESS`, CSRF disabled (Bearer API), CORS only for `http://localhost:5173` in the `dev` profile (in prod the dashboard is served from the same domain).
+Session `STATELESS`. CORS only for `http://localhost:5173` in the `dev` profile, with credentials (in prod the dashboard is served from the same domain).
+
+**CSRF decision:** no CSRF token. Both cookies are `HttpOnly; Secure; SameSite=Strict`, so the browser never attaches them to a request that starts on another site, and the dashboard and the API share one site behind Caddy. A forged cross-site request therefore arrives without credentials and gets `401`. If the dashboard were ever served from a different site, this decision must be revisited (CSRF token or `SameSite=Lax` plus a token).
 
 ### 4.3 Security rules
 
 - Password hashed with **BCrypt**; policy 8–72 characters. OTP code also stored **hashed**.
 - OTP: single use, expires in 5 min, max 5 attempts; requesting a new code revokes the previous ones of that user.
-- JWT HS256, secret ≥ 32 bytes from `APP_JWT_SECRET`, 30 min. Claims `sub` (user id), `iat`, `exp`, `iss`. No refresh token, no revocation list.
+- Access JWT HS256, secret ≥ 32 bytes from `APP_JWT_SECRET`, **15 min**. Claims `sub` (user id), `iat`, `exp`, `iss`, `jti`, `sid` (session id = refresh family). It travels only in an `HttpOnly` cookie, so DevTools storage and JavaScript never see it.
+- Logout and revocation: the `jti` and the `sid` go to `revoked_token` and `RevokedTokenValidator` (part of the `JwtDecoder`, so REST and WebSocket) rejects them. Revoking the `sid` also kills the access tokens issued before the last refresh; it is remembered for one access lifetime (15 min), after that nothing of that session can be valid.
+- Refresh token: 256 random bits, 7 days, cookie only sent to `/api/v1/auth`, stored as SHA-256 in `refresh_token`. Rotated on every use inside a family; reusing a rotated token (outside a 10 s grace for parallel tabs) revokes the family. `SessionService` owns all of this.
+- A daily job (`TokenCleanupJob`, 03:00) deletes expired rows of both tables.
 - Generic `401 invalid credentials` on login (hash is computed even when the user doesn't exist). `DISABLED` accounts get the same answer.
-- `/api/v1/users/me` loads the user on every request and rejects `DISABLED` accounts even if the JWT is still valid.
+- `/api/v1/account` loads the user on every request and rejects `DISABLED` accounts even if the JWT is still valid.
 - Mail: `EmailOtpSender` with `JavaMailSender` over SMTP (Amazon SES SMTP or Gmail with an app password). Profile `dev` uses `LogOtpSender` (writes the code to the log).
-- Out of scope: rate limiting, password recovery, email change.
+- Out of scope: general rate limiting (OTP requests are capped at 5 per 15 min), password recovery, email change.
 
 ### 4.4 SOLID in the auth part
 
@@ -301,7 +306,7 @@ src/main/java/com/cuymonitor/backend/
 
 ✅ = exists today. Everything else is planned.
 
-`src/main/resources/db/migration/` (V1, V2) is **moved to `cuy-monitor-db`** in Task 21 and then deleted here.
+The backend has no migrations: `V1` to `V6` live in `cuy-monitor-db` (Flyway is off at runtime).
 
 ---
 
@@ -368,11 +373,13 @@ Producers: `ai-service` (`BEHAVIOR`, `AUDIO`) calls `http://backend:8080` inside
 |---|---|---|
 | `POST /api/v1/auth/register` | `{ username, fullName, email, password }` | `201 { challengeId, expiresAt }` · `400` invalid / weak password · `409` username or email taken |
 | `POST /api/v1/auth/login` | `{ username, password }` | `200 { challengeId, expiresAt }` · `401` invalid credentials |
-| `POST /api/v1/auth/otp/verify` | `{ challengeId, code }` | `200 { accessToken, tokenType: "Bearer", expiresAt }` · `401` invalid / expired / used code |
-| `GET /api/v1/users/me` | — | `200 { id, username, fullName, email, status, createdAt }` |
-| `PUT /api/v1/users/me` | `{ fullName }` | `200` user |
-| `PUT /api/v1/users/me/password` | `{ currentPassword, newPassword }` | `204` · `401` wrong current password |
-| `DELETE /api/v1/users/me` | `{ currentPassword }` | `204` (account `DISABLED`) · `401` wrong current password |
+| `POST /api/v1/auth/refresh` | cookie `refresh_token` | `204` + new cookies · `401` invalid / expired / reused |
+| `POST /api/v1/auth/logout` | cookies | `204` + expired cookies (never fails) |
+| `POST /api/v1/auth/otp/verify` | `{ challengeId, code }` | `204` + `Set-Cookie` access_token and refresh_token · `401` invalid / expired / used code |
+| `GET /api/v1/account/profile` | — | `200 { username, fullName }` |
+| `PUT /api/v1/account/profile` | `{ fullName }` | `200` user |
+| `PUT /api/v1/account/password` | `{ currentPassword, newPassword }` | `204` · `401` wrong current password |
+| `DELETE /api/v1/account` | `{ currentPassword }` | `204` (account `DISABLED`) · `401` wrong current password |
 
 ### REST API
 
@@ -382,7 +389,7 @@ Producers: `ai-service` (`BEHAVIOR`, `AUDIO`) calls `http://backend:8080` inside
 | `GET /api/v1/system/status` | JWT (once security is on) | smoke test (counts cages) | ✅ (removed in Task 17.1) |
 | `POST /api/v1/ingestion/events` | `X-API-Key` | ai-service, serial_bridge | ✅ (receives and logs; pipeline pending) |
 | `/api/v1/auth/**` | public | dashboard | planned (Task 18) |
-| `/api/v1/users/me/**` | JWT | dashboard | planned (Task 19) |
+| `/api/v1/account/**` | JWT | dashboard | planned (Task 19) |
 | `GET /api/v1/cages/{id}/health` | JWT | dashboard | planned |
 | `GET /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | planned |
 | `POST /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | planned |
@@ -438,7 +445,7 @@ baseline_profile  (guinea_pig_id, avg_still_seconds, avg_feeder_visits, avg_grou
 | Container | Image / build | Exposed to the internet | Memory |
 |---|---|---|---|
 | caddy | `caddy:2.11` | 80, 443 (tcp + udp) | ~30 MB |
-| migrate | *(pending, backend Task 22.4)* built from `../../cuy-monitor-db` (`flyway/flyway` + migrations); runs `migrate` once and exits. Until then Flyway runs inside the backend at startup | no | only while it runs |
+| migrate | built from `../../cuy-monitor-db` (`flyway/flyway` + migrations); runs `migrate` once and exits | no | only while it runs |
 | backend | built from `Dockerfile` (`eclipse-temurin:25-jre`), starts after `migrate` finishes OK | no (only via Caddy) | `-Xms256m -Xmx384m` |
 | dashboard | built from `../../cuy-monitor-dashboard` (static build served by Caddy inside the image) | no (only via Caddy `/`) | ~20 MB |
 | ai-service | built from `../../cuy-monitor-ai-service`, profile `ai` | no (only via Caddy `/ai/*`) | +0.6–1 GB |
@@ -483,7 +490,7 @@ Local development: `docker compose -f ../cuy-monitor-db/docker-compose.yml up -d
 | Domain unit | Each state transition, each chain handler alone, composite aggregation, `AlertPublisher`, `User` and `OtpChallenge` rules | Plain JUnit 5 — **no Spring context, no database** |
 | Application | Use case services (incl. `AuthenticationService`, `UserAccountService`) with in-memory fakes of the output ports and a fixed `Clock` | JUnit 5 |
 | Input adapters | Each factory and adapter (envelope → `HealthEvent`); controllers 202 / 400 / 401 / 409 | JUnit 5, `@WebMvcTest` |
-| Security | Protected routes: 401 without token, 200 with token; ingestion still works with `X-API-Key`; STOMP `CONNECT` rejected without token | `@WebMvcTest` + `spring-security-test` |
+| Security | Protected routes: 401 without token, 200 with the access cookie, 401 for a revoked token; refresh rotation and reuse detection (`SessionServiceTest`); ingestion still works with `X-API-Key`; STOMP `CONNECT` rejected without token | `@WebMvcTest` + `spring-security-test` |
 | Output adapters | Persistence adapters and mappers against a real Postgres with the migrations of `../cuy-monitor-db/migrations` | `@DataJpaTest` + Testcontainers |
 | Architecture | Dependency rules of section 3.4 | ArchUnit |
 | Integration | HTTP event → pipeline → Postgres end to end | `@SpringBootTest` + Testcontainers |
@@ -596,9 +603,9 @@ Local development: `docker compose -f ../cuy-monitor-db/docker-compose.yml up -d
 
 **Context:** The dashboard shows farm data and must not be public. There is only one kind of user (who looks at the dashboard).
 
-**Decision:** Users register and log in against this backend: username + password (BCrypt) and a 6-digit code sent by email, which returns a 30-minute JWT (HS256). No roles. The dashboard is served by the same Caddy and domain, so cookies/CORS are not needed and the WebSocket goes to the same origin.
+**Decision:** Users register and log in against this backend: username + password (BCrypt) and a 6-digit code sent by email, which starts a session made of two `HttpOnly` cookies: a 15-minute JWT (HS256) and a 7-day rotating refresh token. No roles. The dashboard is served by the same Caddy and domain, so CORS is not needed in production, `SameSite=Strict` works and the WebSocket goes to the same origin.
 
-**Consequences:** no external identity provider (Cognito/Supabase Auth) to configure; the auth code is part of the course project and follows the same hexagonal rules. Needs an SMTP account (SES or Gmail). No password recovery in this version.
+**Consequences:** no external identity provider (Cognito/Supabase Auth) to configure; the auth code is part of the course project and follows the same hexagonal rules. Needs an SMTP account (SES or Gmail). No password recovery in this version. Two small tables (`revoked_token`, `refresh_token`) keep the session state; the token check costs one indexed lookup per request.
 
 ---
 

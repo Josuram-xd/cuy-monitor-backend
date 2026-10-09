@@ -4,11 +4,27 @@
 name: cuy-monitor
 
 services:
+  # Applies cuy-monitor-db migrations to RDS once and exits (ADR-008).
+  # Needs cuy-monitor-db cloned next to cuy-monitor-backend.
+  migrate:
+    build:
+      context: ../../cuy-monitor-db
+    image: cuy-monitor-db-migrate:local
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+
   backend:
     build:
       context: ..
     image: cuy-monitor-backend:local
     restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     environment:
       # application-prod.yml: TLS on the JDBC connection
       SPRING_PROFILES_ACTIVE: prod
