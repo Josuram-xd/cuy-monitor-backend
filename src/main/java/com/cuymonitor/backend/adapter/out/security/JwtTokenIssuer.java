@@ -12,6 +12,7 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.UUID;
 
 public class JwtTokenIssuer implements TokenIssuer {
 
@@ -36,6 +37,7 @@ public class JwtTokenIssuer implements TokenIssuer {
                 .subject(user.getId().toString())
                 .issuedAt(now)
                 .expiresAt(expiresAt)
+                .id(UUID.randomUUID().toString())
                 .build();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
 

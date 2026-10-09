@@ -56,6 +56,24 @@ class JwtTokenIssuerTest {
                 .isInstanceOf(JwtException.class);
     }
 
+    @Test
+    void issuedTokenCarriesAJtiThatIsAUuid() {
+        Jwt jwt = decoder(KEY).decode(issuer.issueToken(user()).accessToken());
+
+        assertThat(jwt.getId()).isNotBlank();
+        assertThat(UUID.fromString(jwt.getId())).isNotNull();
+    }
+
+    @Test
+    void everyTokenGetsItsOwnJti() {
+        User user = user();
+
+        Jwt first = decoder(KEY).decode(issuer.issueToken(user).accessToken());
+        Jwt second = decoder(KEY).decode(issuer.issueToken(user).accessToken());
+
+        assertThat(first.getId()).isNotEqualTo(second.getId());
+    }
+
     private static JwtDecoder decoder(SecretKey key) {
         return NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
     }
