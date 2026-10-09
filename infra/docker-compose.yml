@@ -1,6 +1,6 @@
 # Production stack for the EC2 instance.
-# Run from this folder:  docker compose up -d --build --remove-orphans
-# The database is Amazon RDS (private, same VPC); there is no Postgres container.
+# Normal way:  ./deploy.sh   (pulls the 4 repos, builds, starts, waits for health). See infra/README.md.
+# The database is Amazon RDS; there is no Postgres container.
 name: cuy-monitor
 
 services:
@@ -69,6 +69,12 @@ services:
     environment:
       BACKEND_URL: http://backend:8080
       API_KEY: ${API_KEY}
+      CAGE_ID: ${CAGE_ID:-cage-1}
+      # false = Amazon Bedrock analyses the frames and audio it receives; true = fake events.
+      # No AWS key here: the container uses the EC2 instance role (see infra/aws/setup.sh).
+      MOCK_MODE: ${AI_MOCK_MODE:-false}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      BEDROCK_MODEL_ID: ${BEDROCK_MODEL_ID:-us.amazon.nova-2-lite-v1:0}
 
   caddy:
     image: caddy:2.11
