@@ -134,9 +134,10 @@ Producers only ever send `EventType` and `MarkColor`. The others are listed here
 
 | Status | Body | Meaning | Producer action |
 |---|---|---|---|
-| `202 Accepted` | `{ "eventId": "...", "status": "ACCEPTED" }` | The event went through the pipeline. | Done. |
-| `400 Bad Request` | `{ "error": "<code>", "message": "..." }` | Envelope invalid: missing field, unknown `type`, malformed JSON. | **Do not retry**; fix the producer. |
+| `202 Accepted` | `{ "eventId": "...", "status": "ACCEPTED" }` | The event went through the pipeline. Also returned for a repeated `eventId` and for events the backend discards (stale, low confidence, unknown color). | Done. |
+| `400 Bad Request` | `{ "error": "<code>", "message": "..." }` | Envelope or payload invalid: missing field, unknown `type`, value out of range, `schemaVersion` other than 1, malformed JSON. The `message` names the field (`payload.stillSeconds is required`). | **Do not retry**; fix the producer. |
 | `401 Unauthorized` | `{ "error": "<code>", "message": "..." }` | Missing or wrong `X-API-Key`. | **Do not retry**; fix the key. |
+| `404 Not Found` | `{ "error": "not_found", "message": "unknown cage <cageId>" }` | `cageId` is not a registered cage. | **Do not retry**; fix the producer's `cageId`. |
 | `5xx` / network error | — | Backend or network problem. | **Retry with backoff**, keeping the same `eventId`, with a small bounded buffer. |
 
 Errors follow the API convention `{ "error": "<code>", "message": "..." }`.
