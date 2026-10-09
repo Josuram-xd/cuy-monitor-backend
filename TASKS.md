@@ -96,7 +96,7 @@
 
 - [x] **Task 6.1** — `feat(chain): add EventHandler and the four handlers`
   `domain/health/chain/`: `ValidationHandler`, `IdentificationHandler`, `BehaviorThresholdHandler`, `SustainedAnomalyHandler` (lógica simple por ahora; reciben los puertos que necesitan por constructor).
-- [ ] **Task 6.2** — `feat(chain): add HandlerChainBuilder`
+- [x] **Task 6.2** — `feat(chain): add HandlerChainBuilder`
 - [ ] **Task 6.3** — `feat(state): add HealthState and the four states`
 - [ ] **Task 6.4** — `feat(state): add GuineaPigHealthContext`
 - [ ] **Task 6.5** — `feat(composite): add HealthComponent, leaves and CageHealth`
