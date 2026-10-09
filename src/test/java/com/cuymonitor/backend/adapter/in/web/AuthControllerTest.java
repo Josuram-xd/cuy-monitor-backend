@@ -10,6 +10,9 @@ import com.cuymonitor.backend.domain.exception.WeakPasswordException;
 import com.cuymonitor.backend.domain.model.auth.AuthSession;
 import com.cuymonitor.backend.domain.model.auth.AuthToken;
 import com.cuymonitor.backend.domain.model.auth.LoginChallenge;
+import com.cuymonitor.backend.domain.exception.GoogleSignInDisabledException;
+import com.cuymonitor.backend.domain.exception.InvalidGoogleTokenException;
+import com.cuymonitor.backend.domain.port.in.GoogleSignInUseCase;
 import com.cuymonitor.backend.domain.port.in.LoginUseCase;
 import com.cuymonitor.backend.domain.port.in.LogoutUseCase;
 import com.cuymonitor.backend.domain.port.in.RefreshSessionUseCase;
@@ -83,6 +86,8 @@ class AuthControllerTest {
     private RefreshSessionUseCase refreshSessionUseCase;
     @MockitoBean
     private LogoutUseCase logoutUseCase;
+    @MockitoBean
+    private GoogleSignInUseCase googleSignInUseCase;
     @MockitoBean
     private RevokedTokenRepository revokedTokenRepository;
 
@@ -190,6 +195,50 @@ class AuthControllerTest {
                 .andExpect(cookie().sameSite("refresh_token", "Strict"))
                 .andExpect(cookie().path("refresh_token", "/api/v1/auth"))
                 .andExpect(cookie().maxAge("refresh_token", 604800));
+    }
+
+    @Test
+    void signingInWithGoogleSetsTheSameCookiesAsTheCode() throws Exception {
+        given(googleSignInUseCase.signIn("google-id-token")).willReturn(session("jwt-token", "refresh-raw"));
+
+        mvc.perform(post("/api/v1/auth/google").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"idToken\":\"google-id-token\"}"))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""))
+                .andExpect(cookie().value("access_token", "jwt-token"))
+                .andExpect(cookie().httpOnly("access_token", true))
+                .andExpect(cookie().value("refresh_token", "refresh-raw"));
+    }
+
+    @Test
+    void aTokenGoogleDoesNotVouchForGets401() throws Exception {
+        given(googleSignInUseCase.signIn(any())).willThrow(new InvalidGoogleTokenException());
+
+        mvc.perform(post("/api/v1/auth/google").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"idToken\":\"forged\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("unauthorized"))
+                .andExpect(jsonPath("$.message").value("invalid google token"));
+    }
+
+    @Test
+    void googleSignInIsNotFoundWhenItIsNotConfigured() throws Exception {
+        given(googleSignInUseCase.signIn(any())).willThrow(new GoogleSignInDisabledException());
+
+        mvc.perform(post("/api/v1/auth/google").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"idToken\":\"x\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("not_found"));
+    }
+
+    @Test
+    void googleSignInNeedsAnIdToken() throws Exception {
+        mvc.perform(post("/api/v1/auth/google").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/auth/google").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"idToken\":\"" + "a".repeat(5000) + "\"}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(googleSignInUseCase);
     }
 
     @Test

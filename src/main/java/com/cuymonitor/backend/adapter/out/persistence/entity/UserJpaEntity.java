@@ -25,8 +25,12 @@ public class UserJpaEntity {
     @Column(name = "email", nullable = false, length = 254)
     private String email;
 
-    @Column(name = "password_hash", nullable = false, length = 100)
+    // null for an account that only signs in with Google
+    @Column(name = "password_hash", length = 100)
     private String passwordHash;
+
+    @Column(name = "google_subject", length = 255)
+    private String googleSubject;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -37,12 +41,13 @@ public class UserJpaEntity {
     protected UserJpaEntity() {}
 
     public UserJpaEntity(UUID id, String username, String fullName, String email, String passwordHash,
-                         UserStatus status, Instant createdAt, Instant updatedAt) {
+                         String googleSubject, UserStatus status, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.username = username;
         this.fullName = fullName;
         this.email = email;
         this.passwordHash = passwordHash;
+        this.googleSubject = googleSubject;
         this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -66,6 +71,10 @@ public class UserJpaEntity {
 
     public String getEmail() {
         return email;
+    }
+
+    public String getGoogleSubject() {
+        return googleSubject;
     }
 
     public String getPasswordHash() {

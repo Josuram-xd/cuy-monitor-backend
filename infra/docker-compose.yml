@@ -36,6 +36,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       APP_API_KEY: ${API_KEY}
       APP_JWT_SECRET: ${APP_JWT_SECRET}
+      # public client id of the Google OAuth web client; empty = "Continuar con Google" is off
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME}

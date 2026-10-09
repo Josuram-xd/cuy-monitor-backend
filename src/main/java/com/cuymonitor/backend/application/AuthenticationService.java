@@ -90,6 +90,11 @@ public class AuthenticationService implements RegisterUserUseCase, LoginUseCase,
             throw new InvalidCredentialsException();
         }
         User user = found.get();
+        if (!user.hasPassword()) {
+            // an account that only uses Google: same answer and same cost as a wrong password
+            passwordHasher.matches(command.password(), dummyHash);
+            throw new InvalidCredentialsException();
+        }
         if (!passwordHasher.matches(command.password(), user.getPasswordHash()) || !user.canLogIn()) {
             throw new InvalidCredentialsException();
         }

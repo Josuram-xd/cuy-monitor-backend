@@ -47,6 +47,9 @@ app:
       issuer: cuy-monitor-backend
       # short on purpose: the refresh cookie renews it without asking for the code again
       ttl: 15m
+    google:
+      # public client id of the web app (Google Cloud Console > Credentials). Empty = Google sign-in is off.
+      client-id: ${GOOGLE_CLIENT_ID:}
     refresh:
       ttl: 7d
     cookie:

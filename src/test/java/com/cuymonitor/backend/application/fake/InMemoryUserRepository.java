@@ -30,6 +30,18 @@ public class InMemoryUserRepository implements UserRepository {
     }
 
     @Override
+    public Optional<User> findByEmail(String email) {
+        return users.values().stream().filter(u -> u.getEmail().equals(email)).findFirst()
+                .map(InMemoryUserRepository::copy);
+    }
+
+    @Override
+    public Optional<User> findByGoogleSubject(String googleSubject) {
+        return users.values().stream().filter(u -> googleSubject.equals(u.getGoogleSubject())).findFirst()
+                .map(InMemoryUserRepository::copy);
+    }
+
+    @Override
     public boolean existsByUsername(String username) {
         return users.values().stream().anyMatch(u -> u.getUsername().equals(username));
     }
@@ -46,6 +58,6 @@ public class InMemoryUserRepository implements UserRepository {
     // stored as copies so a test fails if the service forgets to call save()
     private static User copy(User u) {
         return User.restore(u.getId(), u.getUsername(), u.getFullName(), u.getEmail(), u.getPasswordHash(),
-                u.getStatus(), u.getCreatedAt(), u.getUpdatedAt());
+                u.getGoogleSubject(), u.getStatus(), u.getCreatedAt(), u.getUpdatedAt());
     }
 }

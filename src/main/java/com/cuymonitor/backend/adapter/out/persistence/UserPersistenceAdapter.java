@@ -36,6 +36,16 @@ public class UserPersistenceAdapter implements UserRepository {
     }
 
     @Override
+    public Optional<User> findByEmail(String email) {
+        return userJpaRepository.findByEmail(email).map(mapper::toDomain);
+    }
+
+    @Override
+    public Optional<User> findByGoogleSubject(String googleSubject) {
+        return userJpaRepository.findByGoogleSubject(googleSubject).map(mapper::toDomain);
+    }
+
+    @Override
     public boolean existsByUsername(String username) {
         return userJpaRepository.existsByUsername(username);
     }

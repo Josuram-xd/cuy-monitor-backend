@@ -70,6 +70,35 @@ class UserAccountServiceTest {
     }
 
     @Test
+    void anAccountMadeWithGoogleCanSetItsFirstPasswordWithoutAnOldOne() {
+        UUID googleUser = users.save(User.registerWithGoogle("ana", "Ana", "ana@gmail.com", "sub-1", CREATED)).getId();
+
+        service.changePassword(new ChangePasswordCommand(googleUser, null, "Brand-new-pass-9"));
+
+        User stored = users.findById(googleUser).orElseThrow();
+        assertThat(stored.hasPassword()).isTrue();
+        assertThat(stored.getPasswordHash()).isEqualTo("hashed:Brand-new-pass-9");
+    }
+
+    @Test
+    void thePasswordPolicyAlsoAppliesToTheFirstPasswordOfAGoogleAccount() {
+        UUID googleUser = users.save(User.registerWithGoogle("ana", "Ana", "ana@gmail.com", "sub-1", CREATED)).getId();
+
+        assertThatThrownBy(() -> service.changePassword(new ChangePasswordCommand(googleUser, null, "weak")))
+                .isInstanceOf(WeakPasswordException.class);
+        assertThat(users.findById(googleUser).orElseThrow().hasPassword()).isFalse();
+    }
+
+    @Test
+    void anAccountMadeWithGoogleCanBeDeactivatedWithoutAPassword() {
+        UUID googleUser = users.save(User.registerWithGoogle("ana", "Ana", "ana@gmail.com", "sub-1", CREATED)).getId();
+
+        service.deactivate(new DeactivateAccountCommand(googleUser, null));
+
+        assertThat(users.findById(googleUser).orElseThrow().getStatus()).isEqualTo(UserStatus.DISABLED);
+    }
+
+    @Test
     void changePasswordWithWrongCurrentPasswordFails() {
         assertThatThrownBy(() -> service.changePassword(new ChangePasswordCommand(userId, "wrong", "new-Secret-pass-1")))
                 .isInstanceOf(InvalidCredentialsException.class);

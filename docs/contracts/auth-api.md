@@ -81,6 +81,29 @@ Existing accounts keep working with the password they have: the rules apply when
 
 If the account was `PENDING_VERIFICATION` it becomes `ACTIVE`.
 
+### `POST /api/v1/auth/google`
+
+Sign in or sign up with Google. No code to type: Google already proved the email.
+
+```json
+{ "idToken": "eyJhbGciOi…" }
+```
+
+`idToken` is the `credential` that Google's button hands to the page (max 4096 characters). `204 No Content` with the same two cookies as `/otp/verify`.
+
+The server checks the signature against Google's public keys, the expiry, the issuer (`accounts.google.com`), that the token was made for **our** client id (`GOOGLE_CLIENT_ID`) and that `email_verified` is true. Then:
+
+| Case | What happens |
+|---|---|
+| The Google id (`sub`) is already linked | That account logs in |
+| Unknown `sub`, but the email belongs to an `ACTIVE` account | The account is linked to Google and keeps its password |
+| Unknown `sub`, the email belongs to a `PENDING_VERIFICATION` account | Linked, activated and **its password is removed**: someone may have registered that email first with a password only they know |
+| Nothing known | A new `ACTIVE` account without password; username taken from the email (`ana.ruiz@gmail.com` becomes `ana.ruiz`, with 4 digits appended if it is taken) |
+
+An account with no password cannot use `/auth/login`; it answers `invalid credentials` like a wrong password. It can set a first password in `PUT /account/password` without `currentPassword`.
+
+`401 unauthorized` / `invalid google token`: bad signature, expired, other client id, other issuer, or unverified email. `401` / `account disabled` for a `DISABLED` account. `404 not_found` if the server has no `GOOGLE_CLIENT_ID` (feature off).
+
 ### `POST /api/v1/auth/refresh`
 
 No body. Reads the `refresh_token` cookie (the browser only sends it to `/api/v1/auth`).
@@ -129,10 +152,10 @@ All these routes need `Authorization: Bearer <accessToken>`. The account is alwa
 `200 OK`
 
 ```json
-{ "username": "juan", "fullName": "Juan Perez" }
+{ "username": "juan", "fullName": "Juan Perez", "hasPassword": true }
 ```
 
-On purpose it returns only what the screen shows: no id, email, status, timestamps or password hash.
+`hasPassword` is `false` for an account made with Google that never set one, so the screen knows not to ask for a password it does not have. On purpose it returns only what the screen shows: no id, email, status, timestamps or password hash.
 
 ### `PUT /api/v1/account/profile`
 
@@ -148,7 +171,7 @@ On purpose it returns only what the screen shows: no id, email, status, timestam
 { "currentPassword": "secret-pass", "newPassword": "new-secret-pass" }
 ```
 
-`204 No Content`. The new password follows the same rules as in registration. Tokens already issued keep working until they expire.
+`204 No Content`. `currentPassword` is required, except for an account without password (made with Google), which may leave it out to set its first one. The new password follows the same rules as in registration. Tokens already issued keep working until they expire.
 
 ### `DELETE /api/v1/account`
 
@@ -156,7 +179,7 @@ On purpose it returns only what the screen shows: no id, email, status, timestam
 { "currentPassword": "secret-pass" }
 ```
 
-`204 No Content`. Soft delete: the account becomes `DISABLED` and can no longer log in. The dashboard should call `POST /api/v1/auth/logout` right after.
+`204 No Content`. `currentPassword` is required, except for an account without password (made with Google). Soft delete: the account becomes `DISABLED` and can no longer log in. The dashboard should call `POST /api/v1/auth/logout` right after.
 
 ### Account errors
 

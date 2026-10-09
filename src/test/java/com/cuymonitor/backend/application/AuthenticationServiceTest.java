@@ -103,6 +103,15 @@ class AuthenticationServiceTest {
     }
 
     @Test
+    void aGoogleOnlyAccountCannotLogInWithAPassword() {
+        users.save(User.registerWithGoogle("ana", "Ana", "ana@gmail.com", "sub-1", NOW));
+
+        assertThatThrownBy(() -> service.login(new LoginCommand("ana", "Whatever-pass-1")))
+                .isInstanceOf(InvalidCredentialsException.class);
+        assertThat(sender.sent()).isEmpty();
+    }
+
+    @Test
     void loginWithCorrectPasswordSendsNewCode() {
         register("juan", "juan@mail.com");
 

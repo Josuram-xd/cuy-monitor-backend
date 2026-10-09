@@ -74,6 +74,10 @@ public class UserAccountService implements GetCurrentUserUseCase, UpdateProfileU
     }
 
     private void checkCurrentPassword(User user, String currentPassword) {
+        // an account made with Google has no password to type: its open session is the proof
+        if (!user.hasPassword()) {
+            return;
+        }
         if (currentPassword == null || !passwordHasher.matches(currentPassword, user.getPasswordHash())) {
             throw new InvalidCredentialsException();
         }
