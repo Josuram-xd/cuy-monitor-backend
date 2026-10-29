@@ -69,6 +69,10 @@ Existing accounts keep working with the password they have: the rules apply when
 { "username": "juan", "password": "secret-pass" }
 ```
 
+Both fields are required and capped at the same length as in register (`username` max 50, `password` max 200): a
+value longer than that cannot belong to an existing account, so it is a `400` with the field named instead of a
+query. The cap is not a hint about the real password rules, which only apply when a password is set.
+
 `200 OK`: same body as register. A new code is emailed and any previous pending code of that user stops working. It also works for accounts that were never verified, so it doubles as "resend code".
 
 ### `POST /api/v1/auth/otp/verify`
@@ -170,6 +174,8 @@ All these routes need `Authorization: Bearer <accessToken>`. The account is alwa
 ```json
 { "currentPassword": "secret-pass", "newPassword": "new-secret-pass" }
 ```
+
+`newPassword` is required; both fields are capped at 200 characters before `PasswordPolicy` looks at them.
 
 `204 No Content`. `currentPassword` is required, except for an account without password (made with Google), which may leave it out to set its first one. The new password follows the same rules as in registration. Tokens already issued keep working until they expire.
 
