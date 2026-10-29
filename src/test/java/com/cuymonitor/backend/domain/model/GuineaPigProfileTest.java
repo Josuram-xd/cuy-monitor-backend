@@ -42,7 +42,7 @@ class GuineaPigProfileTest {
 
     @Test
     void aGuineaPigRegisteredWithoutProfileHasAnEmptyOne() {
-        GuineaPig pig = GuineaPig.register("cage-1", "Canela", MarkColor.RED, NOW);
+        GuineaPig pig = GuineaPig.register("cage-1", "Canela", "RED", NOW);
 
         assertThat(pig.getProfile()).isEqualTo(GuineaPigProfile.EMPTY);
     }
@@ -50,9 +50,9 @@ class GuineaPigProfileTest {
     @Test
     void aGuineaPigKeepsTheProfileItWasRegisteredWith() {
         GuineaPigProfile profile =
-                new GuineaPigProfile(GuineaPigBreed.TEDDY, CoatColor.CREAM, 850, "tranquila");
+                new GuineaPigProfile("TEDDY", "CREAM", 850, "tranquila");
 
-        GuineaPig pig = GuineaPig.register("cage-1", "Canela", MarkColor.RED, profile, NOW);
+        GuineaPig pig = GuineaPig.register("cage-1", "Canela", "RED", profile, NOW);
 
         assertThat(pig.getProfile()).isEqualTo(profile);
     }

@@ -3,7 +3,6 @@ package com.cuymonitor.backend.adapter.in.web.dto;
 import com.cuymonitor.backend.domain.model.CageHealthSummary;
 import com.cuymonitor.backend.domain.model.GuineaPig;
 import com.cuymonitor.backend.domain.model.HealthStatus;
-import com.cuymonitor.backend.domain.model.MarkColor;
 
 import java.time.Instant;
 import java.util.List;
@@ -12,7 +11,7 @@ import java.util.List;
 public record CageHealthResponse(String cageId, HealthStatus status, List<Member> guineaPigs, Audio audio,
                                  Weight weight, Instant updatedAt) {
 
-    public record Member(long id, String name, MarkColor markColor, HealthStatus status) {
+    public record Member(long id, String name, String markColor, HealthStatus status) {
 
         static Member from(GuineaPig guineaPig) {
             return new Member(guineaPig.getId(), guineaPig.getName(), guineaPig.getMarkColor(),

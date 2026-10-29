@@ -231,11 +231,14 @@ Responses: `202 Accepted` · `400` invalid envelope (don't retry) · `401` wrong
 
 | Enum | Values |
 |---|---|
-| `MarkColor` | `RED, BLUE, GREEN, YELLOW, ORANGE, PURPLE, BLACK, WHITE` |
 | `HealthStatus` | `NORMAL, OBSERVED, ALERT, CRITICAL` |
 | `EventType` | `BEHAVIOR, AUDIO, WEIGHT` |
 | `AlertStatus` | `OPEN, REVIEWED` |
 | `UserStatus` | `PENDING_VERIFICATION, ACTIVE, DISABLED` |
+
+Mark colors, breeds and coat colors are **not** enums. They are rows of the `catalog_option` table of
+`cuy-monitor-db`, served at `GET /api/v1/catalog`: adding a color or renaming a breed is an `INSERT` or an
+`UPDATE`, with no change to this repo or to the dashboard.
 
 ## REST API
 
@@ -251,9 +254,10 @@ Responses: `202 Accepted` · `400` invalid envelope (don't retry) · `401` wrong
 | `GET` / `PUT /api/v1/account/profile` | JWT | dashboard | View / update my profile |
 | `PUT /api/v1/account/password` | JWT | dashboard | Change my password |
 | `DELETE /api/v1/account` | JWT | dashboard | Deactivate my account |
+| `GET /api/v1/catalog` | JWT | dashboard | Mark colors, breeds and coat colors, from the database |
 | `GET /api/v1/cages/{id}/health` | JWT | dashboard | Cage health summary (from the Composite) |
 | `GET /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | Guinea pigs with their current state |
-| `POST /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | Register a guinea pig (name + mark color) |
+| `POST /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | Register a guinea pig (name + mark color code) |
 | `GET /api/v1/guinea-pigs/{id}/history?from=&to=` | JWT | dashboard | Behavior and state history |
 | `GET /api/v1/alerts?status=OPEN` | JWT | dashboard | List alerts |
 | `PATCH /api/v1/alerts/{id}` | JWT | dashboard | Mark an alert as `REVIEWED` |

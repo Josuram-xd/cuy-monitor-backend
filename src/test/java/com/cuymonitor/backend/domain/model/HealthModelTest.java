@@ -14,7 +14,7 @@ class HealthModelTest {
 
     @Test
     void deactivatingKeepsTheRestOfTheGuineaPig() {
-        GuineaPig pig = GuineaPig.register("cage-1", "Canela", MarkColor.RED, NOW);
+        GuineaPig pig = GuineaPig.register("cage-1", "Canela", "RED", NOW);
 
         pig.deactivate();
 
@@ -34,7 +34,7 @@ class HealthModelTest {
 
     @Test
     void registeredGuineaPigStartsNormal() {
-        GuineaPig pig = GuineaPig.register("cage-1", "  Canela ", MarkColor.RED, NOW);
+        GuineaPig pig = GuineaPig.register("cage-1", "  Canela ", "RED", NOW);
 
         assertThat(pig.getId()).isNull();
         assertThat(pig.getName()).isEqualTo("Canela");
@@ -45,15 +45,15 @@ class HealthModelTest {
 
     @Test
     void guineaPigNameIsRequiredAndShort() {
-        assertThatThrownBy(() -> GuineaPig.register("cage-1", " ", MarkColor.RED, NOW))
+        assertThatThrownBy(() -> GuineaPig.register("cage-1", " ", "RED", NOW))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> GuineaPig.register("cage-1", "a".repeat(101), MarkColor.RED, NOW))
+        assertThatThrownBy(() -> GuineaPig.register("cage-1", "a".repeat(101), "RED", NOW))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void changeStatusOnlyMovesStatusSinceWhenTheStatusChanges() {
-        GuineaPig pig = GuineaPig.register("cage-1", "Canela", MarkColor.RED, NOW);
+        GuineaPig pig = GuineaPig.register("cage-1", "Canela", "RED", NOW);
         Instant later = NOW.plusSeconds(60);
 
         pig.changeStatus(HealthStatus.NORMAL, later);
@@ -117,11 +117,11 @@ class HealthModelTest {
 
     @Test
     void behaviorSignalRejectsValuesOutsideTheContract() {
-        assertThatThrownBy(() -> new BehaviorSignal(MarkColor.RED, 60, 61, 0, 0, 0.1, 0.1, 0.9))
+        assertThatThrownBy(() -> new BehaviorSignal("RED", 60, 61, 0, 0, 0.1, 0.1, 0.9))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new BehaviorSignal(MarkColor.RED, 60, 10, -1, 0, 0.1, 0.1, 0.9))
+        assertThatThrownBy(() -> new BehaviorSignal("RED", 60, 10, -1, 0, 0.1, 0.1, 0.9))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new BehaviorSignal(MarkColor.RED, 60, 10, 0, 0, 1.2, 0.1, 0.9))
+        assertThatThrownBy(() -> new BehaviorSignal("RED", 60, 10, 0, 0, 1.2, 0.1, 0.9))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -133,6 +133,6 @@ class HealthModelTest {
     }
 
     private static BehaviorSignal window(double stillSeconds, int feederVisits, double groupDistance, double probAnomaly) {
-        return new BehaviorSignal(MarkColor.RED, 60, stillSeconds, feederVisits, 1, groupDistance, probAnomaly, 0.9);
+        return new BehaviorSignal("RED", 60, stillSeconds, feederVisits, 1, groupDistance, probAnomaly, 0.9);
     }
 }

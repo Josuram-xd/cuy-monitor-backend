@@ -170,7 +170,7 @@ These rules are checked by an ArchUnit test (`src/test/java/.../architecture/Hex
 | Handler | Responsibility | Ports used |
 |---|---|---|
 | `ValidationHandler` | Drop malformed, stale or low-confidence events | — |
-| `IdentificationHandler` | Map `(cageId, MarkColor)` to a registered `GuineaPig` | `GuineaPigRepository` |
+| `IdentificationHandler` | Map `(cageId, mark color code)` to a registered `GuineaPig` | `GuineaPigRepository` |
 | `BehaviorThresholdHandler` | Compare the window against the guinea pig's `BaselineProfile` | `BaselineProfileRepository` |
 | `SustainedAnomalyHandler` | Only pass anomalies seen in N consecutive windows | `EventRepository` |
 
@@ -257,7 +257,7 @@ Session `STATELESS`. CORS and the WebSocket origin only for `http://localhost:51
 src/main/java/com/cuymonitor/backend/
 ├── BackendApplication.java
 ├── domain/                               ← pure Java: no Spring, no JPA, no Jackson
-│   ├── model/                            EventType ✅, MarkColor, HealthStatus, AlertStatus, Cage, GuineaPig,
+│   ├── model/                            EventType ✅, CatalogOption, HealthStatus, AlertStatus, Cage, GuineaPig,
 │   │   │                                 HealthEvent, Alert, WeightReading, BaselineProfile, StateTransition
 │   │   ├── user/                         User ✅, UserStatus ✅, PasswordPolicy ✅
 │   │   └── auth/                         OtpChallenge ✅, LoginChallenge ✅, AuthToken ✅, OtpVerificationResult ✅
@@ -361,11 +361,14 @@ Producers: `ai-service` (`BEHAVIOR`, `AUDIO`) calls `http://backend:8080` inside
 
 ### Shared enums
 
-- `MarkColor`: `RED, BLUE, GREEN, YELLOW, ORANGE, PURPLE, BLACK, WHITE`
 - `HealthStatus`: `NORMAL, OBSERVED, ALERT, CRITICAL`
 - `EventType`: `BEHAVIOR, AUDIO, WEIGHT`
 - `AlertStatus`: `OPEN, REVIEWED`
 - `UserStatus`: `PENDING_VERIFICATION, ACTIVE, DISABLED`
+
+Mark colors, breeds and coat colors are **not** enums: they are rows of `catalog_option` in `cuy-monitor-db`,
+served at `GET /api/v1/catalog`. The backend validates a code against that table instead of against a Java enum,
+so the breeder can add a color with an `INSERT`.
 
 ### Auth API (`docs/contracts/auth-api.md`)
 

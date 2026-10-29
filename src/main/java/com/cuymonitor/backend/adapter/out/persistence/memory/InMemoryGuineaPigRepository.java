@@ -1,7 +1,6 @@
 package com.cuymonitor.backend.adapter.out.persistence.memory;
 
 import com.cuymonitor.backend.domain.model.GuineaPig;
-import com.cuymonitor.backend.domain.model.MarkColor;
 import com.cuymonitor.backend.domain.port.out.GuineaPigRepository;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -34,8 +33,8 @@ public class InMemoryGuineaPigRepository implements GuineaPigRepository {
     }
 
     @Override
-    public Optional<GuineaPig> findActiveByCageAndColor(String cageCode, MarkColor markColor) {
-        return findActiveByCage(cageCode).stream().filter(g -> g.getMarkColor() == markColor).findFirst();
+    public Optional<GuineaPig> findActiveByCageAndColor(String cageCode, String markColor) {
+        return findActiveByCage(cageCode).stream().filter(g -> g.getMarkColor().equals(markColor)).findFirst();
     }
 
     @Override

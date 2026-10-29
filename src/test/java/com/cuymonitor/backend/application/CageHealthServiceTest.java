@@ -15,7 +15,6 @@ import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.GuineaPig;
 import com.cuymonitor.backend.domain.model.HealthEvent;
 import com.cuymonitor.backend.domain.model.HealthStatus;
-import com.cuymonitor.backend.domain.model.MarkColor;
 import com.cuymonitor.backend.domain.model.WeightReading;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,9 +59,9 @@ class CageHealthServiceTest {
 
     @Test
     void theCageIsAsBadAsItsWorstGuineaPig() {
-        guineaPig("Canela", MarkColor.RED, HealthStatus.OBSERVED);
-        guineaPig("Pelusa", MarkColor.BLUE, HealthStatus.CRITICAL);
-        guineaPig("Copito", MarkColor.WHITE, HealthStatus.NORMAL);
+        guineaPig("Canela", "RED", HealthStatus.OBSERVED);
+        guineaPig("Pelusa", "BLUE", HealthStatus.CRITICAL);
+        guineaPig("Copito", "WHITE", HealthStatus.NORMAL);
 
         CageHealthSummary summary = service.getHealth(CAGE);
 
@@ -72,7 +71,7 @@ class CageHealthServiceTest {
 
     @Test
     void anOpenAudioAlertRaisesTheAudioPartAndTheCage() {
-        guineaPig("Canela", MarkColor.RED, HealthStatus.NORMAL);
+        guineaPig("Canela", "RED", HealthStatus.NORMAL);
         alerts.save(Alert.forCage(CAGE, EventType.AUDIO, HealthStatus.ALERT, "Distress sounds", NOW));
         events.save(new HealthEvent(UUID.randomUUID(), CAGE, NOW.minusSeconds(30), "ai-service",
                 new AudioSignal(AudioLabel.DISTRESS, 0.9, 1500)), null);
@@ -116,7 +115,7 @@ class CageHealthServiceTest {
         assertThatThrownBy(() -> service.getHealth("nope")).isInstanceOf(CageNotFoundException.class);
     }
 
-    private void guineaPig(String name, MarkColor color, HealthStatus status) {
+    private void guineaPig(String name, String color, HealthStatus status) {
         GuineaPig pig = guineaPigs.save(GuineaPig.register(CAGE, name, color, NOW.minusSeconds(3600)));
         pig.changeStatus(status, NOW.minusSeconds(600));
         guineaPigs.save(pig);
