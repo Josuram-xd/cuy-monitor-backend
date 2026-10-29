@@ -11,7 +11,6 @@ import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.GuineaPig;
 import com.cuymonitor.backend.domain.model.HealthEvent;
 import com.cuymonitor.backend.domain.model.HealthSignal;
-import com.cuymonitor.backend.domain.model.MarkColor;
 import com.cuymonitor.backend.domain.model.WeightSignal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +37,7 @@ class EventIngestionServiceTest {
         events = new InMemoryEventRepository();
         weights = new InMemoryWeightReadingRepository();
         service = new EventIngestionService(new InMemoryCageRepository(), guineaPigs, events, weights);
-        guineaPigs.save(GuineaPig.register(CAGE, "Canela", MarkColor.RED, NOW.minusSeconds(3600)));
+        guineaPigs.save(GuineaPig.register(CAGE, "Canela", "RED", NOW.minusSeconds(3600)));
     }
 
     @Test
@@ -59,14 +58,14 @@ class EventIngestionServiceTest {
 
     @Test
     void attachesABehaviorWindowToTheGuineaPigWearingThatColor() {
-        service.process(event(new BehaviorSignal(MarkColor.RED, 60, 48, 1, 2, 0.4, 0.2, 0.9)));
+        service.process(event(new BehaviorSignal("RED", 60, 48, 1, 2, 0.4, 0.2, 0.9)));
 
         assertThat(events.findLatestBehavior(1, 10)).hasSize(1);
     }
 
     @Test
     void ignoresABehaviorWindowOfAColorNobodyWears() {
-        service.process(event(new BehaviorSignal(MarkColor.BLUE, 60, 48, 1, 2, 0.4, 0.2, 0.9)));
+        service.process(event(new BehaviorSignal("BLUE", 60, 48, 1, 2, 0.4, 0.2, 0.9)));
 
         assertThat(events.findLatestBehavior(1, 10)).isEmpty();
         assertThat(events.findLatest(CAGE, EventType.BEHAVIOR)).isEmpty();

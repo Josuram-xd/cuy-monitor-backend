@@ -10,13 +10,12 @@ import com.cuymonitor.backend.config.JwtConfig;
 import com.cuymonitor.backend.config.SecurityConfig;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
 import com.cuymonitor.backend.domain.exception.ColorAlreadyUsedException;
+import com.cuymonitor.backend.domain.exception.UnknownCatalogOptionException;
+import com.cuymonitor.backend.domain.model.CatalogKind;
 import com.cuymonitor.backend.domain.model.CageHealthSummary;
-import com.cuymonitor.backend.domain.model.CoatColor;
 import com.cuymonitor.backend.domain.model.GuineaPig;
-import com.cuymonitor.backend.domain.model.GuineaPigBreed;
 import com.cuymonitor.backend.domain.model.GuineaPigProfile;
 import com.cuymonitor.backend.domain.model.HealthStatus;
-import com.cuymonitor.backend.domain.model.MarkColor;
 import com.cuymonitor.backend.domain.port.in.GetCageHealthUseCase;
 import com.cuymonitor.backend.domain.port.in.ListGuineaPigsUseCase;
 import com.cuymonitor.backend.domain.port.in.RegisterGuineaPigCommand;
@@ -77,7 +76,7 @@ class CageControllerTest {
 
     @Test
     void listsTheGuineaPigsOfTheCage() throws Exception {
-        given(listGuineaPigsUseCase.list("cage-1")).willReturn(List.of(pig(1, "Canela", MarkColor.RED)));
+        given(listGuineaPigsUseCase.list("cage-1")).willReturn(List.of(pig(1, "Canela", "RED")));
 
         mvc.perform(get("/api/v1/cages/cage-1/guinea-pigs").with(token()))
                 .andExpect(status().isOk())
@@ -91,8 +90,8 @@ class CageControllerTest {
     @Test
     void registersAGuineaPigAndAnswers201() throws Exception {
         given(registerGuineaPigUseCase.register(argThat(c -> "cage-1".equals(c.cageCode())
-                && "Canela".equals(c.name()) && c.markColor() == MarkColor.RED)))
-                .willReturn(pig(7, "Canela", MarkColor.RED));
+                && "Canela".equals(c.name()) && "RED".equals(c.markColor()))))
+                .willReturn(pig(7, "Canela", "RED"));
 
         mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Canela\",\"markColor\":\"RED\"}"))
@@ -103,9 +102,9 @@ class CageControllerTest {
 
     @Test
     void registersAGuineaPigWithItsProfile() throws Exception {
-        GuineaPigProfile profile = new GuineaPigProfile(GuineaPigBreed.TEDDY, CoatColor.CREAM, 850, "tranquila");
+        GuineaPigProfile profile = new GuineaPigProfile("TEDDY", "CREAM", 850, "tranquila");
         given(registerGuineaPigUseCase.register(argThat(c -> "Canela".equals(c.name()) && profile.equals(c.profile()))))
-                .willReturn(GuineaPig.restore(7L, "cage-1", "Canela", MarkColor.RED, HealthStatus.NORMAL, NOW, true,
+                .willReturn(GuineaPig.restore(7L, "cage-1", "Canela", "RED", HealthStatus.NORMAL, NOW, true,
                         NOW, profile));
 
         mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
@@ -120,7 +119,7 @@ class CageControllerTest {
 
     @Test
     void theProfileIsNullWhenTheGuineaPigHasNone() throws Exception {
-        given(listGuineaPigsUseCase.list("cage-1")).willReturn(List.of(pig(1, "Canela", MarkColor.RED)));
+        given(listGuineaPigsUseCase.list("cage-1")).willReturn(List.of(pig(1, "Canela", "RED")));
 
         mvc.perform(get("/api/v1/cages/cage-1/guinea-pigs").with(token()))
                 .andExpect(jsonPath("$[0].breed").value(nullValue()))
@@ -128,14 +127,33 @@ class CageControllerTest {
     }
 
     @Test
+    void rejectsACodeThatIsNotInTheCatalogWith400() throws Exception {
+        willThrow(new UnknownCatalogOptionException(CatalogKind.BREED, "DRAGON"))
+                .given(registerGuineaPigUseCase).register(any());
+
+        mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Canela\",\"markColor\":\"RED\",\"breed\":\"DRAGON\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("bad_request"))
+                .andExpect(jsonPath("$.message").value("unknown breed: DRAGON"));
+    }
+
+    @Test
+    void rejectsACodeLongerThanTheColumnWith400() throws Exception {
+        mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Canela\",\"markColor\":\"" + "A".repeat(21) + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.markColor").exists());
+        mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Canela\",\"markColor\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.markColor").exists());
+        verifyNoInteractions(registerGuineaPigUseCase);
+    }
+
+    @Test
     void rejectsAnInvalidProfileWith400() throws Exception {
         String base = "{\"name\":\"Canela\",\"markColor\":\"RED\",";
-        mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
-                        .content(base + "\"breed\":\"DRAGON\"}"))
-                .andExpect(status().isBadRequest());
-        mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
-                        .content(base + "\"coatColor\":\"PINK\"}"))
-                .andExpect(status().isBadRequest());
         mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
                         .content(base + "\"initialWeightGrams\":5}"))
                 .andExpect(status().isBadRequest())
@@ -184,19 +202,16 @@ class CageControllerTest {
     }
 
     @Test
-    void rejectsABlankNameOrAnUnknownColorWith400() throws Exception {
+    void rejectsABlankNameOrAMissingColorWith400() throws Exception {
         mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"  \",\"markColor\":\"RED\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("bad_request"))
                 .andExpect(jsonPath("$.fields.name").exists());
         mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Canela\",\"markColor\":\"PINK\"}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("bad_request"));
-        mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Canela\"}"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.markColor").exists());
         verifyNoInteractions(registerGuineaPigUseCase);
     }
 
@@ -224,7 +239,7 @@ class CageControllerTest {
 
     @Test
     void returnsTheCageHealthInTheContractShape() throws Exception {
-        GuineaPig canela = GuineaPig.restore(1L, "cage-1", "Canela", MarkColor.RED, HealthStatus.OBSERVED,
+        GuineaPig canela = GuineaPig.restore(1L, "cage-1", "Canela", "RED", HealthStatus.OBSERVED,
                 NOW.minusSeconds(600), true, NOW.minusSeconds(3600));
         given(getCageHealthUseCase.getHealth("cage-1")).willReturn(new CageHealthSummary("cage-1",
                 HealthStatus.OBSERVED, List.of(canela),
@@ -243,7 +258,7 @@ class CageControllerTest {
                 .andExpect(jsonPath("$.updatedAt").value("2026-10-05T14:32:00Z"));
     }
 
-    private static GuineaPig pig(long id, String name, MarkColor color) {
+    private static GuineaPig pig(long id, String name, String color) {
         return GuineaPig.restore(id, "cage-1", name, color, HealthStatus.NORMAL, NOW, true, NOW);
     }
 

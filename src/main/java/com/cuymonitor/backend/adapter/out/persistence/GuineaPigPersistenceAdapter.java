@@ -4,7 +4,6 @@ import com.cuymonitor.backend.adapter.out.persistence.mapper.GuineaPigPersistenc
 import com.cuymonitor.backend.adapter.out.persistence.repository.CageJpaRepository;
 import com.cuymonitor.backend.adapter.out.persistence.repository.GuineaPigJpaRepository;
 import com.cuymonitor.backend.domain.model.GuineaPig;
-import com.cuymonitor.backend.domain.model.MarkColor;
 import com.cuymonitor.backend.domain.port.out.GuineaPigRepository;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -44,7 +43,7 @@ public class GuineaPigPersistenceAdapter implements GuineaPigRepository {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<GuineaPig> findActiveByCageAndColor(String cageCode, MarkColor markColor) {
+    public Optional<GuineaPig> findActiveByCageAndColor(String cageCode, String markColor) {
         return guineaPigJpaRepository.findByCage_CodeAndMarkColorAndActiveTrue(cageCode, markColor)
                 .map(mapper::toDomain);
     }

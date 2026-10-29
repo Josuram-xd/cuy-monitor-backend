@@ -112,13 +112,17 @@ Active guinea pigs only.
 | Field | Rules |
 |---|---|
 | `name` | Required, 1–100 characters. |
-| `markColor` | Required, a `MarkColor`. One color per guinea pig in a cage. It is what the camera uses to tell them apart. |
-| `breed` | Optional, a `GuineaPigBreed`. |
-| `coatColor` | Optional, a `CoatColor`: the real color of the fur, not the mark. |
+| `markColor` | Required, a `MARK_COLOR` code of 3.8, up to 20 characters. One color per guinea pig in a cage: it is what the camera uses to tell them apart. |
+| `breed` | Optional, a `BREED` code of 3.8. |
+| `coatColor` | Optional, a `COAT_COLOR` code of 3.8: the real color of the fur, not the mark. |
 | `initialWeightGrams` | Optional, integer from 50 to 2000. Weight on arrival. |
 | `notes` | Optional, up to 500 characters (trimmed; blank is stored as `null`). |
 
-`201` returns the created guinea pig (same shape as an item of 3.2, `status: "NORMAL"`). `400` invalid body · `409` color already used in the cage · `404` unknown cage.
+`201` returns the created guinea pig (same shape as an item of 3.2, `status: "NORMAL"`). `400` invalid body, or a
+code that is not an active option (`{ "error": "bad_request", "message": "unknown breed: DRAGON" }`) · `409` color
+already used in the cage · `404` unknown cage.
+
+The codes are read upper case: `red` and `RED` are the same option.
 
 ### 3.3b `DELETE /api/v1/cages/{cageId}/guinea-pigs/{id}`
 
@@ -194,6 +198,30 @@ Same defaults and rules for `from`/`to` as 3.4.
 Ordered by `measuredAt`, oldest first. Includes unstable readings; the client filters by `stable` if it needs to.
 
 ---
+
+### 3.8 `GET /api/v1/catalog`
+
+The lists the dashboard draws its pickers with. They are **rows of the `catalog_option` table**, not values of an
+enum: adding a mark color or renaming a breed is an `INSERT` or an `UPDATE` in `cuy-monitor-db`, with no change to
+this repo or to the dashboard.
+
+```json
+{
+  "markColors": [{ "code": "RED", "label": "Rojo", "hex": "#d62828" }],
+  "coatColors": [{ "code": "CINNAMON", "label": "Canela", "hex": "#c9763d" }],
+  "breeds": [{ "code": "TEDDY", "label": "Teddy", "hex": null }]
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `code` | What travels in the API and is stored in the database (`RED`). Upper case, letters, digits and `_`, up to 20 characters |
+| `label` | What the breeder reads, in Spanish. The dashboard shows it as it comes; it does not translate it |
+| `hex` | Color of the dot the dashboard paints (`#d62828`). `null` for a breed, which has no sample |
+
+Each list is already in the order it should be shown, and only holds the **active** options. A retired option
+(`active = false`) disappears from here but the guinea pigs that use it keep their code, so an old record stays
+readable. `200 OK`. Needs a session like every other endpoint of section 3.
 
 ## 4. WebSocket (STOMP)
 

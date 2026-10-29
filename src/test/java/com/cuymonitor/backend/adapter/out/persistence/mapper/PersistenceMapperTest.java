@@ -12,11 +12,8 @@ import com.cuymonitor.backend.domain.model.Cage;
 import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.HealthEvent;
 import com.cuymonitor.backend.domain.model.HealthStatus;
-import com.cuymonitor.backend.domain.model.CoatColor;
 import com.cuymonitor.backend.domain.model.GuineaPig;
-import com.cuymonitor.backend.domain.model.GuineaPigBreed;
 import com.cuymonitor.backend.domain.model.GuineaPigProfile;
-import com.cuymonitor.backend.domain.model.MarkColor;
 import com.cuymonitor.backend.domain.model.StateTransition;
 import com.cuymonitor.backend.domain.model.WeightReading;
 import com.cuymonitor.backend.domain.model.WeightSignal;
@@ -34,7 +31,7 @@ class PersistenceMapperTest {
     private static final Instant NOW = Instant.parse("2026-10-05T14:00:00Z");
     private static final CageJpaEntity CAGE_ENTITY = new CageJpaEntity(3L, "cage-1", "Ranchito", null);
     private static final GuineaPigJpaEntity GUINEA_PIG_ENTITY = new GuineaPigJpaEntity(
-            8L, CAGE_ENTITY, "Canela", MarkColor.RED, HealthStatus.NORMAL, NOW, true, NOW);
+            8L, CAGE_ENTITY, "Canela", "RED", HealthStatus.NORMAL, NOW, true, NOW);
 
     @Test
     void mapsCageBetweenDomainAndPersistence() {
@@ -48,7 +45,7 @@ class PersistenceMapperTest {
     void mapsGuineaPigBetweenDomainAndPersistence() {
         GuineaPigPersistenceMapper mapper = new GuineaPigPersistenceMapper();
         GuineaPig guineaPig = GuineaPig.restore(
-                8L, "cage-1", "Canela", MarkColor.RED, HealthStatus.NORMAL, NOW, true, NOW);
+                8L, "cage-1", "Canela", "RED", HealthStatus.NORMAL, NOW, true, NOW);
 
         assertThat(mapper.toDomain(mapper.toEntity(guineaPig, CAGE_ENTITY)).getName()).isEqualTo("Canela");
         assertThat(mapper.toDomain(mapper.toEntity(guineaPig, CAGE_ENTITY)).getId()).isEqualTo(8L);
@@ -57,14 +54,14 @@ class PersistenceMapperTest {
     @Test
     void mapsTheGuineaPigProfileBothWays() {
         GuineaPigPersistenceMapper mapper = new GuineaPigPersistenceMapper();
-        GuineaPigProfile profile = new GuineaPigProfile(GuineaPigBreed.ABYSSINIAN, CoatColor.BICOLOR, 920, "activo");
+        GuineaPigProfile profile = new GuineaPigProfile("ABYSSINIAN", "BICOLOR", 920, "activo");
         GuineaPig guineaPig = GuineaPig.restore(
-                8L, "cage-1", "Canela", MarkColor.RED, HealthStatus.NORMAL, NOW, true, NOW, profile);
+                8L, "cage-1", "Canela", "RED", HealthStatus.NORMAL, NOW, true, NOW, profile);
 
         GuineaPigJpaEntity entity = mapper.toEntity(guineaPig, CAGE_ENTITY);
 
-        assertThat(entity.getBreed()).isEqualTo(GuineaPigBreed.ABYSSINIAN);
-        assertThat(entity.getCoatColor()).isEqualTo(CoatColor.BICOLOR);
+        assertThat(entity.getBreed()).isEqualTo("ABYSSINIAN");
+        assertThat(entity.getCoatColor()).isEqualTo("BICOLOR");
         assertThat(entity.getInitialWeightGrams()).isEqualTo(920);
         assertThat(entity.getNotes()).isEqualTo("activo");
         assertThat(mapper.toDomain(entity).getProfile()).isEqualTo(profile);
@@ -82,7 +79,7 @@ class PersistenceMapperTest {
         EventPersistenceMapper mapper = new EventPersistenceMapper(JsonMapper.builder().build());
         List<HealthEvent> events = List.of(
                 new HealthEvent(UUID.randomUUID(), "cage-1", NOW, "camera",
-                        new BehaviorSignal(MarkColor.RED, 60, 10, 2, 1, 0.2, 0.1, 0.9)),
+                        new BehaviorSignal("RED", 60, 10, 2, 1, 0.2, 0.1, 0.9)),
                 new HealthEvent(UUID.randomUUID(), "cage-1", NOW, "microphone",
                         new AudioSignal(AudioLabel.DISTRESS, 0.95, 1000)),
                 new HealthEvent(UUID.randomUUID(), "cage-1", NOW, "arduino",

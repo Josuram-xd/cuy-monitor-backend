@@ -2,12 +2,13 @@ package com.cuymonitor.backend.domain.model;
 
 import java.util.Objects;
 
-// one 60 s window of one guinea pig, identified by the color of its mark
-public record BehaviorSignal(MarkColor color, int windowSeconds, double stillSeconds, int feederVisits,
+// one 60 s window of one guinea pig, identified by the MARK_COLOR code of its mark
+public record BehaviorSignal(String color, int windowSeconds, double stillSeconds, int feederVisits,
                              int watererVisits, double avgGroupDistance, double probAnomaly,
                              double detectionConfidence) implements HealthSignal {
 
     public BehaviorSignal {
+        color = CatalogOption.normalize(color);
         Objects.requireNonNull(color, "color");
         if (windowSeconds <= 0) {
             throw new IllegalArgumentException("windowSeconds must be positive");

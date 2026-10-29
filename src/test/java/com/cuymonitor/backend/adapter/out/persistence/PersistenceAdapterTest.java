@@ -30,7 +30,6 @@ import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.HealthEvent;
 import com.cuymonitor.backend.domain.model.HealthStatus;
 import com.cuymonitor.backend.domain.model.GuineaPig;
-import com.cuymonitor.backend.domain.model.MarkColor;
 import com.cuymonitor.backend.domain.model.StateTransition;
 import com.cuymonitor.backend.domain.model.WeightReading;
 import com.cuymonitor.backend.domain.model.WeightSignal;
@@ -74,7 +73,7 @@ class PersistenceAdapterTest {
         GuineaPigPersistenceAdapter adapter =
                 new GuineaPigPersistenceAdapter(cages, guineaPigs, new GuineaPigPersistenceMapper());
 
-        GuineaPig saved = adapter.save(GuineaPig.register("cage-1", "Canela", MarkColor.RED, NOW));
+        GuineaPig saved = adapter.save(GuineaPig.register("cage-1", "Canela", "RED", NOW));
 
         assertThat(saved.getName()).isEqualTo("Canela");
         assertThat(saved.getCageCode()).isEqualTo("cage-1");
@@ -112,7 +111,7 @@ class PersistenceAdapterTest {
         HealthEvent event = new HealthEvent(
                 UUID.randomUUID(), "cage-1", NOW, "ai-service",
                 new com.cuymonitor.backend.domain.model.BehaviorSignal(
-                        MarkColor.RED, 60, 10, 1, 0, 0.2, 0.1, 0.9));
+                        "RED", 60, 10, 1, 0, 0.2, 0.1, 0.9));
 
         assertThatThrownBy(() -> adapter.save(event, 8L))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -234,6 +233,6 @@ class PersistenceAdapterTest {
 
     private static GuineaPigJpaEntity guineaPig(CageJpaEntity cage) {
         return new GuineaPigJpaEntity(
-                8L, cage, "Canela", MarkColor.RED, HealthStatus.NORMAL, NOW, true, NOW);
+                8L, cage, "Canela", "RED", HealthStatus.NORMAL, NOW, true, NOW);
     }
 }

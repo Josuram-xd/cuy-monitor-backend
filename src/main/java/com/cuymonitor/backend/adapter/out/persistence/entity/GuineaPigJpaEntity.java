@@ -1,9 +1,6 @@
 package com.cuymonitor.backend.adapter.out.persistence.entity;
 
-import com.cuymonitor.backend.domain.model.CoatColor;
-import com.cuymonitor.backend.domain.model.GuineaPigBreed;
 import com.cuymonitor.backend.domain.model.HealthStatus;
-import com.cuymonitor.backend.domain.model.MarkColor;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -32,9 +29,8 @@ public class GuineaPigJpaEntity {
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "mark_color", nullable = false, length = 20)
-    private MarkColor markColor;
+    private String markColor;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "current_status", nullable = false, length = 20)
@@ -49,13 +45,11 @@ public class GuineaPigJpaEntity {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "breed", length = 20)
-    private GuineaPigBreed breed;
+    private String breed;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "coat_color", length = 20)
-    private CoatColor coatColor;
+    private String coatColor;
 
     @Column(name = "initial_weight_grams")
     private Integer initialWeightGrams;
@@ -66,14 +60,14 @@ public class GuineaPigJpaEntity {
     protected GuineaPigJpaEntity() {
     }
 
-    public GuineaPigJpaEntity(Long id, CageJpaEntity cage, String name, MarkColor markColor, HealthStatus status,
+    public GuineaPigJpaEntity(Long id, CageJpaEntity cage, String name, String markColor, HealthStatus status,
                               Instant statusSince, boolean active, Instant createdAt) {
         this(id, cage, name, markColor, status, statusSince, active, createdAt, null, null, null, null);
     }
 
-    public GuineaPigJpaEntity(Long id, CageJpaEntity cage, String name, MarkColor markColor, HealthStatus status,
-                              Instant statusSince, boolean active, Instant createdAt, GuineaPigBreed breed,
-                              CoatColor coatColor, Integer initialWeightGrams, String notes) {
+    public GuineaPigJpaEntity(Long id, CageJpaEntity cage, String name, String markColor, HealthStatus status,
+                              Instant statusSince, boolean active, Instant createdAt, String breed,
+                              String coatColor, Integer initialWeightGrams, String notes) {
         this.id = id;
         this.cage = cage;
         this.name = name;
@@ -100,7 +94,7 @@ public class GuineaPigJpaEntity {
         return name;
     }
 
-    public MarkColor getMarkColor() {
+    public String getMarkColor() {
         return markColor;
     }
 
@@ -120,11 +114,11 @@ public class GuineaPigJpaEntity {
         return createdAt;
     }
 
-    public GuineaPigBreed getBreed() {
+    public String getBreed() {
         return breed;
     }
 
-    public CoatColor getCoatColor() {
+    public String getCoatColor() {
         return coatColor;
     }
 

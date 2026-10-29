@@ -8,19 +8,19 @@ public class GuineaPig {
     private final Long id;
     private final String cageCode;
     private final String name;
-    private final MarkColor markColor;
+    private final String markColor;
     private HealthStatus status;
     private Instant statusSince;
     private boolean active;
     private final Instant createdAt;
     private final GuineaPigProfile profile;
 
-    private GuineaPig(Long id, String cageCode, String name, MarkColor markColor, HealthStatus status,
+    private GuineaPig(Long id, String cageCode, String name, String markColor, HealthStatus status,
                       Instant statusSince, boolean active, Instant createdAt, GuineaPigProfile profile) {
         this.id = id;
         this.cageCode = Objects.requireNonNull(cageCode, "cageCode");
         this.name = requireName(name);
-        this.markColor = Objects.requireNonNull(markColor, "markColor");
+        this.markColor = requireMarkColor(markColor);
         this.status = Objects.requireNonNull(status, "status");
         this.statusSince = Objects.requireNonNull(statusSince, "statusSince");
         this.active = active;
@@ -28,21 +28,21 @@ public class GuineaPig {
         this.profile = profile == null ? GuineaPigProfile.EMPTY : profile;
     }
 
-    public static GuineaPig register(String cageCode, String name, MarkColor markColor, Instant now) {
+    public static GuineaPig register(String cageCode, String name, String markColor, Instant now) {
         return register(cageCode, name, markColor, GuineaPigProfile.EMPTY, now);
     }
 
-    public static GuineaPig register(String cageCode, String name, MarkColor markColor, GuineaPigProfile profile,
+    public static GuineaPig register(String cageCode, String name, String markColor, GuineaPigProfile profile,
                                      Instant now) {
         return new GuineaPig(null, cageCode, name, markColor, HealthStatus.NORMAL, now, true, now, profile);
     }
 
-    public static GuineaPig restore(Long id, String cageCode, String name, MarkColor markColor, HealthStatus status,
+    public static GuineaPig restore(Long id, String cageCode, String name, String markColor, HealthStatus status,
                                     Instant statusSince, boolean active, Instant createdAt) {
         return restore(id, cageCode, name, markColor, status, statusSince, active, createdAt, GuineaPigProfile.EMPTY);
     }
 
-    public static GuineaPig restore(Long id, String cageCode, String name, MarkColor markColor, HealthStatus status,
+    public static GuineaPig restore(Long id, String cageCode, String name, String markColor, HealthStatus status,
                                     Instant statusSince, boolean active, Instant createdAt, GuineaPigProfile profile) {
         return new GuineaPig(id, cageCode, name, markColor, status, statusSince, active, createdAt, profile);
     }
@@ -72,7 +72,7 @@ public class GuineaPig {
         return name;
     }
 
-    public MarkColor getMarkColor() {
+    public String getMarkColor() {
         return markColor;
     }
 
@@ -94,6 +94,19 @@ public class GuineaPig {
 
     public GuineaPigProfile getProfile() {
         return profile;
+    }
+
+    // a MARK_COLOR code of catalog_option; that the row exists is checked by GuineaPigService
+    private static String requireMarkColor(String markColor) {
+        String code = CatalogOption.normalize(markColor);
+        if (code == null) {
+            throw new IllegalArgumentException("markColor is required");
+        }
+        if (code.length() > CatalogOption.MAX_CODE_LENGTH) {
+            throw new IllegalArgumentException(
+                    "markColor must have at most " + CatalogOption.MAX_CODE_LENGTH + " characters");
+        }
+        return code;
     }
 
     private static String requireName(String name) {

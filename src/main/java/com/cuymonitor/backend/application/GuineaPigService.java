@@ -3,12 +3,15 @@ package com.cuymonitor.backend.application;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
 import com.cuymonitor.backend.domain.exception.ColorAlreadyUsedException;
 import com.cuymonitor.backend.domain.exception.GuineaPigNotFoundException;
+import com.cuymonitor.backend.domain.exception.UnknownCatalogOptionException;
+import com.cuymonitor.backend.domain.model.CatalogKind;
 import com.cuymonitor.backend.domain.model.GuineaPig;
 import com.cuymonitor.backend.domain.port.in.DeleteGuineaPigUseCase;
 import com.cuymonitor.backend.domain.port.in.ListGuineaPigsUseCase;
 import com.cuymonitor.backend.domain.port.in.RegisterGuineaPigCommand;
 import com.cuymonitor.backend.domain.port.in.RegisterGuineaPigUseCase;
 import com.cuymonitor.backend.domain.port.out.CageRepository;
+import com.cuymonitor.backend.domain.port.out.CatalogOptionRepository;
 import com.cuymonitor.backend.domain.port.out.GuineaPigRepository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,11 +22,14 @@ public class GuineaPigService implements ListGuineaPigsUseCase, RegisterGuineaPi
 
     private final CageRepository cages;
     private final GuineaPigRepository guineaPigs;
+    private final CatalogOptionRepository catalogOptions;
     private final Clock clock;
 
-    public GuineaPigService(CageRepository cages, GuineaPigRepository guineaPigs, Clock clock) {
+    public GuineaPigService(CageRepository cages, GuineaPigRepository guineaPigs,
+                            CatalogOptionRepository catalogOptions, Clock clock) {
         this.cages = cages;
         this.guineaPigs = guineaPigs;
+        this.catalogOptions = catalogOptions;
         this.clock = clock;
     }
 
@@ -38,6 +44,9 @@ public class GuineaPigService implements ListGuineaPigsUseCase, RegisterGuineaPi
     @Transactional
     public GuineaPig register(RegisterGuineaPigCommand command) {
         requireCage(command.cageCode());
+        requireCatalogOption(CatalogKind.MARK_COLOR, command.markColor());
+        requireCatalogOption(CatalogKind.COAT_COLOR, command.profile().coatColor());
+        requireCatalogOption(CatalogKind.BREED, command.profile().breed());
         if (guineaPigs.findActiveByCageAndColor(command.cageCode(), command.markColor()).isPresent()) {
             throw new ColorAlreadyUsedException();
         }
@@ -60,5 +69,12 @@ public class GuineaPigService implements ListGuineaPigsUseCase, RegisterGuineaPi
 
     private void requireCage(String cageCode) {
         cages.findByCode(cageCode).orElseThrow(CageNotFoundException::new);
+    }
+
+    // the lists live in catalog_option, so a code that was retired there stops being accepted here
+    private void requireCatalogOption(CatalogKind kind, String code) {
+        if (code != null && !catalogOptions.existsActive(kind, code)) {
+            throw new UnknownCatalogOptionException(kind, code);
+        }
     }
 }

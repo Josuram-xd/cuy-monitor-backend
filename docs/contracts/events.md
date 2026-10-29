@@ -74,7 +74,7 @@ One event **per guinea pig per 60 s window**.
 
 | Field | Type | Rules |
 |---|---|---|
-| `color` | `MarkColor` | Color of the mark on the guinea pig's back. The backend maps `(cageId, color)` to a registered guinea pig. Never guessed: if the color is unclear, lower `detectionConfidence` instead. |
+| `color` | string | A `MARK_COLOR` code (see below): the mark on the guinea pig's back. The backend maps `(cageId, color)` to a registered guinea pig. Never guessed: if the color is unclear, lower `detectionConfidence` instead. |
 | `windowSeconds` | integer | Length of the window. `60` today. |
 | `stillSeconds` | number | Seconds the guinea pig was still inside the window. `0 ≤ stillSeconds ≤ windowSeconds`. |
 | `feederVisits` | integer | Visits to the feeder (`feeder`) in the window. `≥ 0`. |
@@ -121,14 +121,27 @@ Values are `UPPER_SNAKE_CASE` strings, identical in JSON, Java and PostgreSQL (`
 | Enum | Values | Used in |
 |---|---|---|
 | `EventType` | `BEHAVIOR`, `AUDIO`, `WEIGHT` | envelope `type` |
-| `MarkColor` | `RED`, `BLUE`, `GREEN`, `YELLOW`, `ORANGE`, `PURPLE`, `BLACK`, `WHITE` | `BEHAVIOR.color`; guinea pig registration |
-| `GuineaPigBreed` | `AMERICAN`, `PERUVIAN`, `ABYSSINIAN`, `TEDDY`, `SILKIE`, `SKINNY`, `CRESTED`, `OTHER` | guinea pig registration (not sent by producers) |
-| `CoatColor` | `WHITE`, `BLACK`, `BROWN`, `CREAM`, `GRAY`, `CINNAMON`, `BICOLOR`, `TRICOLOR` | guinea pig registration (not sent by producers) |
 | `HealthStatus` | `NORMAL`, `OBSERVED`, `ALERT`, `CRITICAL` | REST API and WebSocket (not sent by producers) |
 | `AlertStatus` | `OPEN`, `REVIEWED` | REST API and WebSocket (not sent by producers) |
 | `UserStatus` | `PENDING_VERIFICATION`, `ACTIVE`, `DISABLED` | auth API |
 
-Producers only ever send `EventType` and `MarkColor`. The others are listed here because they are shared across repos: a change to any enum follows section 6.
+Producers only ever send `EventType`. The others are listed here because they are shared across repos: a change to any enum follows section 6.
+
+### Mark colors, breeds and coat colors are **not** enums
+
+They used to be, and the list was written three times: in the backend, in the dashboard and in the `CHECK`
+constraints of the database. They are now rows of the `catalog_option` table of `cuy-monitor-db`:
+
+| Kind | Codes today | Used in |
+|---|---|---|
+| `MARK_COLOR` | `RED`, `BLUE`, `GREEN`, `YELLOW`, `ORANGE`, `PURPLE`, `BLACK`, `WHITE` | `BEHAVIOR.color`; guinea pig registration |
+| `COAT_COLOR` | `WHITE`, `BLACK`, `BROWN`, `CREAM`, `GRAY`, `CINNAMON`, `BICOLOR`, `TRICOLOR` | guinea pig registration |
+| `BREED` | `AMERICAN`, `PERUVIAN`, `ABYSSINIAN`, `TEDDY`, `SILKIE`, `SKINNY`, `CRESTED`, `OTHER` | guinea pig registration |
+
+They are strings with the same shape as an enum value (`UPPER_SNAKE_CASE`, up to 20 characters), so nothing
+changes on the wire. What changes is who decides: **the database**. The backend serves the active ones at
+`GET /api/v1/catalog` and rejects any other code with `400`. The codes above are the ones migration `V10`
+inserts, and that list can grow without a release, so a producer should not hardcode it either.
 
 ---
 
