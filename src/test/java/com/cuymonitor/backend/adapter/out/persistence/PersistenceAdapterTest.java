@@ -33,6 +33,7 @@ import com.cuymonitor.backend.domain.model.GuineaPig;
 import com.cuymonitor.backend.domain.model.StateTransition;
 import com.cuymonitor.backend.domain.model.WeightReading;
 import com.cuymonitor.backend.domain.model.WeightSignal;
+import com.cuymonitor.backend.application.fake.Photos;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -73,9 +74,9 @@ class PersistenceAdapterTest {
         GuineaPigPersistenceAdapter adapter =
                 new GuineaPigPersistenceAdapter(cages, guineaPigs, new GuineaPigPersistenceMapper());
 
-        GuineaPig saved = adapter.save(GuineaPig.register("cage-1", "Canela", "RED", NOW));
+        GuineaPig saved = adapter.register(GuineaPig.register("cage-1", "RED", Photos.png(), NOW), Photos.png());
 
-        assertThat(saved.getName()).isEqualTo("Canela");
+        assertThat(saved.getPhotoContentType()).isEqualTo("image/png");
         assertThat(saved.getCageCode()).isEqualTo("cage-1");
         verify(guineaPigs).save(any(GuineaPigJpaEntity.class));
     }
@@ -233,6 +234,6 @@ class PersistenceAdapterTest {
 
     private static GuineaPigJpaEntity guineaPig(CageJpaEntity cage) {
         return new GuineaPigJpaEntity(
-                8L, cage, "Canela", "RED", HealthStatus.NORMAL, NOW, true, NOW);
+                8L, cage, Photos.png().content(), "image/png", "RED", HealthStatus.NORMAL, NOW, true, NOW);
     }
 }

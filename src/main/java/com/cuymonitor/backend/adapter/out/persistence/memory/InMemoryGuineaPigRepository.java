@@ -1,6 +1,7 @@
 package com.cuymonitor.backend.adapter.out.persistence.memory;
 
 import com.cuymonitor.backend.domain.model.GuineaPig;
+import com.cuymonitor.backend.domain.model.GuineaPigPhoto;
 import com.cuymonitor.backend.domain.port.out.GuineaPigRepository;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -17,7 +18,15 @@ import java.util.concurrent.atomic.AtomicLong;
 public class InMemoryGuineaPigRepository implements GuineaPigRepository {
 
     private final Map<Long, GuineaPig> guineaPigs = new ConcurrentHashMap<>();
+    private final Map<Long, GuineaPigPhoto> photos = new ConcurrentHashMap<>();
     private final AtomicLong sequence = new AtomicLong();
+
+    @Override
+    public GuineaPig register(GuineaPig guineaPig, GuineaPigPhoto photo) {
+        GuineaPig stored = save(guineaPig);
+        photos.put(stored.getId(), photo);
+        return stored;
+    }
 
     @Override
     public GuineaPig save(GuineaPig guineaPig) {
@@ -46,8 +55,13 @@ public class InMemoryGuineaPigRepository implements GuineaPigRepository {
                 .toList();
     }
 
+    @Override
+    public Optional<GuineaPigPhoto> findPhoto(long guineaPigId) {
+        return Optional.ofNullable(photos.get(guineaPigId));
+    }
+
     private static GuineaPig copy(GuineaPig g, long id) {
-        return GuineaPig.restore(id, g.getCageCode(), g.getName(), g.getMarkColor(), g.getStatus(),
+        return GuineaPig.restore(id, g.getCageCode(), g.getPhotoContentType(), g.getMarkColor(), g.getStatus(),
                 g.getStatusSince(), g.isActive(), g.getCreatedAt(), g.getProfile());
     }
 }
