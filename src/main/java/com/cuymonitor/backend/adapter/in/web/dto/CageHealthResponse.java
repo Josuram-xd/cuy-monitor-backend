@@ -11,10 +11,10 @@ import java.util.List;
 public record CageHealthResponse(String cageId, HealthStatus status, List<Member> guineaPigs, Audio audio,
                                  Weight weight, Instant updatedAt) {
 
-    public record Member(long id, String name, String markColor, HealthStatus status) {
+    public record Member(long id, String photoUrl, String markColor, HealthStatus status) {
 
         static Member from(GuineaPig guineaPig) {
-            return new Member(guineaPig.getId(), guineaPig.getName(), guineaPig.getMarkColor(),
+            return new Member(guineaPig.getId(), GuineaPigResponse.photoUrl(guineaPig), guineaPig.getMarkColor(),
                     guineaPig.getStatus());
         }
     }

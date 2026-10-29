@@ -6,6 +6,7 @@ import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.HealthEvent;
 import com.cuymonitor.backend.domain.model.HealthStatus;
 import com.cuymonitor.backend.domain.model.GuineaPig;
+import com.cuymonitor.backend.domain.model.GuineaPigPhoto;
 import com.cuymonitor.backend.domain.port.out.BaselineProfileRepository;
 import com.cuymonitor.backend.domain.port.out.EventRepository;
 import com.cuymonitor.backend.domain.port.out.GuineaPigRepository;
@@ -118,7 +119,7 @@ class HandlerChainBuilderTest {
         private final GuineaPig guineaPig = GuineaPig.restore(
                 1L,
                 "cage-1",
-                "Cuy",
+                "image/png",
                 "RED",
                 HealthStatus.NORMAL,
                 NOW,
@@ -127,8 +128,18 @@ class HandlerChainBuilderTest {
         );
 
         @Override
+        public GuineaPig register(GuineaPig guineaPig, GuineaPigPhoto photo) {
+            return guineaPig;
+        }
+
+        @Override
         public GuineaPig save(GuineaPig guineaPig) {
             return guineaPig;
+        }
+
+        @Override
+        public Optional<GuineaPigPhoto> findPhoto(long guineaPigId) {
+            return Optional.empty();
         }
 
         @Override

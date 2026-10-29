@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.domain.model;
 
+import com.cuymonitor.backend.application.fake.Photos;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -42,7 +43,7 @@ class GuineaPigProfileTest {
 
     @Test
     void aGuineaPigRegisteredWithoutProfileHasAnEmptyOne() {
-        GuineaPig pig = GuineaPig.register("cage-1", "Canela", "RED", NOW);
+        GuineaPig pig = GuineaPig.register("cage-1", "RED", Photos.png(), NOW);
 
         assertThat(pig.getProfile()).isEqualTo(GuineaPigProfile.EMPTY);
     }
@@ -52,7 +53,7 @@ class GuineaPigProfileTest {
         GuineaPigProfile profile =
                 new GuineaPigProfile("TEDDY", "CREAM", 850, "tranquila");
 
-        GuineaPig pig = GuineaPig.register("cage-1", "Canela", "RED", profile, NOW);
+        GuineaPig pig = GuineaPig.register("cage-1", "RED", Photos.png(), profile, NOW);
 
         assertThat(pig.getProfile()).isEqualTo(profile);
     }

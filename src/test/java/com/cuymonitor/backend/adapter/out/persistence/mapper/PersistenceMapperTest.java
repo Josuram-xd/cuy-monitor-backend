@@ -13,10 +13,12 @@ import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.HealthEvent;
 import com.cuymonitor.backend.domain.model.HealthStatus;
 import com.cuymonitor.backend.domain.model.GuineaPig;
+import com.cuymonitor.backend.domain.model.GuineaPigPhoto;
 import com.cuymonitor.backend.domain.model.GuineaPigProfile;
 import com.cuymonitor.backend.domain.model.StateTransition;
 import com.cuymonitor.backend.domain.model.WeightReading;
 import com.cuymonitor.backend.domain.model.WeightSignal;
+import com.cuymonitor.backend.application.fake.Photos;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -29,9 +31,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 class PersistenceMapperTest {
 
     private static final Instant NOW = Instant.parse("2026-10-05T14:00:00Z");
+    private static final GuineaPigPhoto PHOTO = Photos.png();
     private static final CageJpaEntity CAGE_ENTITY = new CageJpaEntity(3L, "cage-1", "Ranchito", null);
     private static final GuineaPigJpaEntity GUINEA_PIG_ENTITY = new GuineaPigJpaEntity(
-            8L, CAGE_ENTITY, "Canela", "RED", HealthStatus.NORMAL, NOW, true, NOW);
+            8L, CAGE_ENTITY, PHOTO.content(), PHOTO.contentType(), "RED", HealthStatus.NORMAL, NOW, true, NOW);
 
     @Test
     void mapsCageBetweenDomainAndPersistence() {
@@ -45,10 +48,13 @@ class PersistenceMapperTest {
     void mapsGuineaPigBetweenDomainAndPersistence() {
         GuineaPigPersistenceMapper mapper = new GuineaPigPersistenceMapper();
         GuineaPig guineaPig = GuineaPig.restore(
-                8L, "cage-1", "Canela", "RED", HealthStatus.NORMAL, NOW, true, NOW);
+                8L, "cage-1", "image/png", "RED", HealthStatus.NORMAL, NOW, true, NOW);
 
-        assertThat(mapper.toDomain(mapper.toEntity(guineaPig, CAGE_ENTITY)).getName()).isEqualTo("Canela");
-        assertThat(mapper.toDomain(mapper.toEntity(guineaPig, CAGE_ENTITY)).getId()).isEqualTo(8L);
+        GuineaPigJpaEntity entity = mapper.toEntity(guineaPig, CAGE_ENTITY, PHOTO);
+
+        assertThat(entity.getPhoto()).isEqualTo(PHOTO.content());
+        assertThat(mapper.toDomain(entity).getPhotoContentType()).isEqualTo("image/png");
+        assertThat(mapper.toDomain(entity).getId()).isEqualTo(8L);
     }
 
     @Test
@@ -56,9 +62,9 @@ class PersistenceMapperTest {
         GuineaPigPersistenceMapper mapper = new GuineaPigPersistenceMapper();
         GuineaPigProfile profile = new GuineaPigProfile("ABYSSINIAN", "BICOLOR", 920, "activo");
         GuineaPig guineaPig = GuineaPig.restore(
-                8L, "cage-1", "Canela", "RED", HealthStatus.NORMAL, NOW, true, NOW, profile);
+                8L, "cage-1", "image/png", "RED", HealthStatus.NORMAL, NOW, true, NOW, profile);
 
-        GuineaPigJpaEntity entity = mapper.toEntity(guineaPig, CAGE_ENTITY);
+        GuineaPigJpaEntity entity = mapper.toEntity(guineaPig, CAGE_ENTITY, PHOTO);
 
         assertThat(entity.getBreed()).isEqualTo("ABYSSINIAN");
         assertThat(entity.getCoatColor()).isEqualTo("BICOLOR");
