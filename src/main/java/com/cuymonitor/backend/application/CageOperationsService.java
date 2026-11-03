@@ -9,19 +9,9 @@ import com.cuymonitor.backend.domain.model.GuineaPig;
 import com.cuymonitor.backend.domain.model.GuineaPigProfile;
 import com.cuymonitor.backend.domain.model.MarkColor;
 import com.cuymonitor.backend.domain.port.in.CreateCageCommand;
-import com.cuymonitor.backend.domain.port.in.CreateCageUseCase;
-import com.cuymonitor.backend.domain.port.in.DeleteCageUseCase;
-import com.cuymonitor.backend.domain.port.in.DeleteGuineaPigUseCase;
-import com.cuymonitor.backend.domain.port.in.GetCageHealthUseCase;
-import com.cuymonitor.backend.domain.port.in.GetCageUseCase;
 import com.cuymonitor.backend.domain.port.in.ListAlertsUseCase;
-import com.cuymonitor.backend.domain.port.in.ListCagesUseCase;
-import com.cuymonitor.backend.domain.port.in.ListGuineaPigsUseCase;
 import com.cuymonitor.backend.domain.port.in.RegisterGuineaPigCommand;
-import com.cuymonitor.backend.domain.port.in.RegisterGuineaPigUseCase;
-import com.cuymonitor.backend.domain.port.in.ReviewAlertUseCase;
 import com.cuymonitor.backend.domain.port.in.UpdateCageCommand;
-import com.cuymonitor.backend.domain.port.in.UpdateCageUseCase;
 
 import java.util.List;
 import java.util.UUID;
@@ -34,87 +24,67 @@ import java.util.UUID;
  */
 public class CageOperationsService implements CageOperations {
 
-    private final ListCagesUseCase listCages;
-    private final GetCageUseCase getCage;
-    private final CreateCageUseCase createCage;
-    private final UpdateCageUseCase updateCage;
-    private final DeleteCageUseCase deleteCage;
-    private final GetCageHealthUseCase getCageHealth;
-    private final ListGuineaPigsUseCase listGuineaPigs;
-    private final RegisterGuineaPigUseCase registerGuineaPig;
-    private final DeleteGuineaPigUseCase deleteGuineaPig;
-    private final ListAlertsUseCase listAlerts;
-    private final ReviewAlertUseCase reviewAlert;
+    private final CageUseCases useCases;
 
-    public CageOperationsService(CageService cageService, CageHealthService cageHealthService,
-                                 GuineaPigService guineaPigService, AlertService alertService) {
-        this.listCages = cageService;
-        this.getCage = cageService;
-        this.createCage = cageService;
-        this.updateCage = cageService;
-        this.deleteCage = cageService;
-        this.getCageHealth = cageHealthService;
-        this.listGuineaPigs = guineaPigService;
-        this.registerGuineaPig = guineaPigService;
-        this.deleteGuineaPig = guineaPigService;
-        this.listAlerts = alertService;
-        this.reviewAlert = alertService;
+    public CageOperationsService(CageUseCases useCases) {
+        this.useCases = useCases;
     }
 
     @Override
     public List<Cage> listCages(UUID requesterId) {
-        return listCages.list(requesterId);
+        return useCases.listCages().list(requesterId);
     }
 
     @Override
     public Cage createCage(UUID requesterId, String name, String location) {
-        return createCage.create(new CreateCageCommand(requesterId, name, location));
+        return useCases.createCage().create(new CreateCageCommand(requesterId, name, location));
     }
 
     @Override
     public Cage getCage(UUID requesterId, String cageCode) {
-        return getCage.get(cageCode);
+        return useCases.getCage().get(cageCode);
     }
 
     @Override
     public Cage updateCage(UUID requesterId, String cageCode, String name, String location) {
-        return updateCage.update(new UpdateCageCommand(cageCode, name, location));
+        return useCases.updateCage().update(new UpdateCageCommand(cageCode, name, location));
     }
 
     @Override
     public void deleteCage(UUID requesterId, String cageCode) {
-        deleteCage.delete(cageCode);
+        useCases.deleteCage().delete(cageCode);
     }
 
     @Override
     public CageHealthSummary getHealth(UUID requesterId, String cageCode) {
-        return getCageHealth.getHealth(cageCode);
+        return useCases.getCageHealth().getHealth(cageCode);
     }
 
     @Override
     public List<GuineaPig> listGuineaPigs(UUID requesterId, String cageCode) {
-        return listGuineaPigs.list(cageCode);
+        return useCases.listGuineaPigs().list(cageCode);
     }
 
     @Override
     public GuineaPig registerGuineaPig(UUID requesterId, String cageCode, String name, MarkColor markColor,
                                       GuineaPigProfile profile) {
-        return registerGuineaPig.register(new RegisterGuineaPigCommand(cageCode, name, markColor,
+        return useCases.registerGuineaPig().register(new RegisterGuineaPigCommand(cageCode, name, markColor,
                 profile == null ? GuineaPigProfile.EMPTY : profile));
     }
 
     @Override
     public void deleteGuineaPig(UUID requesterId, String cageCode, long guineaPigId) {
-        deleteGuineaPig.delete(cageCode, guineaPigId);
+        useCases.deleteGuineaPig().delete(cageCode, guineaPigId);
     }
 
     @Override
     public List<Alert> listAlerts(UUID requesterId, String cageCode, AlertStatus status) {
-        return cageCode == null ? listAlerts.list(status) : listAlerts.listForCage(cageCode, status);
+        ListAlertsUseCase alerts = useCases.listAlerts();
+        return cageCode == null ? alerts.list(status) : alerts.listForCage(cageCode, status);
     }
 
     @Override
     public Alert reviewAlert(UUID requesterId, long alertId) {
-        return reviewAlert.markReviewed(alertId);
+        return useCases.reviewAlert().markReviewed(alertId);
     }
 }
