@@ -8,7 +8,9 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Component
 @Profile("!memory")
@@ -25,6 +27,24 @@ public class CagePersistenceAdapter implements CageRepository {
 
     @Override
     public Optional<Cage> findByCode(String code) {
-        return cageJpaRepository.findByCode(code).map(mapper::toDomain);
+        return cageJpaRepository.findByCodeAndActiveTrue(code).map(mapper::toDomain);
+    }
+
+    @Override
+    public List<Cage> findActiveByOwner(UUID ownerId) {
+        return cageJpaRepository.findByOwnerIdAndActiveTrueOrderByCreatedAtAscIdAsc(ownerId).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public boolean existsByCode(String code) {
+        return cageJpaRepository.existsByCode(code);
+    }
+
+    @Override
+    @Transactional
+    public Cage save(Cage cage) {
+        return mapper.toDomain(cageJpaRepository.save(mapper.toEntity(cage)));
     }
 }

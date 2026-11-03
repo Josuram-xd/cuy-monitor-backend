@@ -56,12 +56,28 @@ class PersistenceAdapterTest {
     private static final Instant NOW = Instant.parse("2026-10-05T14:00:00Z");
 
     @Test
-    void cageAdapterMapsTheEntityReturnedByCodeLookup() {
+    void cageAdapterLooksUpOnlyActiveCagesByCode() {
         CageJpaRepository repository = mock(CageJpaRepository.class);
-        when(repository.findByCode("cage-1")).thenReturn(Optional.of(cage()));
+        when(repository.findByCodeAndActiveTrue("cage-1")).thenReturn(Optional.of(cage()));
         CagePersistenceAdapter adapter = new CagePersistenceAdapter(repository, new CagePersistenceMapper());
 
-        assertThat(adapter.findByCode("cage-1")).contains(new Cage(3L, "cage-1", "Ranchito"));
+        assertThat(adapter.findByCode("cage-1")).hasValueSatisfying(cage -> {
+            assertThat(cage.code()).isEqualTo("cage-1");
+            assertThat(cage.name()).isEqualTo("Ranchito");
+            assertThat(cage.active()).isTrue();
+        });
+    }
+
+    @Test
+    void cageAdapterListsTheActiveCagesOfAnOwner() {
+        CageJpaRepository repository = mock(CageJpaRepository.class);
+        UUID owner = UUID.fromString("00000000-0000-4000-8000-000000000001");
+        when(repository.findByOwnerIdAndActiveTrueOrderByCreatedAtAscIdAsc(owner)).thenReturn(java.util.List.of(
+                new CageJpaEntity(4L, "cage-0a1b2c3d", "Patio", "Atrás", owner, true, NOW)));
+        CagePersistenceAdapter adapter = new CagePersistenceAdapter(repository, new CagePersistenceMapper());
+
+        assertThat(adapter.findActiveByOwner(owner))
+                .containsExactly(new Cage(4L, "cage-0a1b2c3d", "Patio", "Atrás", owner, true, NOW));
     }
 
     @Test

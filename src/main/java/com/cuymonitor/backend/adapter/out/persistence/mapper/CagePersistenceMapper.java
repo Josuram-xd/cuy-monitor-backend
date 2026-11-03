@@ -7,10 +7,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class CagePersistenceMapper {
     public CageJpaEntity toEntity(Cage cage) {
-        return new CageJpaEntity(cage.id(), cage.code(), cage.name(), null);
+        return new CageJpaEntity(cage.id(), cage.code(), cage.name(), cage.location(), cage.ownerId(), cage.active(),
+                cage.createdAt());
     }
 
     public Cage toDomain(CageJpaEntity entity) {
-        return new Cage(entity.getId(), entity.getCode(), entity.getName());
+        return new Cage(entity.getId(), entity.getCode(), entity.getName(), entity.getLocation(), entity.getOwnerId(),
+                entity.isActive(), entity.getCreatedAt());
     }
 }
