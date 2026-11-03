@@ -6,7 +6,7 @@ import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.HealthEvent;
 import com.cuymonitor.backend.domain.model.HealthStatus;
 import com.cuymonitor.backend.domain.model.GuineaPig;
-import com.cuymonitor.backend.domain.model.MarkColor;
+import com.cuymonitor.backend.domain.model.GuineaPigPhoto;
 import com.cuymonitor.backend.domain.port.out.BaselineProfileRepository;
 import com.cuymonitor.backend.domain.port.out.EventRepository;
 import com.cuymonitor.backend.domain.port.out.GuineaPigRepository;
@@ -36,7 +36,7 @@ class HandlerChainBuilderTest {
         var eventRepository = new RecordingEventRepository();
         var chain = chain(guineaPigRepository, baselineRepository, eventRepository, 3);
         var context = new EventHandlerContext(event(
-                new BehaviorSignal(MarkColor.RED, 60, 10, 1, 0, 0.2, 0.1, 0.9)
+                new BehaviorSignal("RED", 60, 10, 1, 0, 0.2, 0.1, 0.9)
         ));
 
         chain.handle(context);
@@ -57,7 +57,7 @@ class HandlerChainBuilderTest {
         var eventRepository = new RecordingEventRepository();
         var chain = chain(guineaPigRepository, baselineRepository, eventRepository, 3);
         var context = new EventHandlerContext(
-                event(new BehaviorSignal(MarkColor.RED, 60, 10, 1, 0, 0.2, 0.1, 0.2))
+                event(new BehaviorSignal("RED", 60, 10, 1, 0, 0.2, 0.1, 0.2))
         );
 
         chain.handle(context);
@@ -75,7 +75,7 @@ class HandlerChainBuilderTest {
         var eventRepository = new RecordingEventRepository();
         var chain = chain(guineaPigRepository, baselineRepository, eventRepository, 1);
         var context = new EventHandlerContext(
-                event(new BehaviorSignal(MarkColor.RED, 60, 48, 0, 1, 0.72, 0.8, 0.9))
+                event(new BehaviorSignal("RED", 60, 48, 0, 1, 0.72, 0.8, 0.9))
         );
 
         chain.handle(context);
@@ -119,8 +119,8 @@ class HandlerChainBuilderTest {
         private final GuineaPig guineaPig = GuineaPig.restore(
                 1L,
                 "cage-1",
-                "Cuy",
-                MarkColor.RED,
+                "image/png",
+                "RED",
                 HealthStatus.NORMAL,
                 NOW,
                 true,
@@ -128,8 +128,18 @@ class HandlerChainBuilderTest {
         );
 
         @Override
+        public GuineaPig register(GuineaPig guineaPig, GuineaPigPhoto photo) {
+            return guineaPig;
+        }
+
+        @Override
         public GuineaPig save(GuineaPig guineaPig) {
             return guineaPig;
+        }
+
+        @Override
+        public Optional<GuineaPigPhoto> findPhoto(long guineaPigId) {
+            return Optional.empty();
         }
 
         @Override
@@ -138,7 +148,7 @@ class HandlerChainBuilderTest {
         }
 
         @Override
-        public Optional<GuineaPig> findActiveByCageAndColor(String cageCode, MarkColor markColor) {
+        public Optional<GuineaPig> findActiveByCageAndColor(String cageCode, String markColor) {
             lookups.incrementAndGet();
             return Optional.of(guineaPig);
         }

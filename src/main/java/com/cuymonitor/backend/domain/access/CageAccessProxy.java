@@ -8,8 +8,8 @@ import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.model.Cage;
 import com.cuymonitor.backend.domain.model.CageHealthSummary;
 import com.cuymonitor.backend.domain.model.GuineaPig;
+import com.cuymonitor.backend.domain.model.GuineaPigPhoto;
 import com.cuymonitor.backend.domain.model.GuineaPigProfile;
-import com.cuymonitor.backend.domain.model.MarkColor;
 import com.cuymonitor.backend.domain.port.out.AlertRepository;
 import com.cuymonitor.backend.domain.port.out.CageRepository;
 
@@ -91,10 +91,16 @@ public class CageAccessProxy implements CageOperations {
     }
 
     @Override
-    public GuineaPig registerGuineaPig(UUID requesterId, String cageCode, String name, MarkColor markColor,
+    public GuineaPig registerGuineaPig(UUID requesterId, String cageCode, String markColor, GuineaPigPhoto photo,
                                        GuineaPigProfile profile) {
         checkOwner(requesterId, cageCode);
-        return realSubject.registerGuineaPig(requesterId, cageCode, name, markColor, profile);
+        return realSubject.registerGuineaPig(requesterId, cageCode, markColor, photo, profile);
+    }
+
+    @Override
+    public GuineaPigPhoto getGuineaPigPhoto(UUID requesterId, String cageCode, long guineaPigId) {
+        checkOwner(requesterId, cageCode);
+        return realSubject.getGuineaPigPhoto(requesterId, cageCode, guineaPigId);
     }
 
     @Override

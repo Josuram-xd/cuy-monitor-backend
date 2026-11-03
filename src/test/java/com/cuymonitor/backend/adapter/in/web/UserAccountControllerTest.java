@@ -122,6 +122,18 @@ class UserAccountControllerTest {
     }
 
     @Test
+    void changePasswordWithAnEndlessPasswordReturns400() throws Exception {
+        String tooLong = "a".repeat(300);
+
+        mvc.perform(put("/api/v1/account/password").with(token()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"Secret-pass-1\",\"newPassword\":\"" + tooLong + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("bad_request"))
+                .andExpect(jsonPath("$.fields.newPassword").exists());
+        verifyNoInteractions(changePasswordUseCase);
+    }
+
+    @Test
     void changePasswordWithWrongCurrentPasswordReturns401() throws Exception {
         willThrow(new InvalidCredentialsException()).given(changePasswordUseCase).changePassword(any());
 

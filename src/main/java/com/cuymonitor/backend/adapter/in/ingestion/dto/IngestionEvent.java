@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -12,13 +13,14 @@ import java.util.UUID;
 /**
  * Common envelope sent by ai-service (BEHAVIOR, AUDIO) and the serial bridge (WEIGHT).
  * The payload shape depends on the type; the adapters convert it to HealthEvent.
+ * cageId and source are capped at what the database columns hold, so a producer cannot send a huge one.
  */
 public record IngestionEvent(
         @NotNull UUID eventId,
         @NotNull EventType type,
-        @NotBlank String cageId,
+        @NotBlank @Size(max = 50) String cageId,
         @NotNull Instant timestamp,
-        @NotBlank String source,
+        @NotBlank @Size(max = 30) String source,
         @Min(1) @Max(1) int schemaVersion,
         @NotNull Map<String, Object> payload) {
 }

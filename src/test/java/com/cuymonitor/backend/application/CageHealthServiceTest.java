@@ -15,9 +15,9 @@ import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.GuineaPig;
 import com.cuymonitor.backend.domain.model.HealthEvent;
 import com.cuymonitor.backend.domain.model.HealthStatus;
-import com.cuymonitor.backend.domain.model.MarkColor;
 import com.cuymonitor.backend.domain.model.WeightReading;
 import org.junit.jupiter.api.BeforeEach;
+import com.cuymonitor.backend.application.fake.Photos;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -60,9 +60,9 @@ class CageHealthServiceTest {
 
     @Test
     void theCageIsAsBadAsItsWorstGuineaPig() {
-        guineaPig("Canela", MarkColor.RED, HealthStatus.OBSERVED);
-        guineaPig("Pelusa", MarkColor.BLUE, HealthStatus.CRITICAL);
-        guineaPig("Copito", MarkColor.WHITE, HealthStatus.NORMAL);
+        guineaPig("RED", HealthStatus.OBSERVED);
+        guineaPig("BLUE", HealthStatus.CRITICAL);
+        guineaPig("WHITE", HealthStatus.NORMAL);
 
         CageHealthSummary summary = service.getHealth(CAGE);
 
@@ -72,7 +72,7 @@ class CageHealthServiceTest {
 
     @Test
     void anOpenAudioAlertRaisesTheAudioPartAndTheCage() {
-        guineaPig("Canela", MarkColor.RED, HealthStatus.NORMAL);
+        guineaPig("RED", HealthStatus.NORMAL);
         alerts.save(Alert.forCage(CAGE, EventType.AUDIO, HealthStatus.ALERT, "Distress sounds", NOW));
         events.save(new HealthEvent(UUID.randomUUID(), CAGE, NOW.minusSeconds(30), "ai-service",
                 new AudioSignal(AudioLabel.DISTRESS, 0.9, 1500)), null);
@@ -116,8 +116,9 @@ class CageHealthServiceTest {
         assertThatThrownBy(() -> service.getHealth("nope")).isInstanceOf(CageNotFoundException.class);
     }
 
-    private void guineaPig(String name, MarkColor color, HealthStatus status) {
-        GuineaPig pig = guineaPigs.save(GuineaPig.register(CAGE, name, color, NOW.minusSeconds(3600)));
+    private void guineaPig(String color, HealthStatus status) {
+        GuineaPig pig = guineaPigs.register(
+                GuineaPig.register(CAGE, color, Photos.png(), NOW.minusSeconds(3600)), Photos.png());
         pig.changeStatus(status, NOW.minusSeconds(600));
         guineaPigs.save(pig);
     }

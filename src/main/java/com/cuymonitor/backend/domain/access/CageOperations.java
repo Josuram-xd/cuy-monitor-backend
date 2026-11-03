@@ -5,8 +5,8 @@ import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.model.Cage;
 import com.cuymonitor.backend.domain.model.CageHealthSummary;
 import com.cuymonitor.backend.domain.model.GuineaPig;
+import com.cuymonitor.backend.domain.model.GuineaPigPhoto;
 import com.cuymonitor.backend.domain.model.GuineaPigProfile;
-import com.cuymonitor.backend.domain.model.MarkColor;
 
 import java.util.List;
 import java.util.UUID;
@@ -36,8 +36,11 @@ public interface CageOperations {
 
     List<GuineaPig> listGuineaPigs(UUID requesterId, String cageCode);
 
-    GuineaPig registerGuineaPig(UUID requesterId, String cageCode, String name, MarkColor markColor,
+    /** markColor is a code of the catalog of mark colors ("RED"); the photo is how the breeder recognizes it. */
+    GuineaPig registerGuineaPig(UUID requesterId, String cageCode, String markColor, GuineaPigPhoto photo,
                                 GuineaPigProfile profile);
+
+    GuineaPigPhoto getGuineaPigPhoto(UUID requesterId, String cageCode, long guineaPigId);
 
     void deleteGuineaPig(UUID requesterId, String cageCode, long guineaPigId);
 

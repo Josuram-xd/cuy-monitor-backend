@@ -4,8 +4,12 @@ import com.cuymonitor.backend.adapter.in.web.dto.CageHealthResponse;
 import com.cuymonitor.backend.adapter.in.web.dto.GuineaPigResponse;
 import com.cuymonitor.backend.adapter.in.web.dto.RegisterGuineaPigRequest;
 import com.cuymonitor.backend.domain.access.CageOperations;
+import com.cuymonitor.backend.domain.model.GuineaPigPhoto;
 import jakarta.validation.Valid;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,6 +20,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.security.Principal;
+import java.time.Duration;
 import java.util.List;
 
 import static com.cuymonitor.backend.adapter.in.web.CagesController.accountId;
@@ -47,8 +52,25 @@ public class CageController {
     @ResponseStatus(HttpStatus.CREATED)
     public GuineaPigResponse registerGuineaPig(Principal principal, @PathVariable String cageId,
                                                @Valid @RequestBody RegisterGuineaPigRequest request) {
-        return GuineaPigResponse.from(cageOperations.registerGuineaPig(accountId(principal), cageId, request.name(),
-                request.markColor(), request.profile()));
+        return GuineaPigResponse.from(cageOperations.registerGuineaPig(accountId(principal), cageId,
+                request.markColor(), request.toPhoto(), request.profile()));
+    }
+
+    /**
+     * The photo of a cuy, which is how the breeder tells them apart. Private to the session, cached by the
+     * browser for a day: a photo never changes, a new cuy is a new id.
+     */
+    @GetMapping("/guinea-pigs/{guineaPigId}/photo")
+    public ResponseEntity<byte[]> guineaPigPhoto(Principal principal, @PathVariable String cageId,
+                                                 @PathVariable long guineaPigId) {
+        GuineaPigPhoto photo = cageOperations.getGuineaPigPhoto(accountId(principal), cageId, guineaPigId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(photo.contentType()))
+                .cacheControl(CacheControl.maxAge(Duration.ofDays(1)).cachePrivate())
+                // the bytes come from whoever registered the cuy: never let the browser guess another type
+                .header("X-Content-Type-Options", "nosniff")
+                .header("Content-Disposition", "inline")
+                .body(photo.content());
     }
 
     /** Soft delete: the guinea pig disappears from the cage and frees its color; its history is kept. */

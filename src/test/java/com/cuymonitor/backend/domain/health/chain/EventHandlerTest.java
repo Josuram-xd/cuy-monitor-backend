@@ -8,7 +8,7 @@ import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.HealthEvent;
 import com.cuymonitor.backend.domain.model.HealthStatus;
 import com.cuymonitor.backend.domain.model.GuineaPig;
-import com.cuymonitor.backend.domain.model.MarkColor;
+import com.cuymonitor.backend.domain.model.GuineaPigPhoto;
 import com.cuymonitor.backend.domain.model.WeightSignal;
 import com.cuymonitor.backend.domain.port.out.BaselineProfileRepository;
 import com.cuymonitor.backend.domain.port.out.EventRepository;
@@ -163,7 +163,7 @@ class EventHandlerTest {
                 event(
                         UUID.randomUUID(),
                         NOW.minusSeconds(60),
-                        new BehaviorSignal(MarkColor.RED, 60, 10, 1, 0, 0.2, 0.1, 0.9)
+                        new BehaviorSignal("RED", 60, 10, 1, 0, 0.2, 0.1, 0.9)
                 ),
                 behaviorEvent(UUID.randomUUID(), NOW.minusSeconds(120), 0.8, 0.9)
         );
@@ -202,8 +202,8 @@ class EventHandlerTest {
         return GuineaPig.restore(
                 1L,
                 "cage-1",
-                "Cuy",
-                MarkColor.RED,
+                "image/png",
+                "RED",
                 HealthStatus.NORMAL,
                 NOW,
                 true,
@@ -215,7 +215,7 @@ class EventHandlerTest {
         return event(
                 eventId,
                 occurredAt,
-                new BehaviorSignal(MarkColor.RED, 60, 48, 0, 1, 0.72, probability, confidence)
+                new BehaviorSignal("RED", 60, 48, 0, 1, 0.72, probability, confidence)
         );
     }
 
@@ -229,8 +229,18 @@ class EventHandlerTest {
     ) {
         return new GuineaPigRepository() {
             @Override
+            public GuineaPig register(GuineaPig guineaPig, GuineaPigPhoto photo) {
+                return guineaPig;
+            }
+
+            @Override
             public GuineaPig save(GuineaPig guineaPig) {
                 return guineaPig;
+            }
+
+            @Override
+            public Optional<GuineaPigPhoto> findPhoto(long guineaPigId) {
+                return Optional.empty();
             }
 
             @Override
@@ -239,10 +249,10 @@ class EventHandlerTest {
             }
 
             @Override
-            public Optional<GuineaPig> findActiveByCageAndColor(String cageCode, MarkColor markColor) {
+            public Optional<GuineaPig> findActiveByCageAndColor(String cageCode, String markColor) {
                 lookups.incrementAndGet();
                 assertEquals("cage-1", cageCode);
-                assertEquals(MarkColor.RED, markColor);
+                assertEquals("RED", markColor);
                 return result;
             }
 

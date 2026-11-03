@@ -6,14 +6,15 @@ import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.model.Cage;
 import com.cuymonitor.backend.domain.model.CageHealthSummary;
 import com.cuymonitor.backend.domain.model.GuineaPig;
+import com.cuymonitor.backend.domain.model.GuineaPigPhoto;
 import com.cuymonitor.backend.domain.model.GuineaPigProfile;
-import com.cuymonitor.backend.domain.model.MarkColor;
 import com.cuymonitor.backend.domain.port.in.CreateCageCommand;
 import com.cuymonitor.backend.domain.port.in.CreateCageUseCase;
 import com.cuymonitor.backend.domain.port.in.DeleteCageUseCase;
 import com.cuymonitor.backend.domain.port.in.DeleteGuineaPigUseCase;
 import com.cuymonitor.backend.domain.port.in.GetCageHealthUseCase;
 import com.cuymonitor.backend.domain.port.in.GetCageUseCase;
+import com.cuymonitor.backend.domain.port.in.GetGuineaPigPhotoUseCase;
 import com.cuymonitor.backend.domain.port.in.ListAlertsUseCase;
 import com.cuymonitor.backend.domain.port.in.ListCagesUseCase;
 import com.cuymonitor.backend.domain.port.in.ListGuineaPigsUseCase;
@@ -43,6 +44,7 @@ public class CageOperationsService implements CageOperations {
     private final ListGuineaPigsUseCase listGuineaPigs;
     private final RegisterGuineaPigUseCase registerGuineaPig;
     private final DeleteGuineaPigUseCase deleteGuineaPig;
+    private final GetGuineaPigPhotoUseCase getGuineaPigPhoto;
     private final ListAlertsUseCase listAlerts;
     private final ReviewAlertUseCase reviewAlert;
 
@@ -57,6 +59,7 @@ public class CageOperationsService implements CageOperations {
         this.listGuineaPigs = guineaPigService;
         this.registerGuineaPig = guineaPigService;
         this.deleteGuineaPig = guineaPigService;
+        this.getGuineaPigPhoto = guineaPigService;
         this.listAlerts = alertService;
         this.reviewAlert = alertService;
     }
@@ -97,10 +100,15 @@ public class CageOperationsService implements CageOperations {
     }
 
     @Override
-    public GuineaPig registerGuineaPig(UUID requesterId, String cageCode, String name, MarkColor markColor,
+    public GuineaPig registerGuineaPig(UUID requesterId, String cageCode, String markColor, GuineaPigPhoto photo,
                                       GuineaPigProfile profile) {
-        return registerGuineaPig.register(new RegisterGuineaPigCommand(cageCode, name, markColor,
+        return registerGuineaPig.register(new RegisterGuineaPigCommand(cageCode, markColor, photo,
                 profile == null ? GuineaPigProfile.EMPTY : profile));
+    }
+
+    @Override
+    public GuineaPigPhoto getGuineaPigPhoto(UUID requesterId, String cageCode, long guineaPigId) {
+        return getGuineaPigPhoto.getPhoto(cageCode, guineaPigId);
     }
 
     @Override

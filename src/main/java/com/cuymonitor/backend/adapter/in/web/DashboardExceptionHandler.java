@@ -5,6 +5,7 @@ import com.cuymonitor.backend.domain.exception.CageAccessDeniedException;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
 import com.cuymonitor.backend.domain.exception.GuineaPigNotFoundException;
 import com.cuymonitor.backend.domain.exception.ColorAlreadyUsedException;
+import com.cuymonitor.backend.domain.exception.UnknownCatalogOptionException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +41,11 @@ public class DashboardExceptionHandler {
 
     @ExceptionHandler(InvalidRequestException.class)
     public ResponseEntity<Map<String, Object>> handleInvalidRequest(InvalidRequestException ex) {
+        return error(HttpStatus.BAD_REQUEST, ApiError.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(UnknownCatalogOptionException.class)
+    public ResponseEntity<Map<String, Object>> handleUnknownOption(UnknownCatalogOptionException ex) {
         return error(HttpStatus.BAD_REQUEST, ApiError.BAD_REQUEST, ex.getMessage());
     }
 
