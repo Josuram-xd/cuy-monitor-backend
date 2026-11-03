@@ -123,6 +123,8 @@ AlertPublisher ◄────────────────────�
 >                                 └─ CageOperationsService            (403 if the cage is someone else's)
 > ```
 
+Each class has one job and depends on ports, following SOLID and GRASP: see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), section 4.5.
+
 ## Users and authentication
 
 | Step | Endpoint | Result |
