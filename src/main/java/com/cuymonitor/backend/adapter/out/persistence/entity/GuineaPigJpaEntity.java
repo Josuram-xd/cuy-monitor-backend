@@ -26,8 +26,12 @@ public class GuineaPigJpaEntity {
     @JoinColumn(name = "cage_id", nullable = false)
     private CageJpaEntity cage;
 
-    @Column(name = "name", nullable = false, length = 100)
-    private String name;
+    // written when the guinea pig is registered and never changed: a save of a status cannot wipe it
+    @Column(name = "photo", updatable = false)
+    private byte[] photo;
+
+    @Column(name = "photo_content_type", length = 30, updatable = false)
+    private String photoContentType;
 
     @Column(name = "mark_color", nullable = false, length = 20)
     private String markColor;
@@ -60,17 +64,19 @@ public class GuineaPigJpaEntity {
     protected GuineaPigJpaEntity() {
     }
 
-    public GuineaPigJpaEntity(Long id, CageJpaEntity cage, String name, String markColor, HealthStatus status,
-                              Instant statusSince, boolean active, Instant createdAt) {
-        this(id, cage, name, markColor, status, statusSince, active, createdAt, null, null, null, null);
+    public GuineaPigJpaEntity(Long id, CageJpaEntity cage, byte[] photo, String photoContentType, String markColor,
+                              HealthStatus status, Instant statusSince, boolean active, Instant createdAt) {
+        this(id, cage, photo, photoContentType, markColor, status, statusSince, active, createdAt, null, null, null,
+                null);
     }
 
-    public GuineaPigJpaEntity(Long id, CageJpaEntity cage, String name, String markColor, HealthStatus status,
-                              Instant statusSince, boolean active, Instant createdAt, String breed,
-                              String coatColor, Integer initialWeightGrams, String notes) {
+    public GuineaPigJpaEntity(Long id, CageJpaEntity cage, byte[] photo, String photoContentType, String markColor,
+                              HealthStatus status, Instant statusSince, boolean active, Instant createdAt,
+                              String breed, String coatColor, Integer initialWeightGrams, String notes) {
         this.id = id;
         this.cage = cage;
-        this.name = name;
+        this.photo = photo;
+        this.photoContentType = photoContentType;
         this.markColor = markColor;
         this.status = status;
         this.statusSince = statusSince;
@@ -90,8 +96,12 @@ public class GuineaPigJpaEntity {
         return cage;
     }
 
-    public String getName() {
-        return name;
+    public byte[] getPhoto() {
+        return photo;
+    }
+
+    public String getPhotoContentType() {
+        return photoContentType;
     }
 
     public String getMarkColor() {

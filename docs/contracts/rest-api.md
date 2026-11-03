@@ -56,6 +56,7 @@ Summary:
 |---|---|---|
 | `GET /api/v1/cages/{cageId}/health` | Cage status summary | `200` |
 | `GET /api/v1/cages/{cageId}/guinea-pigs` | Guinea pigs with current status | `200` |
+| `GET /api/v1/cages/{cageId}/guinea-pigs/{id}/photo` | The photo of a guinea pig | `200` |
 | `POST /api/v1/cages/{cageId}/guinea-pigs` | Register a guinea pig | `201` |
 | `DELETE /api/v1/cages/{cageId}/guinea-pigs/{id}` | Delete a guinea pig (soft delete) | `204` |
 | `GET /api/v1/guinea-pigs/{id}/history?from=&to=` | State changes and behavior windows | `200` |
@@ -72,7 +73,7 @@ Result of the Composite: the cage status and its parts.
   "cageId": "cage-1",
   "status": "OBSERVED",
   "guineaPigs": [
-    { "id": 1, "name": "Canela", "markColor": "RED", "status": "OBSERVED" }
+    { "id": 1, "photoUrl": "/api/v1/cages/cage-1/guinea-pigs/1/photo", "markColor": "RED", "status": "OBSERVED" }
   ],
   "audio":  { "status": "NORMAL", "lastEventAt": "2026-10-05T14:30:00Z" },
   "weight": { "status": "NORMAL", "lastGrams": 812.4, "lastMeasuredAt": "2026-10-05T14:32:00Z" },
@@ -92,37 +93,52 @@ Active guinea pigs only.
 ```json
 [
   {
-    "id": 1, "name": "Canela", "markColor": "RED", "status": "OBSERVED", "statusSince": "2026-10-05T14:10:00Z",
+    "id": 1, "photoUrl": "/api/v1/cages/cage-1/guinea-pigs/1/photo", "markColor": "RED",
+    "status": "OBSERVED", "statusSince": "2026-10-05T14:10:00Z",
     "breed": "TEDDY", "coatColor": "CREAM", "initialWeightGrams": 850, "notes": "Muy tranquila"
   }
 ]
 ```
 
-`breed`, `coatColor`, `initialWeightGrams` and `notes` are `null` for a guinea pig registered without them (all the ones created before they existed).
+`breed`, `coatColor`, `initialWeightGrams` and `notes` are `null` for a guinea pig registered without them
+(all the ones created before they existed). `photoUrl` is the path of 3.3c, or `null` for a guinea pig
+registered before the photo existed: the dashboard draws a placeholder for those.
 
 ### 3.3 `POST /api/v1/cages/{cageId}/guinea-pigs`
 
 ```json
 {
-  "name": "Canela", "markColor": "RED",
+  "photo": "iVBORw0KGgoAAAANSUhEUg...", "photoContentType": "image/jpeg", "markColor": "RED",
   "breed": "TEDDY", "coatColor": "CREAM", "initialWeightGrams": 850, "notes": "Muy tranquila"
 }
 ```
 
 | Field | Rules |
 |---|---|
-| `name` | Required, 1–100 characters. |
+| `photo` | **Required**, the image in base64 (no `data:` prefix), up to 300 KB once decoded. It replaces the name: the breeder recognizes a cuy by its picture. The dashboard shrinks it before sending it. |
+| `photoContentType` | Required, one of `image/jpeg`, `image/png`, `image/webp`. No SVG: those bytes are served back to a browser. |
 | `markColor` | Required, a `MARK_COLOR` code of 3.8, up to 20 characters. One color per guinea pig in a cage: it is what the camera uses to tell them apart. |
 | `breed` | Optional, a `BREED` code of 3.8. |
 | `coatColor` | Optional, a `COAT_COLOR` code of 3.8: the real color of the fur, not the mark. |
 | `initialWeightGrams` | Optional, integer from 50 to 2000. Weight on arrival. |
 | `notes` | Optional, up to 500 characters (trimmed; blank is stored as `null`). |
 
-`201` returns the created guinea pig (same shape as an item of 3.2, `status: "NORMAL"`). `400` invalid body, or a
+`201` returns the created guinea pig (same shape as an item of 3.2, `status: "NORMAL"`, and `photoUrl` already
+filled). `400` invalid body — including a photo that is not base64, is over 300 KB or is not one of the three
+types (`{ "error": "bad_request", "message": "photo must be at most 307200 bytes" }`) — or a
 code that is not an active option (`{ "error": "bad_request", "message": "unknown breed: DRAGON" }`) · `409` color
 already used in the cage · `404` unknown cage.
 
 The codes are read upper case: `red` and `RED` are the same option.
+
+### 3.3c `GET /api/v1/cages/{cageId}/guinea-pigs/{id}/photo`
+
+The bytes of the photo, with the `Content-Type` they were registered with. Not JSON: the dashboard puts the path
+straight into an `img` tag. `Cache-Control: private, max-age=86400` (a photo never changes; a new cuy is a new id)
+and `X-Content-Type-Options: nosniff`.
+
+`404` if the cage does not exist, the id is not an **active** guinea pig of that cage, or it has no photo. Needs a
+session like every other endpoint of section 3, so the picture is not public.
 
 ### 3.3b `DELETE /api/v1/cages/{cageId}/guinea-pigs/{id}`
 

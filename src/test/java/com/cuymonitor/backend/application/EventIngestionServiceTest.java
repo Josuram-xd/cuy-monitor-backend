@@ -13,6 +13,7 @@ import com.cuymonitor.backend.domain.model.HealthEvent;
 import com.cuymonitor.backend.domain.model.HealthSignal;
 import com.cuymonitor.backend.domain.model.WeightSignal;
 import org.junit.jupiter.api.BeforeEach;
+import com.cuymonitor.backend.application.fake.Photos;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -37,7 +38,7 @@ class EventIngestionServiceTest {
         events = new InMemoryEventRepository();
         weights = new InMemoryWeightReadingRepository();
         service = new EventIngestionService(new InMemoryCageRepository(), guineaPigs, events, weights);
-        guineaPigs.save(GuineaPig.register(CAGE, "Canela", "RED", NOW.minusSeconds(3600)));
+        guineaPigs.save(GuineaPig.register(CAGE, "RED", Photos.png(), NOW.minusSeconds(3600)));
     }
 
     @Test

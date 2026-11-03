@@ -366,6 +366,10 @@ Producers: `ai-service` (`BEHAVIOR`, `AUDIO`) calls `http://backend:8080` inside
 - `AlertStatus`: `OPEN, REVIEWED`
 - `UserStatus`: `PENDING_VERIFICATION, ACTIVE, DISABLED`
 
+A guinea pig has **no name**: it is registered with a photo, stored in `guinea_pig.photo` (`BYTEA`, up to
+300 KB) and served at `GET /api/v1/cages/{code}/guinea-pigs/{id}/photo`. The lists read the row without the
+bytes (`GuineaPigRow`), so a page of the dashboard does not drag every picture of the cage with it.
+
 Mark colors, breeds and coat colors are **not** enums: they are rows of `catalog_option` in `cuy-monitor-db`,
 served at `GET /api/v1/catalog`. The backend validates a code against that table instead of against a Java enum,
 so the breeder can add a color with an `INSERT`.

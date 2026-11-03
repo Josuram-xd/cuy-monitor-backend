@@ -257,7 +257,8 @@ Mark colors, breeds and coat colors are **not** enums. They are rows of the `cat
 | `GET /api/v1/catalog` | JWT | dashboard | Mark colors, breeds and coat colors, from the database |
 | `GET /api/v1/cages/{id}/health` | JWT | dashboard | Cage health summary (from the Composite) |
 | `GET /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | Guinea pigs with their current state |
-| `POST /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | Register a guinea pig (name + mark color code) |
+| `POST /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | Register a guinea pig (photo + mark color code) |
+| `GET /api/v1/cages/{id}/guinea-pigs/{gid}/photo` | JWT | dashboard | The photo of a guinea pig |
 | `GET /api/v1/guinea-pigs/{id}/history?from=&to=` | JWT | dashboard | Behavior and state history |
 | `GET /api/v1/alerts?status=OPEN` | JWT | dashboard | List alerts |
 | `PATCH /api/v1/alerts/{id}` | JWT | dashboard | Mark an alert as `REVIEWED` |
