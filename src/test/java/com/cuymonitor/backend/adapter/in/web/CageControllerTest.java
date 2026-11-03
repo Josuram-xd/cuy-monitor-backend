@@ -4,9 +4,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.mockito.Mockito.verify;
 import static org.mockito.BDDMockito.willThrow;
-import com.cuymonitor.backend.domain.port.in.DeleteGuineaPigUseCase;
 import com.cuymonitor.backend.domain.exception.GuineaPigNotFoundException;
 import com.cuymonitor.backend.config.JwtConfig;
+import com.cuymonitor.backend.domain.access.CageOperations;
+import com.cuymonitor.backend.domain.exception.CageAccessDeniedException;
 import com.cuymonitor.backend.config.SecurityConfig;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
 import com.cuymonitor.backend.domain.exception.ColorAlreadyUsedException;
@@ -17,10 +18,6 @@ import com.cuymonitor.backend.domain.model.GuineaPigBreed;
 import com.cuymonitor.backend.domain.model.GuineaPigProfile;
 import com.cuymonitor.backend.domain.model.HealthStatus;
 import com.cuymonitor.backend.domain.model.MarkColor;
-import com.cuymonitor.backend.domain.port.in.GetCageHealthUseCase;
-import com.cuymonitor.backend.domain.port.in.ListGuineaPigsUseCase;
-import com.cuymonitor.backend.domain.port.in.RegisterGuineaPigCommand;
-import com.cuymonitor.backend.domain.port.in.RegisterGuineaPigUseCase;
 import com.cuymonitor.backend.domain.port.out.RevokedTokenRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,10 +30,12 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -51,18 +50,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CageControllerTest {
 
     private static final Instant NOW = Instant.parse("2026-10-05T14:32:00Z");
+    private static final UUID ACCOUNT = UUID.fromString("3f2a4b5c-0000-4000-8000-000000000001");
 
     @Autowired
     private MockMvc mvc;
 
     @MockitoBean
-    private GetCageHealthUseCase getCageHealthUseCase;
-    @MockitoBean
-    private ListGuineaPigsUseCase listGuineaPigsUseCase;
-    @MockitoBean
-    private RegisterGuineaPigUseCase registerGuineaPigUseCase;
-    @MockitoBean
-    private DeleteGuineaPigUseCase deleteGuineaPigUseCase;
+    private CageOperations cageOperations;
     @MockitoBean
     private RevokedTokenRepository revokedTokenRepository;
 
@@ -72,12 +66,12 @@ class CageControllerTest {
         mvc.perform(get("/api/v1/cages/cage-1/guinea-pigs")).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Canela\",\"markColor\":\"RED\"}")).andExpect(status().isUnauthorized());
-        verifyNoInteractions(listGuineaPigsUseCase, registerGuineaPigUseCase, getCageHealthUseCase);
+        verifyNoInteractions(cageOperations);
     }
 
     @Test
     void listsTheGuineaPigsOfTheCage() throws Exception {
-        given(listGuineaPigsUseCase.list("cage-1")).willReturn(List.of(pig(1, "Canela", MarkColor.RED)));
+        given(cageOperations.listGuineaPigs(ACCOUNT, "cage-1")).willReturn(List.of(pig(1, "Canela", MarkColor.RED)));
 
         mvc.perform(get("/api/v1/cages/cage-1/guinea-pigs").with(token()))
                 .andExpect(status().isOk())
@@ -90,8 +84,7 @@ class CageControllerTest {
 
     @Test
     void registersAGuineaPigAndAnswers201() throws Exception {
-        given(registerGuineaPigUseCase.register(argThat(c -> "cage-1".equals(c.cageCode())
-                && "Canela".equals(c.name()) && c.markColor() == MarkColor.RED)))
+        given(cageOperations.registerGuineaPig(eq(ACCOUNT), eq("cage-1"), eq("Canela"), eq(MarkColor.RED), any()))
                 .willReturn(pig(7, "Canela", MarkColor.RED));
 
         mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
@@ -104,7 +97,7 @@ class CageControllerTest {
     @Test
     void registersAGuineaPigWithItsProfile() throws Exception {
         GuineaPigProfile profile = new GuineaPigProfile(GuineaPigBreed.TEDDY, CoatColor.CREAM, 850, "tranquila");
-        given(registerGuineaPigUseCase.register(argThat(c -> "Canela".equals(c.name()) && profile.equals(c.profile()))))
+        given(cageOperations.registerGuineaPig(eq(ACCOUNT), eq("cage-1"), eq("Canela"), eq(MarkColor.RED), eq(profile)))
                 .willReturn(GuineaPig.restore(7L, "cage-1", "Canela", MarkColor.RED, HealthStatus.NORMAL, NOW, true,
                         NOW, profile));
 
@@ -120,7 +113,7 @@ class CageControllerTest {
 
     @Test
     void theProfileIsNullWhenTheGuineaPigHasNone() throws Exception {
-        given(listGuineaPigsUseCase.list("cage-1")).willReturn(List.of(pig(1, "Canela", MarkColor.RED)));
+        given(cageOperations.listGuineaPigs(ACCOUNT, "cage-1")).willReturn(List.of(pig(1, "Canela", MarkColor.RED)));
 
         mvc.perform(get("/api/v1/cages/cage-1/guinea-pigs").with(token()))
                 .andExpect(jsonPath("$[0].breed").value(nullValue()))
@@ -147,7 +140,7 @@ class CageControllerTest {
                         .content(base + "\"notes\":\"" + "a".repeat(501) + "\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fields.notes").exists());
-        verifyNoInteractions(registerGuineaPigUseCase);
+        verifyNoInteractions(cageOperations);
     }
 
     @Test
@@ -156,13 +149,13 @@ class CageControllerTest {
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
 
-        verify(deleteGuineaPigUseCase).delete("cage-1", 7L);
+        verify(cageOperations).deleteGuineaPig(ACCOUNT, "cage-1", 7L);
     }
 
     @Test
     void answers404WhenTheGuineaPigOrTheCageIsUnknown() throws Exception {
-        willThrow(new GuineaPigNotFoundException()).given(deleteGuineaPigUseCase).delete("cage-1", 99L);
-        willThrow(new CageNotFoundException()).given(deleteGuineaPigUseCase).delete("nope", 1L);
+        willThrow(new GuineaPigNotFoundException()).given(cageOperations).deleteGuineaPig(ACCOUNT, "cage-1", 99L);
+        willThrow(new CageNotFoundException()).given(cageOperations).deleteGuineaPig(ACCOUNT, "nope", 1L);
 
         mvc.perform(delete("/api/v1/cages/cage-1/guinea-pigs/99").with(token()))
                 .andExpect(status().isNotFound())
@@ -174,13 +167,13 @@ class CageControllerTest {
     @Test
     void rejectsAnIdThatIsNotANumberWith400() throws Exception {
         mvc.perform(delete("/api/v1/cages/cage-1/guinea-pigs/abc").with(token())).andExpect(status().isBadRequest());
-        verifyNoInteractions(deleteGuineaPigUseCase);
+        verifyNoInteractions(cageOperations);
     }
 
     @Test
     void deletingNeedsASession() throws Exception {
         mvc.perform(delete("/api/v1/cages/cage-1/guinea-pigs/7")).andExpect(status().isUnauthorized());
-        verifyNoInteractions(deleteGuineaPigUseCase);
+        verifyNoInteractions(cageOperations);
     }
 
     @Test
@@ -197,12 +190,12 @@ class CageControllerTest {
         mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Canela\"}"))
                 .andExpect(status().isBadRequest());
-        verifyNoInteractions(registerGuineaPigUseCase);
+        verifyNoInteractions(cageOperations);
     }
 
     @Test
     void answers409WhenTheColorIsTaken() throws Exception {
-        given(registerGuineaPigUseCase.register(any(RegisterGuineaPigCommand.class)))
+        given(cageOperations.registerGuineaPig(eq(ACCOUNT), eq("cage-1"), eq("Pelusa"), eq(MarkColor.RED), any()))
                 .willThrow(new ColorAlreadyUsedException());
 
         mvc.perform(post("/api/v1/cages/cage-1/guinea-pigs").with(token()).contentType(MediaType.APPLICATION_JSON)
@@ -213,8 +206,8 @@ class CageControllerTest {
 
     @Test
     void answers404ForAnUnknownCage() throws Exception {
-        given(listGuineaPigsUseCase.list("nope")).willThrow(new CageNotFoundException());
-        given(getCageHealthUseCase.getHealth("nope")).willThrow(new CageNotFoundException());
+        given(cageOperations.listGuineaPigs(ACCOUNT, "nope")).willThrow(new CageNotFoundException());
+        given(cageOperations.getHealth(ACCOUNT, "nope")).willThrow(new CageNotFoundException());
 
         mvc.perform(get("/api/v1/cages/nope/guinea-pigs").with(token()))
                 .andExpect(status().isNotFound())
@@ -226,7 +219,7 @@ class CageControllerTest {
     void returnsTheCageHealthInTheContractShape() throws Exception {
         GuineaPig canela = GuineaPig.restore(1L, "cage-1", "Canela", MarkColor.RED, HealthStatus.OBSERVED,
                 NOW.minusSeconds(600), true, NOW.minusSeconds(3600));
-        given(getCageHealthUseCase.getHealth("cage-1")).willReturn(new CageHealthSummary("cage-1",
+        given(cageOperations.getHealth(ACCOUNT, "cage-1")).willReturn(new CageHealthSummary("cage-1",
                 HealthStatus.OBSERVED, List.of(canela),
                 new CageHealthSummary.Audio(HealthStatus.NORMAL, NOW.minusSeconds(120)),
                 new CageHealthSummary.Weight(HealthStatus.NORMAL, 812.4, NOW.minusSeconds(60)), NOW));
@@ -243,11 +236,22 @@ class CageControllerTest {
                 .andExpect(jsonPath("$.updatedAt").value("2026-10-05T14:32:00Z"));
     }
 
+    @Test
+    void answers403WhenTheCageBelongsToAnotherAccount() throws Exception {
+        given(cageOperations.getHealth(ACCOUNT, "cage-ajena")).willThrow(new CageAccessDeniedException());
+        willThrow(new CageAccessDeniedException()).given(cageOperations).deleteGuineaPig(ACCOUNT, "cage-ajena", 1L);
+
+        mvc.perform(get("/api/v1/cages/cage-ajena/health").with(token()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("forbidden"));
+        mvc.perform(delete("/api/v1/cages/cage-ajena/guinea-pigs/1").with(token())).andExpect(status().isForbidden());
+    }
+
     private static GuineaPig pig(long id, String name, MarkColor color) {
         return GuineaPig.restore(id, "cage-1", name, color, HealthStatus.NORMAL, NOW, true, NOW);
     }
 
     private static RequestPostProcessor token() {
-        return jwt().jwt(jwt -> jwt.subject("3f2a4b5c-0000-4000-8000-000000000001"));
+        return jwt().jwt(jwt -> jwt.subject(ACCOUNT.toString()));
     }
 }

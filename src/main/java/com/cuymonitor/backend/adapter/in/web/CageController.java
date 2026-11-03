@@ -1,16 +1,12 @@
 package com.cuymonitor.backend.adapter.in.web;
 
-import org.springframework.web.bind.annotation.DeleteMapping;
 import com.cuymonitor.backend.adapter.in.web.dto.CageHealthResponse;
 import com.cuymonitor.backend.adapter.in.web.dto.GuineaPigResponse;
 import com.cuymonitor.backend.adapter.in.web.dto.RegisterGuineaPigRequest;
-import com.cuymonitor.backend.domain.port.in.DeleteGuineaPigUseCase;
-import com.cuymonitor.backend.domain.port.in.GetCageHealthUseCase;
-import com.cuymonitor.backend.domain.port.in.ListGuineaPigsUseCase;
-import com.cuymonitor.backend.domain.port.in.RegisterGuineaPigCommand;
-import com.cuymonitor.backend.domain.port.in.RegisterGuineaPigUseCase;
+import com.cuymonitor.backend.domain.access.CageOperations;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,48 +15,46 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.security.Principal;
 import java.util.List;
 
+import static com.cuymonitor.backend.adapter.in.web.CagesController.accountId;
+
+/** What is inside one cage. Every call goes through the cage access proxy, which checks the owner. */
 @RestController
 @RequestMapping("/api/v1/cages/{cageId}")
 public class CageController {
 
-    private final GetCageHealthUseCase getCageHealthUseCase;
-    private final ListGuineaPigsUseCase listGuineaPigsUseCase;
-    private final RegisterGuineaPigUseCase registerGuineaPigUseCase;
-    private final DeleteGuineaPigUseCase deleteGuineaPigUseCase;
+    private final CageOperations cageOperations;
 
-    public CageController(GetCageHealthUseCase getCageHealthUseCase, ListGuineaPigsUseCase listGuineaPigsUseCase,
-                          RegisterGuineaPigUseCase registerGuineaPigUseCase,
-                          DeleteGuineaPigUseCase deleteGuineaPigUseCase) {
-        this.getCageHealthUseCase = getCageHealthUseCase;
-        this.listGuineaPigsUseCase = listGuineaPigsUseCase;
-        this.registerGuineaPigUseCase = registerGuineaPigUseCase;
-        this.deleteGuineaPigUseCase = deleteGuineaPigUseCase;
+    public CageController(CageOperations cageOperations) {
+        this.cageOperations = cageOperations;
     }
 
     @GetMapping("/health")
-    public CageHealthResponse health(@PathVariable String cageId) {
-        return CageHealthResponse.from(getCageHealthUseCase.getHealth(cageId));
+    public CageHealthResponse health(Principal principal, @PathVariable String cageId) {
+        return CageHealthResponse.from(cageOperations.getHealth(accountId(principal), cageId));
     }
 
     @GetMapping("/guinea-pigs")
-    public List<GuineaPigResponse> guineaPigs(@PathVariable String cageId) {
-        return listGuineaPigsUseCase.list(cageId).stream().map(GuineaPigResponse::from).toList();
+    public List<GuineaPigResponse> guineaPigs(Principal principal, @PathVariable String cageId) {
+        return cageOperations.listGuineaPigs(accountId(principal), cageId).stream()
+                .map(GuineaPigResponse::from)
+                .toList();
     }
 
     @PostMapping("/guinea-pigs")
     @ResponseStatus(HttpStatus.CREATED)
-    public GuineaPigResponse registerGuineaPig(@PathVariable String cageId,
+    public GuineaPigResponse registerGuineaPig(Principal principal, @PathVariable String cageId,
                                                @Valid @RequestBody RegisterGuineaPigRequest request) {
-        return GuineaPigResponse.from(registerGuineaPigUseCase.register(
-                new RegisterGuineaPigCommand(cageId, request.name(), request.markColor(), request.profile())));
+        return GuineaPigResponse.from(cageOperations.registerGuineaPig(accountId(principal), cageId, request.name(),
+                request.markColor(), request.profile()));
     }
 
     /** Soft delete: the guinea pig disappears from the cage and frees its color; its history is kept. */
     @DeleteMapping("/guinea-pigs/{guineaPigId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteGuineaPig(@PathVariable String cageId, @PathVariable long guineaPigId) {
-        deleteGuineaPigUseCase.delete(cageId, guineaPigId);
+    public void deleteGuineaPig(Principal principal, @PathVariable String cageId, @PathVariable long guineaPigId) {
+        cageOperations.deleteGuineaPig(accountId(principal), cageId, guineaPigId);
     }
 }

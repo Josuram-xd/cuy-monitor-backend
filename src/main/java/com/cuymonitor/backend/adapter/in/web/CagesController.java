@@ -2,13 +2,7 @@ package com.cuymonitor.backend.adapter.in.web;
 
 import com.cuymonitor.backend.adapter.in.web.dto.CageRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.CageResponse;
-import com.cuymonitor.backend.domain.port.in.CreateCageCommand;
-import com.cuymonitor.backend.domain.port.in.CreateCageUseCase;
-import com.cuymonitor.backend.domain.port.in.DeleteCageUseCase;
-import com.cuymonitor.backend.domain.port.in.GetCageUseCase;
-import com.cuymonitor.backend.domain.port.in.ListCagesUseCase;
-import com.cuymonitor.backend.domain.port.in.UpdateCageCommand;
-import com.cuymonitor.backend.domain.port.in.UpdateCageUseCase;
+import com.cuymonitor.backend.domain.access.CageOperations;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,55 +19,45 @@ import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
 
-/** The cages of the signed-in farmer. */
+/** The cages of the signed-in farmer. Every call goes through the cage access proxy. */
 @RestController
 @RequestMapping("/api/v1/cages")
 public class CagesController {
 
-    private final ListCagesUseCase listCagesUseCase;
-    private final GetCageUseCase getCageUseCase;
-    private final CreateCageUseCase createCageUseCase;
-    private final UpdateCageUseCase updateCageUseCase;
-    private final DeleteCageUseCase deleteCageUseCase;
+    private final CageOperations cageOperations;
 
-    public CagesController(ListCagesUseCase listCagesUseCase, GetCageUseCase getCageUseCase,
-                           CreateCageUseCase createCageUseCase, UpdateCageUseCase updateCageUseCase,
-                           DeleteCageUseCase deleteCageUseCase) {
-        this.listCagesUseCase = listCagesUseCase;
-        this.getCageUseCase = getCageUseCase;
-        this.createCageUseCase = createCageUseCase;
-        this.updateCageUseCase = updateCageUseCase;
-        this.deleteCageUseCase = deleteCageUseCase;
+    public CagesController(CageOperations cageOperations) {
+        this.cageOperations = cageOperations;
     }
 
     @GetMapping
     public List<CageResponse> list(Principal principal) {
-        return listCagesUseCase.list(accountId(principal)).stream().map(CageResponse::from).toList();
+        return cageOperations.listCages(accountId(principal)).stream().map(CageResponse::from).toList();
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public CageResponse create(Principal principal, @Valid @RequestBody CageRequest request) {
-        return CageResponse.from(createCageUseCase.create(
-                new CreateCageCommand(accountId(principal), request.name(), request.location())));
+        return CageResponse.from(cageOperations.createCage(accountId(principal), request.name(), request.location()));
     }
 
     @GetMapping("/{cageId}")
-    public CageResponse get(@PathVariable String cageId) {
-        return CageResponse.from(getCageUseCase.get(cageId));
+    public CageResponse get(Principal principal, @PathVariable String cageId) {
+        return CageResponse.from(cageOperations.getCage(accountId(principal), cageId));
     }
 
     @PutMapping("/{cageId}")
-    public CageResponse update(@PathVariable String cageId, @Valid @RequestBody CageRequest request) {
-        return CageResponse.from(updateCageUseCase.update(
-                new UpdateCageCommand(cageId, request.name(), request.location())));
+    public CageResponse update(Principal principal, @PathVariable String cageId,
+                               @Valid @RequestBody CageRequest request) {
+        return CageResponse.from(cageOperations.updateCage(accountId(principal), cageId, request.name(),
+                request.location()));
     }
 
     /** Soft delete: its guinea pigs, alerts and history are kept. */
     @DeleteMapping("/{cageId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable String cageId) {
-        deleteCageUseCase.delete(cageId);
+    public void delete(Principal principal, @PathVariable String cageId) {
+        cageOperations.deleteCage(accountId(principal), cageId);
     }
 
     // the JWT subject is the account id; it always comes from the session, never from the request
