@@ -10,7 +10,6 @@ import com.cuymonitor.backend.domain.model.AudioSignal;
 import com.cuymonitor.backend.domain.model.BehaviorSignal;
 import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.HealthEvent;
-import com.cuymonitor.backend.domain.model.MarkColor;
 import com.cuymonitor.backend.domain.model.WeightSignal;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
@@ -45,7 +44,7 @@ class EventSourceAdapterTest {
 
         assertThat(actual).isEqualTo(new HealthEvent(
                 EVENT_ID, "cage-1", NOW, "ai-service",
-                new BehaviorSignal(MarkColor.RED, 60, 48, 0, 1, 0.72, 0.81, 0.93)));
+                new BehaviorSignal("RED", 60, 48, 0, 1, 0.72, 0.81, 0.93)));
     }
 
     @Test

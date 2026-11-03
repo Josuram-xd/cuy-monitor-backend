@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.domain.model;
 
+import com.cuymonitor.backend.application.fake.Photos;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -14,12 +15,12 @@ class HealthModelTest {
 
     @Test
     void deactivatingKeepsTheRestOfTheGuineaPig() {
-        GuineaPig pig = GuineaPig.register("cage-1", "Canela", MarkColor.RED, NOW);
+        GuineaPig pig = GuineaPig.register("cage-1", "RED", Photos.png(), NOW);
 
         pig.deactivate();
 
         assertThat(pig.isActive()).isFalse();
-        assertThat(pig.getName()).isEqualTo("Canela");
+        assertThat(pig.hasPhoto()).isTrue();
         assertThat(pig.getStatus()).isEqualTo(HealthStatus.NORMAL);
     }
 
@@ -34,26 +35,29 @@ class HealthModelTest {
 
     @Test
     void registeredGuineaPigStartsNormal() {
-        GuineaPig pig = GuineaPig.register("cage-1", "  Canela ", MarkColor.RED, NOW);
+        GuineaPig pig = GuineaPig.register("cage-1", " red ", Photos.png(), NOW);
 
         assertThat(pig.getId()).isNull();
-        assertThat(pig.getName()).isEqualTo("Canela");
+        assertThat(pig.getMarkColor()).isEqualTo("RED");
+        assertThat(pig.getPhotoContentType()).isEqualTo("image/png");
         assertThat(pig.getStatus()).isEqualTo(HealthStatus.NORMAL);
         assertThat(pig.getStatusSince()).isEqualTo(NOW);
         assertThat(pig.isActive()).isTrue();
     }
 
     @Test
-    void guineaPigNameIsRequiredAndShort() {
-        assertThatThrownBy(() -> GuineaPig.register("cage-1", " ", MarkColor.RED, NOW))
+    void guineaPigNeedsAPhotoAndAMarkColor() {
+        assertThatThrownBy(() -> GuineaPig.register("cage-1", "RED", null, NOW))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> GuineaPig.register("cage-1", " ", Photos.png(), NOW))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> GuineaPig.register("cage-1", "a".repeat(101), MarkColor.RED, NOW))
+        assertThatThrownBy(() -> GuineaPig.register("cage-1", "A".repeat(21), Photos.png(), NOW))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void changeStatusOnlyMovesStatusSinceWhenTheStatusChanges() {
-        GuineaPig pig = GuineaPig.register("cage-1", "Canela", MarkColor.RED, NOW);
+        GuineaPig pig = GuineaPig.register("cage-1", "RED", Photos.png(), NOW);
         Instant later = NOW.plusSeconds(60);
 
         pig.changeStatus(HealthStatus.NORMAL, later);
@@ -117,11 +121,11 @@ class HealthModelTest {
 
     @Test
     void behaviorSignalRejectsValuesOutsideTheContract() {
-        assertThatThrownBy(() -> new BehaviorSignal(MarkColor.RED, 60, 61, 0, 0, 0.1, 0.1, 0.9))
+        assertThatThrownBy(() -> new BehaviorSignal("RED", 60, 61, 0, 0, 0.1, 0.1, 0.9))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new BehaviorSignal(MarkColor.RED, 60, 10, -1, 0, 0.1, 0.1, 0.9))
+        assertThatThrownBy(() -> new BehaviorSignal("RED", 60, 10, -1, 0, 0.1, 0.1, 0.9))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new BehaviorSignal(MarkColor.RED, 60, 10, 0, 0, 1.2, 0.1, 0.9))
+        assertThatThrownBy(() -> new BehaviorSignal("RED", 60, 10, 0, 0, 1.2, 0.1, 0.9))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -133,6 +137,6 @@ class HealthModelTest {
     }
 
     private static BehaviorSignal window(double stillSeconds, int feederVisits, double groupDistance, double probAnomaly) {
-        return new BehaviorSignal(MarkColor.RED, 60, stillSeconds, feederVisits, 1, groupDistance, probAnomaly, 0.9);
+        return new BehaviorSignal("RED", 60, stillSeconds, feederVisits, 1, groupDistance, probAnomaly, 0.9);
     }
 }
