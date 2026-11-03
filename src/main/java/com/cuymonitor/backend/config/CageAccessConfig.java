@@ -25,7 +25,8 @@ public class CageAccessConfig {
                                          GuineaPigService guineaPigService, AlertService alertService,
                                          CageRepository cages, AlertRepository alerts) {
         CageUseCases useCases = new CageUseCases(cageService, cageService, cageService, cageService, cageService,
-                cageHealthService, guineaPigService, guineaPigService, guineaPigService, alertService, alertService);
+                cageHealthService, guineaPigService, guineaPigService, guineaPigService, guineaPigService, alertService,
+                alertService);
         CageOperations realSubject = new CageOperationsService(useCases);
         return new CageAccessProxy(realSubject, cages, alerts);
     }

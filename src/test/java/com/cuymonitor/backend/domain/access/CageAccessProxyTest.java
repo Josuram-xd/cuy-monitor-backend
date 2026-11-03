@@ -2,6 +2,7 @@ package com.cuymonitor.backend.domain.access;
 
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryAlertRepository;
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryCageRepository;
+import com.cuymonitor.backend.application.fake.Photos;
 import com.cuymonitor.backend.domain.exception.AlertNotFoundException;
 import com.cuymonitor.backend.domain.exception.CageAccessDeniedException;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
@@ -11,9 +12,9 @@ import com.cuymonitor.backend.domain.model.Cage;
 import com.cuymonitor.backend.domain.model.CageHealthSummary;
 import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.GuineaPig;
+import com.cuymonitor.backend.domain.model.GuineaPigPhoto;
 import com.cuymonitor.backend.domain.model.GuineaPigProfile;
 import com.cuymonitor.backend.domain.model.HealthStatus;
-import com.cuymonitor.backend.domain.model.MarkColor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -63,13 +64,15 @@ class CageAccessProxyTest {
         proxy.updateCage(ANA, "cage-ana", "Nueva", null);
         proxy.getHealth(ANA, "cage-ana");
         proxy.listGuineaPigs(ANA, "cage-ana");
-        proxy.registerGuineaPig(ANA, "cage-ana", "Canela", MarkColor.RED, GuineaPigProfile.EMPTY);
+        proxy.registerGuineaPig(ANA, "cage-ana", "RED", Photos.png(), GuineaPigProfile.EMPTY);
+        proxy.getGuineaPigPhoto(ANA, "cage-ana", 7L);
         proxy.deleteGuineaPig(ANA, "cage-ana", 7L);
         proxy.listAlerts(ANA, "cage-ana", AlertStatus.OPEN);
         proxy.deleteCage(ANA, "cage-ana");
 
         assertThat(realSubject.calls).containsExactly("getCage cage-ana", "updateCage cage-ana", "getHealth cage-ana",
-                "listGuineaPigs cage-ana", "registerGuineaPig cage-ana", "deleteGuineaPig cage-ana 7",
+                "listGuineaPigs cage-ana", "registerGuineaPig cage-ana", "getGuineaPigPhoto cage-ana 7",
+                "deleteGuineaPig cage-ana 7",
                 "listAlerts cage-ana", "deleteCage cage-ana");
     }
 
@@ -81,7 +84,8 @@ class CageAccessProxyTest {
                 () -> proxy.deleteCage(ANA, "cage-luis"),
                 () -> proxy.getHealth(ANA, "cage-luis"),
                 () -> proxy.listGuineaPigs(ANA, "cage-luis"),
-                () -> proxy.registerGuineaPig(ANA, "cage-luis", "Intrusa", MarkColor.RED, GuineaPigProfile.EMPTY),
+                () -> proxy.registerGuineaPig(ANA, "cage-luis", "RED", Photos.png(), GuineaPigProfile.EMPTY),
+                () -> proxy.getGuineaPigPhoto(ANA, "cage-luis", 1L),
                 () -> proxy.deleteGuineaPig(ANA, "cage-luis", 1L),
                 () -> proxy.listAlerts(ANA, "cage-luis", null));
 
@@ -191,9 +195,15 @@ class CageAccessProxyTest {
         }
 
         @Override
-        public GuineaPig registerGuineaPig(UUID requesterId, String cageCode, String name, MarkColor markColor,
-                                          GuineaPigProfile profile) {
+        public GuineaPig registerGuineaPig(UUID requesterId, String cageCode, String markColor,
+                                          GuineaPigPhoto photo, GuineaPigProfile profile) {
             calls.add("registerGuineaPig " + cageCode);
+            return null;
+        }
+
+        @Override
+        public GuineaPigPhoto getGuineaPigPhoto(UUID requesterId, String cageCode, long guineaPigId) {
+            calls.add("getGuineaPigPhoto " + cageCode + " " + guineaPigId);
             return null;
         }
 

@@ -1,11 +1,12 @@
 package com.cuymonitor.backend.domain.port.in;
 
+import com.cuymonitor.backend.domain.model.GuineaPigPhoto;
 import com.cuymonitor.backend.domain.model.GuineaPigProfile;
-import com.cuymonitor.backend.domain.model.MarkColor;
 
-public record RegisterGuineaPigCommand(String cageCode, String name, MarkColor markColor, GuineaPigProfile profile) {
+public record RegisterGuineaPigCommand(String cageCode, String markColor, GuineaPigPhoto photo,
+                                       GuineaPigProfile profile) {
 
-    public RegisterGuineaPigCommand(String cageCode, String name, MarkColor markColor) {
-        this(cageCode, name, markColor, GuineaPigProfile.EMPTY);
+    public RegisterGuineaPigCommand(String cageCode, String markColor, GuineaPigPhoto photo) {
+        this(cageCode, markColor, photo, GuineaPigProfile.EMPTY);
     }
 }

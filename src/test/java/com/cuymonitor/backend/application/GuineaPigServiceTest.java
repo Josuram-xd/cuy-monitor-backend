@@ -3,17 +3,18 @@ package com.cuymonitor.backend.application;
 import com.cuymonitor.backend.domain.exception.GuineaPigNotFoundException;
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryCageRepository;
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryGuineaPigRepository;
+import com.cuymonitor.backend.application.fake.FakeCatalogOptionRepository;
 import com.cuymonitor.backend.application.fake.MutableClock;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
 import com.cuymonitor.backend.domain.exception.ColorAlreadyUsedException;
-import com.cuymonitor.backend.domain.model.CoatColor;
+import com.cuymonitor.backend.domain.exception.UnknownCatalogOptionException;
+import com.cuymonitor.backend.domain.model.CatalogKind;
 import com.cuymonitor.backend.domain.model.GuineaPig;
-import com.cuymonitor.backend.domain.model.GuineaPigBreed;
 import com.cuymonitor.backend.domain.model.GuineaPigProfile;
 import com.cuymonitor.backend.domain.model.HealthStatus;
-import com.cuymonitor.backend.domain.model.MarkColor;
 import com.cuymonitor.backend.domain.port.in.RegisterGuineaPigCommand;
 import org.junit.jupiter.api.BeforeEach;
+import com.cuymonitor.backend.application.fake.Photos;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -26,30 +27,48 @@ class GuineaPigServiceTest {
     private static final Instant NOW = Instant.parse("2026-10-05T14:32:00Z");
 
     private InMemoryGuineaPigRepository guineaPigs;
+    private FakeCatalogOptionRepository catalogOptions;
     private GuineaPigService service;
 
     @BeforeEach
     void setUp() {
         guineaPigs = new InMemoryGuineaPigRepository();
-        service = new GuineaPigService(new InMemoryCageRepository(), guineaPigs, new MutableClock(NOW));
+        catalogOptions = new FakeCatalogOptionRepository();
+        service = new GuineaPigService(new InMemoryCageRepository(), guineaPigs, catalogOptions,
+                new MutableClock(NOW));
     }
 
     @Test
-    void registersANormalGuineaPigWithATrimmedName() {
-        GuineaPig created = service.register(new RegisterGuineaPigCommand("cage-1", "  Canela ", MarkColor.RED));
+    void registersANormalGuineaPigWithItsPhoto() {
+        GuineaPig created = service.register(new RegisterGuineaPigCommand("cage-1", "RED", Photos.png()));
 
         assertThat(created.getId()).isNotNull();
-        assertThat(created.getName()).isEqualTo("Canela");
+        assertThat(created.hasPhoto()).isTrue();
         assertThat(created.getStatus()).isEqualTo(HealthStatus.NORMAL);
         assertThat(created.getStatusSince()).isEqualTo(NOW);
-        assertThat(service.list("cage-1")).extracting(GuineaPig::getName).containsExactly("Canela");
+        assertThat(service.getPhoto("cage-1", created.getId())).isEqualTo(Photos.png());
+    }
+
+    @Test
+    void thePhotoOfAnotherCageOrOfADeletedGuineaPigIsNotFound() {
+        GuineaPig created = service.register(new RegisterGuineaPigCommand("cage-1", "RED", Photos.png()));
+
+        assertThatThrownBy(() -> service.getPhoto("cage-2", created.getId()))
+                .isInstanceOf(CageNotFoundException.class);
+        assertThatThrownBy(() -> service.getPhoto("cage-1", 999))
+                .isInstanceOf(GuineaPigNotFoundException.class);
+
+        service.delete("cage-1", created.getId());
+
+        assertThatThrownBy(() -> service.getPhoto("cage-1", created.getId()))
+                .isInstanceOf(GuineaPigNotFoundException.class);
     }
 
     @Test
     void keepsTheBreedCoatWeightAndNotes() {
-        GuineaPigProfile profile = new GuineaPigProfile(GuineaPigBreed.PERUVIAN, CoatColor.TRICOLOR, 900, "nueva");
+        GuineaPigProfile profile = new GuineaPigProfile("PERUVIAN", "TRICOLOR", 900, "nueva");
 
-        GuineaPig created = service.register(new RegisterGuineaPigCommand("cage-1", "Canela", MarkColor.RED, profile));
+        GuineaPig created = service.register(new RegisterGuineaPigCommand("cage-1", "RED", Photos.png(), profile));
 
         assertThat(service.list("cage-1")).singleElement().satisfies(pig -> {
             assertThat(pig.getId()).isEqualTo(created.getId());
@@ -58,21 +77,49 @@ class GuineaPigServiceTest {
     }
 
     @Test
+    void refusesAMarkColorThatIsNotInTheCatalog() {
+        assertThatThrownBy(() -> service.register(new RegisterGuineaPigCommand("cage-1", "FUCHSIA", Photos.png())))
+                .isInstanceOf(UnknownCatalogOptionException.class)
+                .hasMessageContaining("FUCHSIA");
+
+        assertThat(service.list("cage-1")).isEmpty();
+    }
+
+    @Test
+    void refusesABreedOrCoatColorThatIsNotInTheCatalog() {
+        assertThatThrownBy(() -> service.register(new RegisterGuineaPigCommand("cage-1", "RED", Photos.png(),
+                new GuineaPigProfile("DRAGON", null, null, null))))
+                .isInstanceOf(UnknownCatalogOptionException.class);
+
+        assertThatThrownBy(() -> service.register(new RegisterGuineaPigCommand("cage-1", "RED", Photos.png(),
+                new GuineaPigProfile(null, "NEON", null, null))))
+                .isInstanceOf(UnknownCatalogOptionException.class);
+    }
+
+    @Test
+    void aColorRetiredInTheCatalogStopsBeingAccepted() {
+        catalogOptions.retire(CatalogKind.MARK_COLOR, "PURPLE");
+
+        assertThatThrownBy(() -> service.register(new RegisterGuineaPigCommand("cage-1", "PURPLE", Photos.png())))
+                .isInstanceOf(UnknownCatalogOptionException.class);
+    }
+
+    @Test
     void deletingKeepsTheRecordButHidesItAndFreesItsColor() {
-        GuineaPig canela = service.register(new RegisterGuineaPigCommand("cage-1", "Canela", MarkColor.RED));
+        GuineaPig canela = service.register(new RegisterGuineaPigCommand("cage-1", "RED", Photos.png()));
 
         service.delete("cage-1", canela.getId());
 
         assertThat(service.list("cage-1")).isEmpty();
         assertThat(guineaPigs.findById(canela.getId())).get().extracting(GuineaPig::isActive).isEqualTo(false);
         // the color is free again
-        assertThat(service.register(new RegisterGuineaPigCommand("cage-1", "Pelusa", MarkColor.RED)).getId())
+        assertThat(service.register(new RegisterGuineaPigCommand("cage-1", "RED", Photos.png())).getId())
                 .isNotEqualTo(canela.getId());
     }
 
     @Test
     void deletingAnUnknownOrAlreadyDeletedGuineaPigIsNotFound() {
-        GuineaPig canela = service.register(new RegisterGuineaPigCommand("cage-1", "Canela", MarkColor.RED));
+        GuineaPig canela = service.register(new RegisterGuineaPigCommand("cage-1", "RED", Photos.png()));
         service.delete("cage-1", canela.getId());
 
         assertThatThrownBy(() -> service.delete("cage-1", canela.getId()))
@@ -82,7 +129,7 @@ class GuineaPigServiceTest {
 
     @Test
     void deletingAnIdOfAnotherCageDoesNothing() {
-        GuineaPig other = guineaPigs.save(GuineaPig.register("cage-2", "Ajeno", MarkColor.BLUE, NOW));
+        GuineaPig other = guineaPigs.save(GuineaPig.register("cage-2", "BLUE", Photos.png(), NOW));
 
         assertThatThrownBy(() -> service.delete("cage-1", other.getId()))
                 .isInstanceOf(GuineaPigNotFoundException.class);
@@ -96,24 +143,24 @@ class GuineaPigServiceTest {
 
     @Test
     void refusesAColorAnotherGuineaPigWears() {
-        service.register(new RegisterGuineaPigCommand("cage-1", "Canela", MarkColor.RED));
+        service.register(new RegisterGuineaPigCommand("cage-1", "RED", Photos.png()));
 
-        assertThatThrownBy(() -> service.register(new RegisterGuineaPigCommand("cage-1", "Pelusa", MarkColor.RED)))
+        assertThatThrownBy(() -> service.register(new RegisterGuineaPigCommand("cage-1", "RED", Photos.png())))
                 .isInstanceOf(ColorAlreadyUsedException.class);
         assertThat(service.list("cage-1")).hasSize(1);
     }
 
     @Test
     void differentColorsCanShareTheCage() {
-        service.register(new RegisterGuineaPigCommand("cage-1", "Canela", MarkColor.RED));
-        service.register(new RegisterGuineaPigCommand("cage-1", "Pelusa", MarkColor.BLUE));
+        service.register(new RegisterGuineaPigCommand("cage-1", "RED", Photos.png()));
+        service.register(new RegisterGuineaPigCommand("cage-1", "BLUE", Photos.png()));
 
-        assertThat(service.list("cage-1")).extracting(GuineaPig::getName).containsExactly("Canela", "Pelusa");
+        assertThat(service.list("cage-1")).extracting(GuineaPig::getMarkColor).containsExactly("RED", "BLUE");
     }
 
     @Test
     void anUnknownCageIsNotFound() {
-        assertThatThrownBy(() -> service.register(new RegisterGuineaPigCommand("nope", "Canela", MarkColor.RED)))
+        assertThatThrownBy(() -> service.register(new RegisterGuineaPigCommand("nope", "RED", Photos.png())))
                 .isInstanceOf(CageNotFoundException.class);
         assertThatThrownBy(() -> service.list("nope")).isInstanceOf(CageNotFoundException.class);
         assertThat(guineaPigs.findActiveByCage("nope")).isEmpty();

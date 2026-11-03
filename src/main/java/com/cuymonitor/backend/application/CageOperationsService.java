@@ -6,8 +6,8 @@ import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.model.Cage;
 import com.cuymonitor.backend.domain.model.CageHealthSummary;
 import com.cuymonitor.backend.domain.model.GuineaPig;
+import com.cuymonitor.backend.domain.model.GuineaPigPhoto;
 import com.cuymonitor.backend.domain.model.GuineaPigProfile;
-import com.cuymonitor.backend.domain.model.MarkColor;
 import com.cuymonitor.backend.domain.port.in.CreateCageCommand;
 import com.cuymonitor.backend.domain.port.in.ListAlertsUseCase;
 import com.cuymonitor.backend.domain.port.in.RegisterGuineaPigCommand;
@@ -66,10 +66,15 @@ public class CageOperationsService implements CageOperations {
     }
 
     @Override
-    public GuineaPig registerGuineaPig(UUID requesterId, String cageCode, String name, MarkColor markColor,
+    public GuineaPig registerGuineaPig(UUID requesterId, String cageCode, String markColor, GuineaPigPhoto photo,
                                       GuineaPigProfile profile) {
-        return useCases.registerGuineaPig().register(new RegisterGuineaPigCommand(cageCode, name, markColor,
+        return useCases.registerGuineaPig().register(new RegisterGuineaPigCommand(cageCode, markColor, photo,
                 profile == null ? GuineaPigProfile.EMPTY : profile));
+    }
+
+    @Override
+    public GuineaPigPhoto getGuineaPigPhoto(UUID requesterId, String cageCode, long guineaPigId) {
+        return useCases.getGuineaPigPhoto().getPhoto(cageCode, guineaPigId);
     }
 
     @Override
