@@ -119,8 +119,38 @@ Processing is synchronous inside the HTTP request. The load is tiny (a few event
 | State | `domain.health.state` | `HealthState` (interface), `NormalState`, `ObservedState`, `AlertState`, `CriticalState`, `GuineaPigHealthContext` | Core |
 | Composite | `domain.health.composite` | `HealthComponent`, `GuineaPigHealth` / `CageAudioHealth` / `CageWeightHealth` (leaves), `CageHealth` (composite) | Core |
 | Observer | `domain.notification` + `domain.port.out` + `adapter.out.notification` | `AlertPublisher` (subject, core), `AlertObserver` (output port), 3 concrete observers (output adapters) | Core + output port + output adapters |
+| Proxy (protection) | `domain.access` + `application` | `CageOperations` (subject), `CageAccessProxy` (proxy), `CageOperationsService` (real subject) | Core, between the input adapters and the use cases |
 
 The Adapter pattern and the Observer are also the clearest examples of the hexagonal idea: the first converts the outside format into the core's language, the second lets the core notify the outside world through a port without knowing who listens.
+
+#### Proxy: who may touch a cage
+
+A farmer has several cages and must only see and change their own. That rule lives in **one hand-written protection
+proxy**, not in Spring Security annotations (`@PreAuthorize`, `@PostFilter`, …) nor spread over controllers:
+
+```
+CagesController / CageController / AlertController / JwtChannelInterceptor (SUBSCRIBE)
+        │  only know the interface
+        ▼
+CageOperations ◄──────────── Subject (domain.access)
+   ▲            ▲
+   │ implements │ implements
+CageAccessProxy ──── holds a reference to ───► CageOperationsService   RealSubject (application)
+ Proxy (domain.access)                          delegates to CageService, CageHealthService,
+ 1. cages.findByCode(code)   → 404 if missing    GuineaPigService and AlertService;
+ 2. cage.isOwnedBy(requester)→ 403 if not        no access control at all
+ 3. forwards the same call
+```
+
+- Every method of `CageOperations` receives the `requesterId` (the JWT subject, read from the standard
+  `java.security.Principal`); the proxy compares it with `cage.ownerId`.
+- Listing every alert is filtered on the way back (only alerts of the requester's cages); reviewing an alert checks the
+  owner of the alert's cage.
+- `config/CageAccessConfig` creates the real subject with `new` and returns only the proxy as the `CageOperations`
+  bean, so no controller can get the real subject and skip the check.
+- The STOMP `SUBSCRIBE` to `/topic/cages/{cageId}` asks the same proxy (`getCage`), so nobody can listen to someone
+  else's cage.
+- `CageAccessProxyTest` checks it with a recording fake real subject: allowed calls reach it, refused calls never do.
 
 The user/auth part adds **no new GoF pattern** for the course. `OtpSender` behaves like a Strategy (email in prod, log in `dev`, chosen by profile) and `UserStatus` is a plain enum (3 states with simple rules don't justify a State).
 
@@ -189,6 +219,7 @@ Every transition is stored through `StateTransitionRepository` and, if it goes u
 ### 3.8 Design rules
 
 - Observer is implemented **by hand** (`AlertObserver` port + list in `AlertPublisher`), not with Spring's `ApplicationEventPublisher`, so the pattern is explicit.
+- Proxy is implemented **by hand** (`CageAccessProxy implements CageOperations`), not with Spring AOP, `@PreAuthorize` or any security annotation. Spring Security only authenticates the session (who you are); the proxy decides what you may touch.
 - DTOs, payloads and `HealthEvent` are Java `record`s. Lombok only on JPA entities.
 - Factory Method is a real Factory Method, not a Simple Factory: `AdapterFactory` is an abstract creator with an abstract `createAdapter()` method, and each concrete factory (`CameraAdapterFactory`, `AudioAdapterFactory`, `WeightAdapterFactory`) overrides it to create its own adapter. The only `switch` on `EventType` allowed is the one that picks **which factory** to use; it never creates adapters directly.
 - Patterns are written **by hand** and stay visible in the code. Spring only wires the objects (constructor injection, beans in `config/DomainConfig`); it never implements a pattern. Not allowed: `@EventListener` / `ApplicationEventPublisher` for Observer, `@Order` or injected lists to order the Chain (`HandlerChainBuilder` links each handler with `setNext`), Spring State Machine for State.
@@ -223,6 +254,7 @@ LOGOUT     POST /api/v1/auth/logout                                 → 204; jti
 | `/api/v1/ingestion/**` | `X-API-Key` filter (no JWT) |
 | `/ws` (HTTP handshake) | Open; `CookieHandshakeInterceptor` copies the access cookie to the session and the JWT is checked on the STOMP `CONNECT` frame by a `ChannelInterceptor` |
 | everything else under `/api/v1/**` | `access_token` cookie, or `Authorization: Bearer <jwt>` for tools (OAuth2 resource server, HS256; `CookieBearerTokenResolver`) |
+| a cage and what is inside it (`/api/v1/cages/{cageId}/**`, alerts, `/topic/cages/{cageId}`) | Only its owner: checked by the `CageAccessProxy` (section 3.2), `403 forbidden` otherwise |
 
 Session `STATELESS`. CORS and the WebSocket origin only for `http://localhost:5173` in the `dev` profile (`app.ws.allowed-origins` in `application-dev.yml`), with credentials; in prod the dashboard is served from the same domain.
 

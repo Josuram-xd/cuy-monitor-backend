@@ -94,7 +94,7 @@ The **database schema** is not in this repo: it lives in [`cuy-monitor-db`](http
 
 ## Design patterns
 
-The health evaluation logic is intentionally built around six GoF patterns, written by hand inside a hexagonal core:
+The health evaluation logic and the access to each cage are intentionally built around seven GoF patterns, written by hand inside a hexagonal core:
 
 | Pattern | Package | Role in the system |
 |---|---|---|
@@ -104,6 +104,7 @@ The health evaluation logic is intentionally built around six GoF patterns, writ
 | **State** | `domain.health.state` | Per-guinea-pig lifecycle: `NormalState`, `ObservedState`, `AlertState`, `CriticalState` |
 | **Composite** | `domain.health.composite` | `CageHealth` aggregates `GuineaPigHealth`, `CageAudioHealth` and `CageWeightHealth` |
 | **Observer** | `domain.notification` + `adapter.out.notification` | `AlertPublisher` fans out to `WebSocketAlertObserver`, `DatabaseAlertObserver`, `LogAlertObserver` through the `AlertObserver` port |
+| **Proxy** (protection) | `domain.access` + `application` | `CageAccessProxy` and `CageOperationsService` implement `CageOperations`; the proxy checks that the account owns the cage before forwarding to the real service |
 
 ```
 AdapterFactory ─► EventSourceAdapter ─► HealthEvent ─► EventHandler chain ─► HealthState ─► CageHealth
@@ -113,6 +114,14 @@ AlertPublisher ◄────────────────────�
 ```
 
 > The Observer is implemented explicitly (port + list of observers) rather than with Spring's `ApplicationEventPublisher`, so the pattern stays visible in the code.
+>
+> The Proxy is plain Java too: no `@PreAuthorize`, no Spring AOP. Controllers only receive a `CageOperations`, and the
+> only bean of that type is the proxy (`config/CageAccessConfig`), which wraps the real service:
+>
+> ```
+> Controller ─► CageOperations ◄─┬─ CageAccessProxy ──(owner ok)──► CageOperationsService ─► use cases
+>                                 └─ CageOperationsService            (403 if the cage is someone else's)
+> ```
 
 ## Users and authentication
 

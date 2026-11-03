@@ -29,6 +29,7 @@ Common errors for every JWT endpoint: `401` without a token, with an invalid or 
 |---|---|---|
 | `400` | `bad_request` | Invalid body, query param or date range |
 | `401` | `unauthorized` | Missing, invalid or expired token |
+| `403` | `forbidden` | The cage (or the alert's cage) belongs to another account |
 | `404` | `not_found` | Cage, guinea pig or alert does not exist |
 | `409` | `conflict` | Duplicate (for example, color already used in the cage) |
 
@@ -171,9 +172,10 @@ No body. `204 No Content`. **Soft delete**: the guinea pig stops appearing in th
 
 Both lists are ordered by `occurredAt`, oldest first. `windows` comes from stored `BEHAVIOR` events. `404` unknown guinea pig.
 
-### 3.5 `GET /api/v1/alerts?status=`
+### 3.5 `GET /api/v1/alerts?status=&cageId=`
 
-`status` is optional (`OPEN` or `REVIEWED`); without it, all alerts. Newest first.
+`status` is optional (`OPEN` or `REVIEWED`); without it, all alerts. `cageId` is optional; without it, the alerts of
+every cage of the account (never another account's). Newest first. `403` if `cageId` is another account's cage.
 
 ```json
 [
@@ -236,7 +238,8 @@ Ordered by `measuredAt`, oldest first. Includes unstable readings; the client fi
 
 ### Topic `/topic/cages/{cageId}`
 
-One topic per cage, with the cage **code** (`/topic/cages/cage-1`). Every message has the same envelope:
+One topic per cage, with the cage **code** (`/topic/cages/cage-1`). Only the owner of the cage can subscribe; any other
+account gets a STOMP `ERROR` frame. Every message has the same envelope:
 
 ```json
 { "type": "ALERT", "cageId": "cage-1", "occurredAt": "2026-10-05T14:20:00Z", "data": {} }
