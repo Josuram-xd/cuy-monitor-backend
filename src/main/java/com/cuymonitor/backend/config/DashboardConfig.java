@@ -2,6 +2,7 @@ package com.cuymonitor.backend.config;
 
 import com.cuymonitor.backend.application.AlertService;
 import com.cuymonitor.backend.application.CageHealthService;
+import com.cuymonitor.backend.application.CageService;
 import com.cuymonitor.backend.application.EventIngestionService;
 import com.cuymonitor.backend.application.GuineaPigService;
 import com.cuymonitor.backend.domain.port.out.AlertRepository;
@@ -17,6 +18,11 @@ import java.time.Clock;
 /** Wires the use cases the dashboard reads and writes through. */
 @Configuration
 public class DashboardConfig {
+
+    @Bean
+    public CageService cageService(CageRepository cages, Clock clock) {
+        return new CageService(cages, clock);
+    }
 
     @Bean
     public GuineaPigService guineaPigService(CageRepository cages, GuineaPigRepository guineaPigs, Clock clock) {
