@@ -16,8 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.security.Principal;
 import java.util.List;
 
-import static com.cuymonitor.backend.adapter.in.web.CagesController.accountId;
-
 /** Alerts of the account's cages. The cage access proxy filters and checks them. */
 @RestController
 @RequestMapping("/api/v1/alerts")
@@ -33,7 +31,7 @@ public class AlertController {
     @GetMapping
     public List<AlertResponse> list(Principal principal, @RequestParam(required = false) AlertStatus status,
                                     @RequestParam(required = false) String cageId) {
-        return cageOperations.listAlerts(accountId(principal), cageId, status).stream()
+        return cageOperations.listAlerts(Requester.idOf(principal), cageId, status).stream()
                 .map(AlertResponse::from)
                 .toList();
     }
@@ -45,6 +43,6 @@ public class AlertController {
         if (request.status() != AlertStatus.REVIEWED) {
             throw new InvalidRequestException("only REVIEWED is accepted");
         }
-        return AlertResponse.from(cageOperations.reviewAlert(accountId(principal), id));
+        return AlertResponse.from(cageOperations.reviewAlert(Requester.idOf(principal), id));
     }
 }
