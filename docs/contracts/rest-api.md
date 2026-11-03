@@ -54,6 +54,11 @@ Summary:
 
 | Method and path | Purpose | Success |
 |---|---|---|
+| `GET /api/v1/cages` | Cages of the signed-in account | `200` |
+| `POST /api/v1/cages` | Create a cage | `201` |
+| `GET /api/v1/cages/{cageId}` | One cage | `200` |
+| `PUT /api/v1/cages/{cageId}` | Rename a cage / change its location | `200` |
+| `DELETE /api/v1/cages/{cageId}` | Delete a cage (soft delete) | `204` |
 | `GET /api/v1/cages/{cageId}/health` | Cage status summary | `200` |
 | `GET /api/v1/cages/{cageId}/guinea-pigs` | Guinea pigs with current status | `200` |
 | `POST /api/v1/cages/{cageId}/guinea-pigs` | Register a guinea pig | `201` |
@@ -62,6 +67,28 @@ Summary:
 | `GET /api/v1/alerts?status=` | List alerts | `200` |
 | `PATCH /api/v1/alerts/{id}` | Mark an alert as reviewed | `200` |
 | `GET /api/v1/cages/{cageId}/weight?from=&to=` | Weight readings | `200` |
+
+### 3.0 Cages
+
+A farmer can have several cages. Each one belongs to the account that created it (see the cage access proxy in
+`ARCHITECTURE.md`): another account gets `403` on it.
+
+`GET /api/v1/cages` → `200`, the active cages of the account, oldest first:
+
+```json
+[
+  { "cageId": "cage-1", "name": "Jaula piloto", "location": "Galpón", "createdAt": "2026-09-20T10:00:00Z" },
+  { "cageId": "cage-0a1b2c3d", "name": "Jaula del patio", "location": null, "createdAt": "2026-11-02T14:00:00Z" }
+]
+```
+
+`POST /api/v1/cages` and `PUT /api/v1/cages/{cageId}` take `{ "name": "Jaula del patio", "location": "Patio" }`:
+`name` 1–100 characters (trimmed), `location` optional, up to 200 (blank removes it). The backend picks the code of a
+new cage (`cage-` + 8 hex characters); that code is what the camera, the AI service and the scale send as `cageId`.
+Answers `201` / `200` with the cage, `400` for an invalid body, `404` for an unknown cage.
+
+`DELETE /api/v1/cages/{cageId}` → `204`. Soft delete: the cage leaves the list and its events are rejected from then
+on; its guinea pigs, alerts and history are kept.
 
 ### 3.1 `GET /api/v1/cages/{cageId}/health`
 
