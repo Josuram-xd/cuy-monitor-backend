@@ -61,6 +61,15 @@ public class Alert {
         }
     }
 
+    /** GRASP Information Expert: the alert knows which cage it is about. */
+    public boolean belongsTo(String otherCageCode) {
+        return cageCode.equals(otherCageCode);
+    }
+
+    public boolean isOpen() {
+        return status == AlertStatus.OPEN;
+    }
+
     public Long getId() {
         return id;
     }

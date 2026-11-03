@@ -110,8 +110,7 @@ public class CageOperationsService implements CageOperations {
 
     @Override
     public List<Alert> listAlerts(UUID requesterId, String cageCode, AlertStatus status) {
-        List<Alert> all = listAlerts.list(status);
-        return cageCode == null ? all : all.stream().filter(a -> a.getCageCode().equals(cageCode)).toList();
+        return cageCode == null ? listAlerts.list(status) : listAlerts.listForCage(cageCode, status);
     }
 
     @Override

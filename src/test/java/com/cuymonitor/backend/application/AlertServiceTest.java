@@ -41,6 +41,16 @@ class AlertServiceTest {
     }
 
     @Test
+    void listsOnlyTheAlertsOfOneCage() {
+        alerts.save(Alert.forCage("cage-2", EventType.AUDIO, HealthStatus.ALERT, "Other cage", NOW));
+
+        assertThat(service.listForCage("cage-1", null)).extracting(Alert::getMessage)
+                .containsExactly("Newer", "Older");
+        assertThat(service.listForCage("cage-2", AlertStatus.OPEN)).extracting(Alert::getMessage)
+                .containsExactly("Other cage");
+    }
+
+    @Test
     void filtersByStatus() {
         service.markReviewed(older.getId());
 
