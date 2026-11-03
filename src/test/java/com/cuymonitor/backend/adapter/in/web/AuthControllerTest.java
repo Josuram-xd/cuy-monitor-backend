@@ -164,6 +164,19 @@ class AuthControllerTest {
     }
 
     @Test
+    void loginWithAnEndlessUsernameOrPasswordReturns400() throws Exception {
+        String tooLong = "a".repeat(300);
+
+        mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"" + tooLong + "\",\"password\":\"" + tooLong + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("bad_request"))
+                .andExpect(jsonPath("$.fields.username").exists())
+                .andExpect(jsonPath("$.fields.password").exists());
+        verifyNoInteractions(loginUseCase);
+    }
+
+    @Test
     void loginWithBadCredentialsReturns401() throws Exception {
         given(loginUseCase.login(any())).willThrow(new InvalidCredentialsException());
 
