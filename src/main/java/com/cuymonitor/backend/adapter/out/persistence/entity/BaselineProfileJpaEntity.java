@@ -36,17 +36,42 @@ public class BaselineProfileJpaEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    // V13: how many normal windows it was learned from
+    @Column(name = "sample_count", nullable = false)
+    private int sampleCount;
+
     protected BaselineProfileJpaEntity() {
     }
 
     public BaselineProfileJpaEntity(GuineaPigJpaEntity guineaPig, BigDecimal avgStillSeconds,
                                     BigDecimal avgFeederVisits, BigDecimal avgGroupDistance, Instant updatedAt) {
-        this.guineaPigId = guineaPig.getId();
+        this(guineaPig, avgStillSeconds, avgFeederVisits, avgGroupDistance, updatedAt, 0);
+    }
+
+    public BaselineProfileJpaEntity(GuineaPigJpaEntity guineaPig, BigDecimal avgStillSeconds,
+                                    BigDecimal avgFeederVisits, BigDecimal avgGroupDistance, Instant updatedAt,
+                                    int sampleCount) {
+        // the id is left to @MapsId: a null id is what tells Spring Data to persist instead of merge
         this.guineaPig = guineaPig;
         this.avgStillSeconds = avgStillSeconds;
         this.avgFeederVisits = avgFeederVisits;
         this.avgGroupDistance = avgGroupDistance;
         this.updatedAt = updatedAt;
+        this.sampleCount = sampleCount;
+    }
+
+    /** A profile learned one more window: the row is updated in place. */
+    public void relearn(BigDecimal avgStillSeconds, BigDecimal avgFeederVisits, BigDecimal avgGroupDistance,
+                        Instant updatedAt, int sampleCount) {
+        this.avgStillSeconds = avgStillSeconds;
+        this.avgFeederVisits = avgFeederVisits;
+        this.avgGroupDistance = avgGroupDistance;
+        this.updatedAt = updatedAt;
+        this.sampleCount = sampleCount;
+    }
+
+    public int getSampleCount() {
+        return sampleCount;
     }
 
     public Long getGuineaPigId() {

@@ -6,4 +6,7 @@ import java.util.Optional;
 
 public interface BaselineProfileRepository {
     Optional<BaselineProfile> findByGuineaPigId(long guineaPigId);
+
+    /** Creates or replaces the profile of its guinea pig. */
+    BaselineProfile save(BaselineProfile profile);
 }

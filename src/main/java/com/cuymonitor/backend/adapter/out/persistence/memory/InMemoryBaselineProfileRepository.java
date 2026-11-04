@@ -1,5 +1,7 @@
 package com.cuymonitor.backend.adapter.out.persistence.memory;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 import com.cuymonitor.backend.domain.model.BaselineProfile;
 import com.cuymonitor.backend.domain.port.out.BaselineProfileRepository;
 import org.springframework.context.annotation.Profile;
@@ -12,8 +14,16 @@ import java.util.Optional;
 @Profile("memory")
 public class InMemoryBaselineProfileRepository implements BaselineProfileRepository {
 
+    private final Map<Long, BaselineProfile> profiles = new ConcurrentHashMap<>();
+
     @Override
     public Optional<BaselineProfile> findByGuineaPigId(long guineaPigId) {
-        return Optional.empty();
+        return Optional.ofNullable(profiles.get(guineaPigId));
+    }
+
+    @Override
+    public BaselineProfile save(BaselineProfile profile) {
+        profiles.put(profile.guineaPigId(), profile);
+        return profile;
     }
 }

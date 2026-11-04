@@ -214,7 +214,8 @@ class PersistenceAdapterTest {
                 guineaPig(cage()), BigDecimal.valueOf(30), BigDecimal.ONE, BigDecimal.valueOf(0.3), NOW);
         when(profiles.findByGuineaPig_Id(8L)).thenReturn(Optional.of(entity));
         BaselineProfilePersistenceAdapter adapter =
-                new BaselineProfilePersistenceAdapter(profiles, new BaselineProfilePersistenceMapper());
+                new BaselineProfilePersistenceAdapter(profiles, mock(GuineaPigJpaRepository.class),
+                        new BaselineProfilePersistenceMapper());
 
         assertThat(adapter.findByGuineaPigId(8L)).contains(new BaselineProfile(8L, 30, 1, 0.3, NOW));
     }
