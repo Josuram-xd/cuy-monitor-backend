@@ -126,12 +126,14 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 
 - [x] **Task 8.1** — `feat(config): allow localhost:5173 in CORS for the dev profile`
   En producción el dashboard se sirve desde el mismo dominio (Caddy), así que no hace falta CORS.
-- [ ] **Task 8.2** — `feat(web): add cage health and guinea pigs list endpoints`
+- [x] **Task 8.2** — `feat(web): add cage health and guinea pigs list endpoints`
   `GetCageHealthUseCase`, `ListGuineaPigsUseCase` → `GET /api/v1/cages/{id}/health`, `GET /api/v1/cages/{id}/guinea-pigs`.
-- [ ] **Task 8.3** — `feat(web): add endpoint to register a guinea pig`
+- [x] **Task 8.3** — `feat(web): add endpoint to register a guinea pig`
   `RegisterGuineaPigUseCase` → `POST /api/v1/cages/{id}/guinea-pigs`.
-- [ ] **Task 8.4** — `feat(web): add alerts list endpoint`
+- [x] **Task 8.4** — `feat(web): add alerts list endpoint`
   `ListAlertsUseCase` → `GET /api/v1/alerts?status=`.
+- [x] **Task 8.6** — `feat(web): add guinea pig history and cage weight endpoints`
+  `GET /api/v1/guinea-pigs/{id}/history` y `GET /api/v1/cages/{id}/weight` (contrato 3.4 y 3.7); los necesita el dashboard para sus gráficas (Tasks 9 y 10 del dashboard).
 - [ ] **Task 8.5** — *(sin commit)* desplegar y probar cada endpoint en Postman
 
 🔓 **Desbloquea:** `cuy-monitor-dashboard` Task 5

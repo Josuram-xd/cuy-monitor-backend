@@ -174,7 +174,7 @@ No body. `204 No Content`. **Soft delete**: the guinea pig stops appearing in th
 
 ### 3.4 `GET /api/v1/guinea-pigs/{id}/history?from=&to=`
 
-`from` and `to` are optional; the default is the last 24 hours. `to` must be after `from`.
+`from` and `to` are optional (ISO-8601); the default is the last 24 hours. `to` must be after `from` and the range can't be longer than 31 days (`400` otherwise). `403` if the guinea pig is in another account's cage.
 
 ```json
 {
@@ -186,11 +186,12 @@ No body. `204 No Content`. **Soft delete**: the guinea pig stops appearing in th
   ],
   "windows": [
     { "occurredAt": "2026-10-05T14:32:00Z", "stillSeconds": 48, "feederVisits": 0, "watererVisits": 1, "avgGroupDistance": 0.72 }
-  ]
+  ],
+  "baseline": { "avgStillSeconds": 30, "avgFeederVisits": 1, "avgGroupDistance": 0.3 }
 }
 ```
 
-Both lists are ordered by `occurredAt`, oldest first. `windows` comes from stored `BEHAVIOR` events. `404` unknown guinea pig.
+Both lists are ordered by `occurredAt`, oldest first. `windows` comes from stored `BEHAVIOR` events. `baseline` is what is normal for this guinea pig (the default until it is learned): the dashboard draws it as the normal range. `404` unknown guinea pig.
 
 ### 3.5 `GET /api/v1/alerts?status=&cageId=`
 
@@ -229,7 +230,7 @@ Only `REVIEWED` is accepted. Returns `200` with the updated alert (same shape as
 
 ### 3.7 `GET /api/v1/cages/{cageId}/weight?from=&to=`
 
-Same defaults and rules for `from`/`to` as 3.4.
+Same defaults and rules for `from`/`to` as 3.4. `403` if it is another account's cage.
 
 ```json
 {
