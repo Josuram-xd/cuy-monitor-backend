@@ -69,9 +69,17 @@ class EventProcessingServiceTest {
                 new BehaviorThresholdHandler(new InMemoryBaselineProfileRepository()),
                 new SustainedAnomalyHandler(events, 2)).build();
         var recorder = new EventIngestionService(cages, guineaPigs, events, new InMemoryWeightReadingRepository());
-        StateTransitionRepository recordTransitions = transition -> {
-            transitions.add(transition);
-            return transition;
+        StateTransitionRepository recordTransitions = new StateTransitionRepository() {
+            @Override
+            public StateTransition save(StateTransition transition) {
+                transitions.add(transition);
+                return transition;
+            }
+
+            @Override
+            public List<StateTransition> findByGuineaPigBetween(long guineaPigId, Instant from, Instant to) {
+                return List.of();
+            }
         };
         var publisher = new AlertPublisher(List.of(new DatabaseAlertObserver(alerts), pushed::add));
         service = new EventProcessingService(recorder, chain, guineaPigs, recordTransitions, publisher, clock, 0.8);

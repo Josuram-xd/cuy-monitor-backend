@@ -286,6 +286,11 @@ class EventHandlerTest {
             public Optional<HealthEvent> findLatest(String cageCode, EventType type) {
                 return Optional.empty();
             }
+
+            @Override
+            public List<HealthEvent> findBehaviorBetween(long guineaPigId, Instant from, Instant to) {
+                return List.of();
+            }
         };
     }
 }
