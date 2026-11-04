@@ -1,14 +1,11 @@
 package com.cuymonitor.backend.adapter.in.web;
 
 import com.cuymonitor.backend.config.JwtConfig;
+import com.cuymonitor.backend.domain.access.CageOperations;
+import com.cuymonitor.backend.domain.exception.CageAccessDeniedException;
 import com.cuymonitor.backend.config.SecurityConfig;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
 import com.cuymonitor.backend.domain.model.Cage;
-import com.cuymonitor.backend.domain.port.in.CreateCageUseCase;
-import com.cuymonitor.backend.domain.port.in.DeleteCageUseCase;
-import com.cuymonitor.backend.domain.port.in.GetCageUseCase;
-import com.cuymonitor.backend.domain.port.in.ListCagesUseCase;
-import com.cuymonitor.backend.domain.port.in.UpdateCageUseCase;
 import com.cuymonitor.backend.domain.port.out.RevokedTokenRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,8 +20,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.verify;
@@ -49,15 +44,7 @@ class CagesControllerTest {
     private MockMvc mvc;
 
     @MockitoBean
-    private ListCagesUseCase listCagesUseCase;
-    @MockitoBean
-    private GetCageUseCase getCageUseCase;
-    @MockitoBean
-    private CreateCageUseCase createCageUseCase;
-    @MockitoBean
-    private UpdateCageUseCase updateCageUseCase;
-    @MockitoBean
-    private DeleteCageUseCase deleteCageUseCase;
+    private CageOperations cageOperations;
     @MockitoBean
     private RevokedTokenRepository revokedTokenRepository;
 
@@ -67,12 +54,12 @@ class CagesControllerTest {
         mvc.perform(post("/api/v1/cages").contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"x\"}"))
                 .andExpect(status().isUnauthorized());
         mvc.perform(delete("/api/v1/cages/cage-1")).andExpect(status().isUnauthorized());
-        verifyNoInteractions(listCagesUseCase, createCageUseCase, deleteCageUseCase);
+        verifyNoInteractions(cageOperations);
     }
 
     @Test
     void listsTheCagesOfTheAccountInTheToken() throws Exception {
-        given(listCagesUseCase.list(ACCOUNT)).willReturn(List.of(cage("cage-1", "Jaula piloto", "Galpón")));
+        given(cageOperations.listCages(ACCOUNT)).willReturn(List.of(cage("cage-1", "Jaula piloto", "Galpón")));
 
         mvc.perform(get("/api/v1/cages").with(token()))
                 .andExpect(status().isOk())
@@ -84,7 +71,7 @@ class CagesControllerTest {
 
     @Test
     void createsACageOwnedByTheAccountInTheToken() throws Exception {
-        given(createCageUseCase.create(argThat(c -> ACCOUNT.equals(c.ownerId()) && "Patio".equals(c.name()))))
+        given(cageOperations.createCage(ACCOUNT, "Patio", null))
                 .willReturn(cage("cage-0a1b2c3d", "Patio", null));
 
         mvc.perform(post("/api/v1/cages").with(token()).contentType(MediaType.APPLICATION_JSON)
@@ -101,12 +88,12 @@ class CagesControllerTest {
         mvc.perform(post("/api/v1/cages").with(token()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"" + "x".repeat(101) + "\"}"))
                 .andExpect(status().isBadRequest());
-        verifyNoInteractions(createCageUseCase);
+        verifyNoInteractions(cageOperations);
     }
 
     @Test
     void renamesACage() throws Exception {
-        given(updateCageUseCase.update(any())).willReturn(cage("cage-1", "Nueva", "Patio"));
+        given(cageOperations.updateCage(ACCOUNT, "cage-1", "Nueva", "Patio")).willReturn(cage("cage-1", "Nueva", "Patio"));
 
         mvc.perform(put("/api/v1/cages/cage-1").with(token()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Nueva\",\"location\":\"Patio\"}"))
@@ -118,16 +105,25 @@ class CagesControllerTest {
     void deletesACage() throws Exception {
         mvc.perform(delete("/api/v1/cages/cage-1").with(token())).andExpect(status().isNoContent());
 
-        verify(deleteCageUseCase).delete("cage-1");
+        verify(cageOperations).deleteCage(ACCOUNT, "cage-1");
     }
 
     @Test
     void anUnknownCageIs404() throws Exception {
-        willThrow(new CageNotFoundException()).given(deleteCageUseCase).delete("cage-nope");
+        willThrow(new CageNotFoundException()).given(cageOperations).deleteCage(ACCOUNT, "cage-nope");
 
         mvc.perform(delete("/api/v1/cages/cage-nope").with(token()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("not_found"));
+    }
+
+    @Test
+    void anotherAccountsCageIs403() throws Exception {
+        given(cageOperations.getCage(ACCOUNT, "cage-ajena")).willThrow(new CageAccessDeniedException());
+
+        mvc.perform(get("/api/v1/cages/cage-ajena").with(token()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("forbidden"));
     }
 
     private static Cage cage(String code, String name, String location) {

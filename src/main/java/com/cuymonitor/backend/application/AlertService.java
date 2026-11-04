@@ -28,10 +28,16 @@ public class AlertService implements ListAlertsUseCase, ReviewAlertUseCase {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<Alert> listForCage(String cageCode, AlertStatus status) {
+        return list(status).stream().filter(alert -> alert.belongsTo(cageCode)).toList();
+    }
+
+    @Override
     @Transactional
     public Alert markReviewed(long alertId) {
         Alert alert = alerts.findById(alertId).orElseThrow(AlertNotFoundException::new);
-        if (alert.getStatus() == AlertStatus.REVIEWED) {
+        if (!alert.isOpen()) {
             return alert;
         }
         alert.markReviewed(clock.instant());

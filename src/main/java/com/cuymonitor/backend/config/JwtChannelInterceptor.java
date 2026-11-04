@@ -20,7 +20,9 @@ import java.util.Map;
 /**
  * Validates the JWT on the STOMP CONNECT frame. Browsers bring it in the access cookie (copied to the session
  * attributes by CookieHandshakeInterceptor); other clients can send an Authorization header on the frame.
- * Throwing here makes Spring answer with an ERROR frame and close the connection.
+ * On SUBSCRIBE it needs an authenticated session and hands the destination to {@link CageTopicGuard}, which knows
+ * who may follow each cage. Throwing here makes Spring answer with an ERROR frame
+ * and close the connection.
  */
 public class JwtChannelInterceptor implements ChannelInterceptor {
 
@@ -28,10 +30,12 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
     private static final String BEARER = "Bearer ";
 
     private final JwtDecoder decoder;
+    private final CageTopicGuard cageTopicGuard;
     private final JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
 
-    public JwtChannelInterceptor(JwtDecoder decoder) {
+    public JwtChannelInterceptor(JwtDecoder decoder, CageTopicGuard cageTopicGuard) {
         this.decoder = decoder;
+        this.cageTopicGuard = cageTopicGuard;
     }
 
     @Override
@@ -40,9 +44,11 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
         if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
             // the user stays attached to the session, so later frames carry it too
             accessor.setUser(authenticate(tokenFrom(accessor)));
-        } else if (accessor != null && StompCommand.SUBSCRIBE.equals(accessor.getCommand())
-                && accessor.getUser() == null) {
-            throw new AccessDeniedException("subscription requires an authenticated session");
+        } else if (accessor != null && StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
+            if (accessor.getUser() == null) {
+                throw new AccessDeniedException("subscription requires an authenticated session");
+            }
+            cageTopicGuard.check(accessor.getUser(), accessor.getDestination());
         }
         return message;
     }

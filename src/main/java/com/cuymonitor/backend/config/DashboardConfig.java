@@ -7,6 +7,7 @@ import com.cuymonitor.backend.application.CatalogService;
 import com.cuymonitor.backend.application.EventIngestionService;
 import com.cuymonitor.backend.application.GuineaPigService;
 import com.cuymonitor.backend.domain.port.out.AlertRepository;
+import com.cuymonitor.backend.domain.port.out.CageCodeGenerator;
 import com.cuymonitor.backend.domain.port.out.CageRepository;
 import com.cuymonitor.backend.domain.port.out.CatalogOptionRepository;
 import com.cuymonitor.backend.domain.port.out.EventRepository;
@@ -22,8 +23,8 @@ import java.time.Clock;
 public class DashboardConfig {
 
     @Bean
-    public CageService cageService(CageRepository cages, Clock clock) {
-        return new CageService(cages, clock);
+    public CageService cageService(CageRepository cages, CageCodeGenerator codes, Clock clock) {
+        return new CageService(cages, codes, clock);
     }
 
     @Bean

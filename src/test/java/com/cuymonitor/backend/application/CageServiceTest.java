@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.application;
 
+import com.cuymonitor.backend.adapter.out.code.RandomCageCodeGenerator;
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryCageRepository;
 import com.cuymonitor.backend.application.fake.MutableClock;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
@@ -27,7 +28,7 @@ class CageServiceTest {
     @BeforeEach
     void setUp() {
         cages = new InMemoryCageRepository();
-        service = new CageService(cages, new MutableClock(NOW));
+        service = new CageService(cages, new RandomCageCodeGenerator(cages), new MutableClock(NOW));
     }
 
     @Test
@@ -40,6 +41,13 @@ class CageServiceTest {
         assertThat(created.ownerId()).isEqualTo(ANA);
         assertThat(created.createdAt()).isEqualTo(NOW);
         assertThat(created.active()).isTrue();
+    }
+
+    @Test
+    void usesTheCodeTheGeneratorPicks() {
+        CageService withFixedCode = new CageService(cages, () -> "cage-fixed", new MutableClock(NOW));
+
+        assertThat(withFixedCode.create(new CreateCageCommand(ANA, "Fija", null)).code()).isEqualTo("cage-fixed");
     }
 
     @Test
