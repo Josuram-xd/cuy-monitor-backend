@@ -148,10 +148,10 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 
 ### Task 10 — Reglas reales de State
 
-- [ ] **Task 10.1** — `feat(state): add escalation rules between states`
-- [ ] **Task 10.2** — `feat(state): add recovery back to NORMAL`
-- [ ] **Task 10.3** — `feat(state): persist every transition through StateTransitionRepository`
-- [ ] **Task 10.4** — `test(state): cover escalation and recovery paths`
+- [x] **Task 10.1** — `feat(state): add escalation rules between states`
+- [x] **Task 10.2** — `feat(state): add recovery back to NORMAL`
+- [x] **Task 10.3** — `feat(state): persist every transition through StateTransitionRepository`
+- [x] **Task 10.4** — `test(state): cover escalation and recovery paths`
 
 ### Task 11 — Perfil normal y umbrales
 
