@@ -43,7 +43,7 @@ class EventIngestionServiceTest {
 
     @Test
     void storesAWeightEventAndItsReading() {
-        service.process(event(new WeightSignal(812.4, true)));
+        service.record(event(new WeightSignal(812.4, true)));
 
         assertThat(events.findLatest(CAGE, EventType.WEIGHT)).isPresent();
         assertThat(weights.findLatest(CAGE).orElseThrow().grams()).isEqualTo(812.4);
@@ -52,21 +52,21 @@ class EventIngestionServiceTest {
 
     @Test
     void storesAnAudioEventWithoutAGuineaPig() {
-        service.process(event(new AudioSignal(AudioLabel.DISTRESS, 0.9, 1500)));
+        service.record(event(new AudioSignal(AudioLabel.DISTRESS, 0.9, 1500)));
 
         assertThat(events.findLatest(CAGE, EventType.AUDIO)).isPresent();
     }
 
     @Test
     void attachesABehaviorWindowToTheGuineaPigWearingThatColor() {
-        service.process(event(new BehaviorSignal("RED", 60, 48, 1, 2, 0.4, 0.2, 0.9)));
+        service.record(event(new BehaviorSignal("RED", 60, 48, 1, 2, 0.4, 0.2, 0.9)));
 
         assertThat(events.findLatestBehavior(1, 10)).hasSize(1);
     }
 
     @Test
     void ignoresABehaviorWindowOfAColorNobodyWears() {
-        service.process(event(new BehaviorSignal("BLUE", 60, 48, 1, 2, 0.4, 0.2, 0.9)));
+        assertThat(service.record(event(new BehaviorSignal("BLUE", 60, 48, 1, 2, 0.4, 0.2, 0.9)))).isFalse();
 
         assertThat(events.findLatestBehavior(1, 10)).isEmpty();
         assertThat(events.findLatest(CAGE, EventType.BEHAVIOR)).isEmpty();
@@ -76,8 +76,8 @@ class EventIngestionServiceTest {
     void aRetriedEventIsStoredOnlyOnce() {
         HealthEvent weight = event(new WeightSignal(500, true));
 
-        service.process(weight);
-        service.process(weight);
+        assertThat(service.record(weight)).isTrue();
+        assertThat(service.record(weight)).isFalse();
 
         assertThat(weights.findLatest(CAGE)).isPresent();
         assertThat(events.existsById(weight.eventId())).isTrue();
@@ -87,7 +87,7 @@ class EventIngestionServiceTest {
     void anUnknownCageIsRefused() {
         HealthEvent elsewhere = new HealthEvent(UUID.randomUUID(), "nope", NOW, "arduino", new WeightSignal(1, true));
 
-        assertThatThrownBy(() -> service.process(elsewhere)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.record(elsewhere)).isInstanceOf(IllegalArgumentException.class);
     }
 
     private static HealthEvent event(HealthSignal signal) {
