@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.domain.health.chain;
 
+import com.cuymonitor.backend.domain.model.AnomalyThresholds;
 import com.cuymonitor.backend.domain.model.BehaviorSignal;
 import com.cuymonitor.backend.domain.port.out.EventRepository;
 
@@ -13,8 +14,15 @@ import java.util.Objects;
 public final class SustainedRecoveryHandler extends EventHandler {
     private final EventRepository eventRepository;
     private final int requiredNormalWindows;
+    private final AnomalyThresholds thresholds;
 
     public SustainedRecoveryHandler(EventRepository eventRepository, int requiredNormalWindows) {
+        this(eventRepository, requiredNormalWindows, AnomalyThresholds.defaults());
+    }
+
+    public SustainedRecoveryHandler(EventRepository eventRepository, int requiredNormalWindows,
+                                    AnomalyThresholds thresholds) {
+        this.thresholds = Objects.requireNonNull(thresholds, "thresholds");
         this.eventRepository = Objects.requireNonNull(eventRepository, "eventRepository");
         if (requiredNormalWindows < 1) {
             throw new IllegalArgumentException("requiredNormalWindows must be positive");
@@ -35,7 +43,7 @@ public final class SustainedRecoveryHandler extends EventHandler {
         // the current window is already stored, so it is the first of the latest ones
         var latest = eventRepository.findLatestBehavior(guineaPig.getId(), requiredNormalWindows);
         boolean allNormal = latest.size() >= requiredNormalWindows && latest.stream()
-                .allMatch(event -> event.signal() instanceof BehaviorSignal window && !baseline.isAnomalous(window));
+                .allMatch(event -> event.signal() instanceof BehaviorSignal window && !baseline.isAnomalous(window, thresholds));
         if (allNormal) {
             context.confirmRecovery();
         }
