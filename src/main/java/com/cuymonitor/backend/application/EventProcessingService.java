@@ -12,9 +12,9 @@ import com.cuymonitor.backend.domain.model.GuineaPig;
 import com.cuymonitor.backend.domain.model.HealthEvent;
 import com.cuymonitor.backend.domain.model.HealthStatus;
 import com.cuymonitor.backend.domain.model.StateTransition;
+import com.cuymonitor.backend.domain.notification.AlertPublisher;
 import com.cuymonitor.backend.domain.port.in.ProcessEventUseCase;
 import com.cuymonitor.backend.domain.port.in.RecordEventUseCase;
-import com.cuymonitor.backend.domain.port.out.AlertRepository;
 import com.cuymonitor.backend.domain.port.out.GuineaPigRepository;
 import com.cuymonitor.backend.domain.port.out.StateTransitionRepository;
 import org.slf4j.Logger;
@@ -30,10 +30,11 @@ import java.util.Optional;
  * What happens to every event that arrives (GRASP Controller of the ingestion use case):
  *
  * <pre>
- * record it once ─► Chain of Responsibility ─► State of the guinea pig ─► transition ─► alert
+ * record it once ─► Chain of Responsibility ─► State of the guinea pig ─► transition ─► AlertPublisher
  * </pre>
  *
- * The cage status itself is not stored: {@code CageHealthService} rebuilds it from the parts with the
+ * An alert is never saved here: it is published (Observer) and the subscribers store it, send it to the
+ * dashboard over WebSocket and log it. The cage status itself is not stored: {@code CageHealthService} rebuilds it from the parts with the
  * Composite whenever it is asked.
  */
 public class EventProcessingService implements ProcessEventUseCase {
@@ -49,18 +50,18 @@ public class EventProcessingService implements ProcessEventUseCase {
     private final EventHandler chain;
     private final GuineaPigRepository guineaPigs;
     private final StateTransitionRepository transitions;
-    private final AlertRepository alerts;
+    private final AlertPublisher alertPublisher;
     private final Clock clock;
     private final double distressProbability;
 
     public EventProcessingService(RecordEventUseCase recorder, EventHandler chain, GuineaPigRepository guineaPigs,
-                                  StateTransitionRepository transitions, AlertRepository alerts, Clock clock,
+                                  StateTransitionRepository transitions, AlertPublisher alertPublisher, Clock clock,
                                   double distressProbability) {
         this.recorder = Objects.requireNonNull(recorder, "recorder");
         this.chain = Objects.requireNonNull(chain, "chain");
         this.guineaPigs = Objects.requireNonNull(guineaPigs, "guineaPigs");
         this.transitions = Objects.requireNonNull(transitions, "transitions");
-        this.alerts = Objects.requireNonNull(alerts, "alerts");
+        this.alertPublisher = Objects.requireNonNull(alertPublisher, "alertPublisher");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.distressProbability = distressProbability;
     }
@@ -94,9 +95,9 @@ public class EventProcessingService implements ProcessEventUseCase {
             transitions.save(moved);
             pig.changeStatus(moved.toStatus(), now);
             guineaPigs.save(pig);
-            // only a move up to ALERT or CRITICAL warns the breeder; a recovery does not
+            // the state decides: only a move up into ALERT or CRITICAL warns the breeder, a recovery does not
             if (health.raisesAlert() && moved.toStatus().compareTo(moved.fromStatus()) > 0) {
-                alerts.save(Alert.forGuineaPig(pig, moved.toStatus(), messageFor(moved.toStatus()), now));
+                alertPublisher.publish(Alert.forGuineaPig(pig, moved.toStatus(), messageFor(moved.toStatus()), now));
             }
         });
     }
@@ -104,7 +105,8 @@ public class EventProcessingService implements ProcessEventUseCase {
     // the audio is a cage-level signal: a confident distress clip is an alert of the whole cage
     private void evaluateAudio(HealthEvent event, AudioSignal audio, Instant now) {
         if (audio.label() == AudioLabel.DISTRESS && audio.probability() >= distressProbability) {
-            alerts.save(Alert.forCage(event.cageId(), EventType.AUDIO, HealthStatus.ALERT, DISTRESS_MESSAGE, now));
+            alertPublisher.publish(
+                    Alert.forCage(event.cageId(), EventType.AUDIO, HealthStatus.ALERT, DISTRESS_MESSAGE, now));
         }
     }
 

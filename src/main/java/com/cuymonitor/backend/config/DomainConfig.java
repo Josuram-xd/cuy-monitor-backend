@@ -7,8 +7,8 @@ import com.cuymonitor.backend.domain.health.chain.HandlerChainBuilder;
 import com.cuymonitor.backend.domain.health.chain.IdentificationHandler;
 import com.cuymonitor.backend.domain.health.chain.SustainedAnomalyHandler;
 import com.cuymonitor.backend.domain.health.chain.ValidationHandler;
+import com.cuymonitor.backend.domain.notification.AlertPublisher;
 import com.cuymonitor.backend.domain.port.in.RecordEventUseCase;
-import com.cuymonitor.backend.domain.port.out.AlertRepository;
 import com.cuymonitor.backend.domain.port.out.BaselineProfileRepository;
 import com.cuymonitor.backend.domain.port.out.EventRepository;
 import com.cuymonitor.backend.domain.port.out.GuineaPigRepository;
@@ -43,9 +43,9 @@ public class DomainConfig {
     public EventProcessingService eventProcessingService(RecordEventUseCase recorder, EventHandler healthEventChain,
                                                          GuineaPigRepository guineaPigs,
                                                          StateTransitionRepository transitions,
-                                                         AlertRepository alerts, Clock clock,
+                                                         AlertPublisher alertPublisher, Clock clock,
                                                          HealthProperties health) {
-        return new EventProcessingService(recorder, healthEventChain, guineaPigs, transitions, alerts, clock,
+        return new EventProcessingService(recorder, healthEventChain, guineaPigs, transitions, alertPublisher, clock,
                 health.distressProbability());
     }
 }

@@ -218,7 +218,7 @@ Every transition is stored through `StateTransitionRepository` and, if it goes u
 
 ### 3.8 Design rules
 
-- Observer is implemented **by hand** (`AlertObserver` port + list in `AlertPublisher`), not with Spring's `ApplicationEventPublisher`, so the pattern is explicit.
+- Observer is implemented **by hand** (`AlertObserver` port + list in `AlertPublisher`), not with Spring's `ApplicationEventPublisher`, so the pattern is explicit. The order of the subscribers is written out in `config/NotificationConfig` (database first, so the alert has its id; then WebSocket; then the log), not left to `@Order`.
 - Proxy is implemented **by hand** (`CageAccessProxy implements CageOperations`), not with Spring AOP, `@PreAuthorize` or any security annotation. Spring Security only authenticates the session (who you are); the proxy decides what you may touch.
 - DTOs, payloads and `HealthEvent` are Java `record`s. Lombok only on JPA entities.
 - Factory Method is a real Factory Method, not a Simple Factory: `AdapterFactory` is an abstract creator with an abstract `createAdapter()` method, and each concrete factory (`CameraAdapterFactory`, `AudioAdapterFactory`, `WeightAdapterFactory`) overrides it to create its own adapter. The only `switch` on `EventType` allowed is the one that picks **which factory** to use; it never creates adapters directly.
