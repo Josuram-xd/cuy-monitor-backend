@@ -38,7 +38,7 @@ public class DashboardConfig {
         return new CatalogService(catalogOptions);
     }
 
-    // Stores events only. Replace it with the health core's EventProcessingService when that is merged.
+    // stores each event once; EventProcessingService (DomainConfig) calls it before evaluating
     @Bean
     public EventIngestionService eventIngestionService(CageRepository cages, GuineaPigRepository guineaPigs,
                                                        EventRepository events, WeightReadingRepository weights) {
