@@ -1,5 +1,9 @@
 package com.cuymonitor.backend.config;
 
+import com.cuymonitor.backend.domain.port.out.BaselineProfileRepository;
+import com.cuymonitor.backend.domain.port.out.StateTransitionRepository;
+import com.cuymonitor.backend.application.CageWeightService;
+import com.cuymonitor.backend.application.GuineaPigHistoryService;
 import com.cuymonitor.backend.application.AlertService;
 import com.cuymonitor.backend.application.CageHealthService;
 import com.cuymonitor.backend.application.CageService;
@@ -55,5 +59,18 @@ public class DashboardConfig {
                                                AlertRepository alerts, EventRepository events,
                                                WeightReadingRepository weights, Clock clock) {
         return new CageHealthService(cages, guineaPigs, alerts, events, weights, clock);
+    }
+
+    @Bean
+    public GuineaPigHistoryService guineaPigHistoryService(GuineaPigRepository guineaPigs,
+                                                           StateTransitionRepository transitions,
+                                                           EventRepository events,
+                                                           BaselineProfileRepository baselines) {
+        return new GuineaPigHistoryService(guineaPigs, transitions, events, baselines);
+    }
+
+    @Bean
+    public CageWeightService cageWeightService(CageRepository cages, WeightReadingRepository weights) {
+        return new CageWeightService(cages, weights);
     }
 }

@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.config;
 
+import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryGuineaPigRepository;
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryAlertRepository;
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryCageRepository;
 import com.cuymonitor.backend.domain.access.CageAccessProxy;
@@ -64,7 +65,8 @@ class JwtChannelInterceptorTest {
         CageOperations realSubject = (CageOperations) java.lang.reflect.Proxy.newProxyInstance(
                 CageOperations.class.getClassLoader(), new Class<?>[]{CageOperations.class},
                 (proxy, method, args) -> null);
-        return new CageAccessProxy(realSubject, cages, new InMemoryAlertRepository());
+        return new CageAccessProxy(realSubject, cages, new InMemoryAlertRepository(),
+                new InMemoryGuineaPigRepository());
     }
 
     private static Message<byte[]> withDestination(Message<byte[]> message, String destination) {
