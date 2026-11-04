@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.config;
 
+import com.cuymonitor.backend.application.BaselineLearner;
 import com.cuymonitor.backend.application.EventProcessingService;
 import com.cuymonitor.backend.domain.health.chain.BehaviorThresholdHandler;
 import com.cuymonitor.backend.domain.health.chain.EventHandler;
@@ -35,20 +36,27 @@ public class DomainConfig {
         return new HandlerChainBuilder(
                 new ValidationHandler(clock, health.maxEventAge(), health.minDetectionConfidence()),
                 new IdentificationHandler(guineaPigs),
-                new BehaviorThresholdHandler(baselines),
-                new SustainedAnomalyHandler(events, health.consecutiveAnomalyWindows()),
-                new SustainedRecoveryHandler(events, health.recoveryWindows())
+                new BehaviorThresholdHandler(baselines, health.anomalyThresholds(), health.baselineMinSamples()),
+                new SustainedAnomalyHandler(events, health.consecutiveAnomalyWindows(), health.anomalyThresholds()),
+                new SustainedRecoveryHandler(events, health.recoveryWindows(), health.anomalyThresholds())
         ).build();
     }
 
     // the only ProcessEventUseCase: what IngestionController calls for every event
+    /** Task 11.1: learns each guinea pig's normal behavior from its healthy windows. */
+    @Bean
+    public BaselineLearner baselineLearner(BaselineProfileRepository baselines, HealthProperties health) {
+        return new BaselineLearner(baselines, health.anomalyThresholds(), health.baselineWarmupSamples());
+    }
+
     @Bean
     public EventProcessingService eventProcessingService(RecordEventUseCase recorder, EventHandler healthEventChain,
                                                          GuineaPigRepository guineaPigs,
                                                          StateTransitionRepository transitions,
                                                          AlertPublisher alertPublisher, Clock clock,
-                                                         HealthProperties health) {
+                                                         HealthProperties health, BaselineLearner baselineLearner) {
         return new EventProcessingService(recorder, healthEventChain, guineaPigs, transitions, alertPublisher, clock,
-                health.distressProbability(), new EscalationPolicy(health.observedToAlert(), health.alertToCritical()));
+                health.distressProbability(), new EscalationPolicy(health.observedToAlert(), health.alertToCritical()),
+                baselineLearner);
     }
 }

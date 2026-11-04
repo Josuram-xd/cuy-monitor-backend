@@ -2,6 +2,8 @@ package com.cuymonitor.backend.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import com.cuymonitor.backend.domain.model.AnomalyThresholds;
+
 import java.time.Duration;
 
 /**
@@ -15,9 +17,19 @@ import java.time.Duration;
  * @param observedToAlert            how long a confirmed anomaly has to last in OBSERVED to become ALERT
  * @param alertToCritical            how long it has to last in ALERT to become CRITICAL
  * @param recoveryWindows            how many normal windows in a row bring a guinea pig back to NORMAL
+ * @param classifierThreshold        from this probAnomaly on, the AI service's verdict is enough (Task 11.4)
+ * @param stillFactor                still this many times longer than usual, without going to the feeder
+ * @param groupDistanceFactor        this many times farther from the group than usual
+ * @param baselineMinSamples         a learned profile is trusted over the default from this many windows on
+ * @param baselineWarmupSamples      plain average up to this many windows, then a slow moving average
  */
 @ConfigurationProperties(prefix = "app.health")
 public record HealthProperties(Duration maxEventAge, double minDetectionConfidence, int consecutiveAnomalyWindows,
                                double distressProbability, Duration observedToAlert, Duration alertToCritical,
-                               int recoveryWindows) {
+                               int recoveryWindows, double classifierThreshold, double stillFactor,
+                               double groupDistanceFactor, int baselineMinSamples, int baselineWarmupSamples) {
+
+    public AnomalyThresholds anomalyThresholds() {
+        return new AnomalyThresholds(classifierThreshold, stillFactor, groupDistanceFactor);
+    }
 }
