@@ -7,6 +7,7 @@ import com.cuymonitor.backend.domain.model.HealthStatus;
 import com.cuymonitor.backend.domain.port.out.AlertRepository;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -46,6 +47,11 @@ class DatabaseAlertObserverTest {
         public Alert save(Alert alert) {
             savedAlert = alert;
             return savedResult == null ? alert : savedResult;
+        }
+
+        @Override
+        public Optional<Alert> findById(long id) {
+            return Optional.empty();
         }
 
         @Override
