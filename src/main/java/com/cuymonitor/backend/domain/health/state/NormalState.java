@@ -2,7 +2,9 @@ package com.cuymonitor.backend.domain.health.state;
 
 import com.cuymonitor.backend.domain.model.HealthStatus;
 
-/** <b>State pattern — concrete state</b> NORMAL: one more confirmed anomaly moves it to OBSERVED. */
+import java.time.Duration;
+
+/** <b>State pattern — concrete state</b> NORMAL: one confirmed anomaly moves it to OBSERVED at once. */
 public final class NormalState implements HealthState {
 
     @Override
@@ -11,7 +13,8 @@ public final class NormalState implements HealthState {
     }
 
     @Override
-    public HealthState onAnomaly() {
+    public HealthState onAnomaly(Duration timeInState, EscalationPolicy policy) {
+        // the first confirmed anomaly is enough to start watching
         return new ObservedState();
     }
 }

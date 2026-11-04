@@ -6,9 +6,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
+import java.time.Duration;
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** Every arrow of the state diagram in ARCHITECTURE.md 3.7, with plain JUnit and no Spring. */
 class HealthTransitionsTest {
@@ -75,5 +77,38 @@ class HealthTransitionsTest {
     @EnumSource(HealthStatus.class)
     void aStoredStatusRebuildsTheSameState(HealthStatus status) {
         assertThat(HealthStates.of(status).status()).isEqualTo(status);
+    }
+
+    @Test
+    void observedOnlyBecomesAlertOnceTheAnomalyHasLastedTheEscalationTime() {
+        var policy = new EscalationPolicy(Duration.ofMinutes(30), Duration.ofMinutes(60));
+
+        assertThat(new ObservedState().onAnomaly(Duration.ofMinutes(29), policy).status())
+                .isEqualTo(HealthStatus.OBSERVED);
+        assertThat(new ObservedState().onAnomaly(Duration.ofMinutes(30), policy).status())
+                .isEqualTo(HealthStatus.ALERT);
+        assertThat(new AlertState().onAnomaly(Duration.ofMinutes(59), policy).status())
+                .isEqualTo(HealthStatus.ALERT);
+        assertThat(new AlertState().onAnomaly(Duration.ofMinutes(60), policy).status())
+                .isEqualTo(HealthStatus.CRITICAL);
+        assertThat(new NormalState().onAnomaly(Duration.ZERO, policy).status())
+                .as("the first confirmed anomaly is enough to start watching").isEqualTo(HealthStatus.OBSERVED);
+    }
+
+    @Test
+    void theContextCountsTheTimeFromWhenItReachedItsLevel() {
+        var policy = new EscalationPolicy(Duration.ofMinutes(30), Duration.ofMinutes(60));
+        var context = new GuineaPigHealthContext(1L, new ObservedState(), NOW.minus(Duration.ofMinutes(10)));
+
+        assertThat(context.anomalyConfirmed("still", NOW, policy)).isEmpty();
+        assertThat(context.anomalyConfirmed("still", NOW.plus(Duration.ofMinutes(20)), policy))
+                .map(StateTransition::toStatus).contains(HealthStatus.ALERT);
+    }
+
+    @Test
+    void negativeEscalationTimesAreRejected() {
+        assertThatThrownBy(
+                        () -> new EscalationPolicy(Duration.ofMinutes(-1), Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

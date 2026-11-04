@@ -2,7 +2,12 @@ package com.cuymonitor.backend.domain.health.state;
 
 import com.cuymonitor.backend.domain.model.HealthStatus;
 
-/** <b>State pattern — concrete state</b> ALERT: one more confirmed anomaly moves it to CRITICAL. */
+import java.time.Duration;
+
+/**
+ * <b>State pattern — concrete state</b> ALERT: goes to CRITICAL when the anomaly is still confirmed after
+ * alertToCritical.
+ */
 public final class AlertState implements HealthState {
 
     @Override
@@ -11,8 +16,9 @@ public final class AlertState implements HealthState {
     }
 
     @Override
-    public HealthState onAnomaly() {
-        return new CriticalState();
+    public HealthState onAnomaly(Duration timeInState, EscalationPolicy policy) {
+        // the anomaly has to last alertToCritical at this level before it goes up
+        return timeInState.compareTo(policy.alertToCritical()) >= 0 ? new CriticalState() : this;
     }
 
     @Override
