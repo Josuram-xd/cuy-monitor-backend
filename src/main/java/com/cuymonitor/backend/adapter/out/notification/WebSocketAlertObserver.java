@@ -3,13 +3,10 @@ package com.cuymonitor.backend.adapter.out.notification;
 import com.cuymonitor.backend.domain.model.Alert;
 import com.cuymonitor.backend.domain.port.out.AlertObserver;
 import java.util.Objects;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
-@Order(Ordered.LOWEST_PRECEDENCE)
 public final class WebSocketAlertObserver implements AlertObserver {
 
     private final SimpMessagingTemplate messagingTemplate;
