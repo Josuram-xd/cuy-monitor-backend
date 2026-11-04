@@ -1,5 +1,7 @@
 package com.cuymonitor.backend.adapter.out.persistence.memory;
 
+import java.util.Comparator;
+import java.time.Instant;
 import com.cuymonitor.backend.domain.model.StateTransition;
 import com.cuymonitor.backend.domain.port.out.StateTransitionRepository;
 import org.springframework.context.annotation.Profile;
@@ -22,5 +24,18 @@ public class InMemoryStateTransitionRepository implements StateTransitionReposit
                 t.toStatus(), t.reason(), t.occurredAt());
         transitions.add(stored);
         return stored;
+    }
+
+    @Override
+    public List<StateTransition> findByGuineaPigBetween(long guineaPigId, Instant from, Instant to) {
+        return transitions.stream()
+                .filter(t -> t.guineaPigId() == guineaPigId && between(t.occurredAt(), from, to))
+                .sorted(Comparator.comparing(StateTransition::occurredAt))
+                .toList();
+    }
+
+    // from <= t <= to, like BETWEEN in SQL
+    private static boolean between(Instant t, Instant from, Instant to) {
+        return !t.isBefore(from) && !t.isAfter(to);
     }
 }

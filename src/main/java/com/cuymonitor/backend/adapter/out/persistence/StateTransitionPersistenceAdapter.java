@@ -1,5 +1,7 @@
 package com.cuymonitor.backend.adapter.out.persistence;
 
+import java.util.List;
+import java.time.Instant;
 import com.cuymonitor.backend.adapter.out.persistence.mapper.StateTransitionPersistenceMapper;
 import com.cuymonitor.backend.adapter.out.persistence.repository.GuineaPigJpaRepository;
 import com.cuymonitor.backend.adapter.out.persistence.repository.StateTransitionJpaRepository;
@@ -32,5 +34,14 @@ public class StateTransitionPersistenceAdapter implements StateTransitionReposit
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Unknown guinea pig id: " + transition.guineaPigId()));
         return mapper.toDomain(stateTransitionJpaRepository.save(mapper.toEntity(transition, guineaPig)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<StateTransition> findByGuineaPigBetween(long guineaPigId, Instant from, Instant to) {
+        return stateTransitionJpaRepository
+                .findByGuineaPig_IdAndOccurredAtBetweenOrderByOccurredAtAsc(guineaPigId, from, to).stream()
+                .map(mapper::toDomain)
+                .toList();
     }
 }

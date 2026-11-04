@@ -1,5 +1,7 @@
 package com.cuymonitor.backend.adapter.out.persistence;
 
+import java.util.List;
+import java.time.Instant;
 import com.cuymonitor.backend.adapter.out.persistence.mapper.WeightReadingPersistenceMapper;
 import com.cuymonitor.backend.adapter.out.persistence.repository.CageJpaRepository;
 import com.cuymonitor.backend.adapter.out.persistence.repository.WeightReadingJpaRepository;
@@ -39,5 +41,14 @@ public class WeightReadingPersistenceAdapter implements WeightReadingRepository 
     public Optional<WeightReading> findLatest(String cageCode) {
         return weightReadingJpaRepository.findFirstByCage_CodeOrderByMeasuredAtDesc(cageCode)
                 .map(mapper::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<WeightReading> findBetween(String cageCode, Instant from, Instant to) {
+        return weightReadingJpaRepository.findByCage_CodeAndMeasuredAtBetweenOrderByMeasuredAtAsc(cageCode, from, to)
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
     }
 }
