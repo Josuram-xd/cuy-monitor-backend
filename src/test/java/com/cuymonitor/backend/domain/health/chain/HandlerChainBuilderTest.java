@@ -47,7 +47,10 @@ class HandlerChainBuilderTest {
         assertTrue(context.anomalyReason().isEmpty());
         assertEquals(1, guineaPigRepository.lookups.get());
         assertEquals(1, baselineRepository.lookups.get());
-        assertEquals(0, eventRepository.lookups.get());
+        // a normal window skips the sustained anomaly check but the last link (Task 10.2) looks at the
+        // latest windows once, to know whether it is a confirmed recovery
+        assertEquals(1, eventRepository.lookups.get());
+        assertFalse(context.recoveryConfirmed());
     }
 
     @Test
@@ -99,7 +102,8 @@ class HandlerChainBuilderTest {
                 ),
                 new IdentificationHandler(guineaPigRepository),
                 new BehaviorThresholdHandler(baselineProfileRepository),
-                new SustainedAnomalyHandler(eventRepository, requiredConsecutiveWindows)
+                new SustainedAnomalyHandler(eventRepository, requiredConsecutiveWindows),
+                new SustainedRecoveryHandler(eventRepository, 1)
         ).build();
     }
 

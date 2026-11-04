@@ -8,12 +8,14 @@ public final class HandlerChainBuilder {
     private final IdentificationHandler identificationHandler;
     private final BehaviorThresholdHandler behaviorThresholdHandler;
     private final SustainedAnomalyHandler sustainedAnomalyHandler;
+    private final SustainedRecoveryHandler sustainedRecoveryHandler;
 
     public HandlerChainBuilder(
             ValidationHandler validationHandler,
             IdentificationHandler identificationHandler,
             BehaviorThresholdHandler behaviorThresholdHandler,
-            SustainedAnomalyHandler sustainedAnomalyHandler
+            SustainedAnomalyHandler sustainedAnomalyHandler,
+            SustainedRecoveryHandler sustainedRecoveryHandler
     ) {
         this.validationHandler = Objects.requireNonNull(validationHandler, "validationHandler");
         this.identificationHandler = Objects.requireNonNull(identificationHandler, "identificationHandler");
@@ -21,12 +23,15 @@ public final class HandlerChainBuilder {
                 Objects.requireNonNull(behaviorThresholdHandler, "behaviorThresholdHandler");
         this.sustainedAnomalyHandler =
                 Objects.requireNonNull(sustainedAnomalyHandler, "sustainedAnomalyHandler");
+        this.sustainedRecoveryHandler =
+                Objects.requireNonNull(sustainedRecoveryHandler, "sustainedRecoveryHandler");
     }
 
     public EventHandler build() {
         validationHandler.setNext(identificationHandler);
         identificationHandler.setNext(behaviorThresholdHandler);
         behaviorThresholdHandler.setNext(sustainedAnomalyHandler);
+        sustainedAnomalyHandler.setNext(sustainedRecoveryHandler);
         return validationHandler;
     }
 }
