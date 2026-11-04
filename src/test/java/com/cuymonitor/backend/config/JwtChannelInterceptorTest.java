@@ -44,7 +44,7 @@ class JwtChannelInterceptorTest {
 
     private static final UUID OWNER = UUID.fromString("00000000-0000-4000-8000-00000000000a");
 
-    private final JwtChannelInterceptor interceptor = new JwtChannelInterceptor(decoder(), cageProxy());
+    private final JwtChannelInterceptor interceptor = new JwtChannelInterceptor(decoder(), new CageTopicGuard(cageProxy()));
 
     @Test
     void subscribingToAnotherAccountsCageIsRejected() {

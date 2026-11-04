@@ -281,6 +281,26 @@ Session `STATELESS`. CORS and the WebSocket origin only for `http://localhost:51
 - **I**: one input port per use case; each controller depends only on what it uses.
 - **D**: services depend on ports (`UserRepository`, `PasswordHasher`, `TokenIssuer`, `OtpSender`), never on JPA, Spring Security or JavaMail.
 
+### 4.5 SOLID and GRASP in the cages part
+
+| Principle | Where |
+|---|---|
+| **S** Single responsibility | `CageService` manages cages, `CageCodeGenerator` picks codes, `CageAccessProxy` decides access, `CageTopicGuard` guards WebSocket topics, `JwtChannelInterceptor` only authenticates, `Requester` only reads who is asking |
+| **O** Open/closed | Another access rule (e.g. shared cages) is a new `CageOperations` proxy around the same real subject; another code format is a new `CageCodeGenerator` |
+| **L** Liskov substitution | `CageAccessProxy` and `CageOperationsService` are interchangeable behind `CageOperations` (the test swaps the real subject for a recording fake) |
+| **I** Interface segregation | One input port per use case (`ListCagesUseCase`, `CreateCageUseCase`, …); `CageOperations` is the single interface the clients of the proxy need |
+| **D** Dependency inversion | `CageOperationsService` gets `CageUseCases` (only ports); `CageService` gets `CageRepository` and `CageCodeGenerator` (ports); the composition root is `config/` |
+
+| GRASP | Where |
+|---|---|
+| **Information Expert** | `Cage` validates its name and location and answers `isOwnedBy`; `Alert` answers `belongsTo(cageCode)` and `isOpen()` |
+| **Creator** | `Cage.create(...)` builds a new cage; `CageService` creates it because it has the data (owner, code, clock) |
+| **Controller** | `CageService`, `GuineaPigService`, `AlertService` coordinate each use case; REST controllers only translate HTTP |
+| **Pure Fabrication** | `CageCodeGenerator`, `Requester`, `CageTopicGuard`, `CageUseCases`: no domain concept, they keep the others cohesive |
+| **Indirection** | `CageAccessProxy` stands between the controllers and the real subject; ports stand between the core and the adapters |
+| **Protected Variations** | The `CageOperations` interface shields the controllers from how access is checked; `CageRepository` shields the core from JPA |
+| **Low coupling / High cohesion** | Controllers depend on one interface; each class above has one reason to change |
+
 ---
 
 ## 5. Package structure

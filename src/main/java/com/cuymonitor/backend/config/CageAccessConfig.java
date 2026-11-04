@@ -4,6 +4,7 @@ import com.cuymonitor.backend.application.AlertService;
 import com.cuymonitor.backend.application.CageHealthService;
 import com.cuymonitor.backend.application.CageOperationsService;
 import com.cuymonitor.backend.application.CageService;
+import com.cuymonitor.backend.application.CageUseCases;
 import com.cuymonitor.backend.application.GuineaPigService;
 import com.cuymonitor.backend.domain.access.CageAccessProxy;
 import com.cuymonitor.backend.domain.access.CageOperations;
@@ -23,8 +24,10 @@ public class CageAccessConfig {
     public CageOperations cageOperations(CageService cageService, CageHealthService cageHealthService,
                                          GuineaPigService guineaPigService, AlertService alertService,
                                          CageRepository cages, AlertRepository alerts) {
-        CageOperations realSubject = new CageOperationsService(cageService, cageHealthService, guineaPigService,
+        CageUseCases useCases = new CageUseCases(cageService, cageService, cageService, cageService, cageService,
+                cageHealthService, guineaPigService, guineaPigService, guineaPigService, guineaPigService, alertService,
                 alertService);
+        CageOperations realSubject = new CageOperationsService(useCases);
         return new CageAccessProxy(realSubject, cages, alerts);
     }
 }

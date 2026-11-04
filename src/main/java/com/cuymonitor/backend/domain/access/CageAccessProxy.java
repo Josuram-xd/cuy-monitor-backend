@@ -120,7 +120,7 @@ public class CageAccessProxy implements CageOperations {
                 .map(Cage::code)
                 .collect(Collectors.toSet());
         return realSubject.listAlerts(requesterId, null, status).stream()
-                .filter(alert -> ownCages.contains(alert.getCageCode()))
+                .filter(alert -> ownCages.stream().anyMatch(alert::belongsTo))
                 .toList();
     }
 

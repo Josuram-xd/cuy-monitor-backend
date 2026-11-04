@@ -23,8 +23,6 @@ import java.security.Principal;
 import java.time.Duration;
 import java.util.List;
 
-import static com.cuymonitor.backend.adapter.in.web.CagesController.accountId;
-
 /** What is inside one cage. Every call goes through the cage access proxy, which checks the owner. */
 @RestController
 @RequestMapping("/api/v1/cages/{cageId}")
@@ -38,12 +36,12 @@ public class CageController {
 
     @GetMapping("/health")
     public CageHealthResponse health(Principal principal, @PathVariable String cageId) {
-        return CageHealthResponse.from(cageOperations.getHealth(accountId(principal), cageId));
+        return CageHealthResponse.from(cageOperations.getHealth(Requester.idOf(principal), cageId));
     }
 
     @GetMapping("/guinea-pigs")
     public List<GuineaPigResponse> guineaPigs(Principal principal, @PathVariable String cageId) {
-        return cageOperations.listGuineaPigs(accountId(principal), cageId).stream()
+        return cageOperations.listGuineaPigs(Requester.idOf(principal), cageId).stream()
                 .map(GuineaPigResponse::from)
                 .toList();
     }
@@ -52,7 +50,7 @@ public class CageController {
     @ResponseStatus(HttpStatus.CREATED)
     public GuineaPigResponse registerGuineaPig(Principal principal, @PathVariable String cageId,
                                                @Valid @RequestBody RegisterGuineaPigRequest request) {
-        return GuineaPigResponse.from(cageOperations.registerGuineaPig(accountId(principal), cageId,
+        return GuineaPigResponse.from(cageOperations.registerGuineaPig(Requester.idOf(principal), cageId,
                 request.markColor(), request.toPhoto(), request.profile()));
     }
 
@@ -63,7 +61,7 @@ public class CageController {
     @GetMapping("/guinea-pigs/{guineaPigId}/photo")
     public ResponseEntity<byte[]> guineaPigPhoto(Principal principal, @PathVariable String cageId,
                                                  @PathVariable long guineaPigId) {
-        GuineaPigPhoto photo = cageOperations.getGuineaPigPhoto(accountId(principal), cageId, guineaPigId);
+        GuineaPigPhoto photo = cageOperations.getGuineaPigPhoto(Requester.idOf(principal), cageId, guineaPigId);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(photo.contentType()))
                 .cacheControl(CacheControl.maxAge(Duration.ofDays(1)).cachePrivate())
@@ -77,6 +75,6 @@ public class CageController {
     @DeleteMapping("/guinea-pigs/{guineaPigId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteGuineaPig(Principal principal, @PathVariable String cageId, @PathVariable long guineaPigId) {
-        cageOperations.deleteGuineaPig(accountId(principal), cageId, guineaPigId);
+        cageOperations.deleteGuineaPig(Requester.idOf(principal), cageId, guineaPigId);
     }
 }
