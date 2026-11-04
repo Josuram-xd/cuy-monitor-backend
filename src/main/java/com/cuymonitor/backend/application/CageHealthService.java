@@ -1,6 +1,13 @@
 package com.cuymonitor.backend.application;
 
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
+import com.cuymonitor.backend.domain.health.composite.CageAudioHealth;
+import com.cuymonitor.backend.domain.health.composite.CageHealth;
+import com.cuymonitor.backend.domain.health.composite.CageWeightHealth;
+import com.cuymonitor.backend.domain.health.composite.GuineaPigHealth;
+import com.cuymonitor.backend.domain.health.composite.HealthComponent;
+import com.cuymonitor.backend.domain.health.state.GuineaPigHealthContext;
+import com.cuymonitor.backend.domain.health.state.HealthStates;
 import com.cuymonitor.backend.domain.model.Alert;
 import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.model.CageHealthSummary;
@@ -18,6 +25,7 @@ import com.cuymonitor.backend.domain.port.out.WeightReadingRepository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -63,11 +71,23 @@ public class CageHealthService implements GetCageHealthUseCase {
                 lastWeight.map(WeightReading::grams).orElse(null),
                 lastWeight.map(WeightReading::measuredAt).orElse(null));
 
-        HealthStatus status = HealthStatus.worst(audio.status(), weight.status());
+        HealthComponent cage = cageHealthTree(pigs, audio.status(), weight.status());
+        return new CageHealthSummary(cageCode, cage.status(), pigs, audio, weight, clock.instant());
+    }
+
+    /**
+     * <b>Composite pattern.</b> The cage is a composite of leaves (one per guinea pig, the audio and the scale);
+     * asking the root for its status asks every part and keeps the worst.
+     */
+    private static HealthComponent cageHealthTree(List<GuineaPig> pigs, HealthStatus audio, HealthStatus weight) {
+        List<HealthComponent> parts = new ArrayList<>();
         for (GuineaPig pig : pigs) {
-            status = HealthStatus.worst(status, pig.getStatus());
+            var context = new GuineaPigHealthContext(pig.getId(), HealthStates.of(pig.getStatus()));
+            parts.add(new GuineaPigHealth(context));
         }
-        return new CageHealthSummary(cageCode, status, pigs, audio, weight, clock.instant());
+        parts.add(new CageAudioHealth(audio));
+        parts.add(new CageWeightHealth(weight));
+        return new CageHealth(parts);
     }
 
     // an open alert is what puts a cage-level signal out of NORMAL

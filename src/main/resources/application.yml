@@ -63,3 +63,9 @@ app:
       request-window: 15m
   mail:
     from: ${MAIL_FROM:no-reply@cuymonitor.local}
+  # thresholds of the health evaluation (HealthProperties); starting values, tuned with real data
+  health:
+    max-event-age: 10m
+    min-detection-confidence: 0.5
+    consecutive-anomaly-windows: 3
+    distress-probability: 0.8

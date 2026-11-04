@@ -1,0 +1,22 @@
+package com.cuymonitor.backend.domain.health.state;
+
+import com.cuymonitor.backend.domain.model.HealthStatus;
+
+/** <b>State pattern — concrete state</b> ALERT: one more confirmed anomaly moves it to CRITICAL. */
+public final class AlertState implements HealthState {
+
+    @Override
+    public HealthStatus status() {
+        return HealthStatus.ALERT;
+    }
+
+    @Override
+    public HealthState onAnomaly() {
+        return new CriticalState();
+    }
+
+    @Override
+    public boolean raisesAlert() {
+        return true;
+    }
+}
