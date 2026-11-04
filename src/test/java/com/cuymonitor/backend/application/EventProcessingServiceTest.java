@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.application;
 
+import com.cuymonitor.backend.adapter.out.notification.DatabaseAlertObserver;
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryAlertRepository;
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryBaselineProfileRepository;
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryCageRepository;
@@ -23,6 +24,7 @@ import com.cuymonitor.backend.domain.model.HealthEvent;
 import com.cuymonitor.backend.domain.model.HealthSignal;
 import com.cuymonitor.backend.domain.model.HealthStatus;
 import com.cuymonitor.backend.domain.model.StateTransition;
+import com.cuymonitor.backend.domain.notification.AlertPublisher;
 import com.cuymonitor.backend.domain.port.out.StateTransitionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,6 +50,8 @@ class EventProcessingServiceTest {
     private InMemoryEventRepository events;
     private InMemoryAlertRepository alerts;
     private final List<StateTransition> transitions = new ArrayList<>();
+    // what the dashboard would receive: the observer after the database one
+    private final List<Alert> pushed = new ArrayList<>();
     private EventProcessingService service;
     private GuineaPig canela;
     private int minute;
@@ -69,7 +73,8 @@ class EventProcessingServiceTest {
             transitions.add(transition);
             return transition;
         };
-        service = new EventProcessingService(recorder, chain, guineaPigs, recordTransitions, alerts, clock, 0.8);
+        var publisher = new AlertPublisher(List.of(new DatabaseAlertObserver(alerts), pushed::add));
+        service = new EventProcessingService(recorder, chain, guineaPigs, recordTransitions, publisher, clock, 0.8);
         canela = guineaPigs.save(GuineaPig.register(CAGE, "RED", Photos.png(), NOW.minus(Duration.ofDays(3))));
     }
 
@@ -170,5 +175,30 @@ class EventProcessingServiceTest {
     private HealthEvent event(HealthSignal signal) {
         return new HealthEvent(UUID.randomUUID(), CAGE, NOW.minus(Duration.ofMinutes(9)).plus(Duration.ofMinutes(minute++)),
                 "test", signal);
+    }
+
+    @Test
+    void everyAlertIsStoredFirstAndReachesTheDashboardWithItsId() {
+        for (int i = 0; i < 3; i++) {
+            service.process(window(0.9));
+        }
+
+        assertThat(pushed).singleElement().satisfies(alert -> {
+            assertThat(alert.getId()).isNotNull();
+            assertThat(alerts.findById(alert.getId())).isPresent();
+            assertThat(alert.getLevel()).isEqualTo(HealthStatus.ALERT);
+        });
+    }
+
+    @Test
+    void aRecoveryIsNotPublished() {
+        for (int i = 0; i < 3; i++) {
+            service.process(window(0.9));
+        }
+        pushed.clear();
+
+        service.process(window(0.1));
+
+        assertThat(pushed).isEmpty();
     }
 }

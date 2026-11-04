@@ -109,14 +109,14 @@
 
 ### Task 7 — Observer + WebSocket
 
-- [ ] **Task 7.1** — `feat(observer): add AlertObserver output port and AlertPublisher`
+- [x] **Task 7.1** — `feat(observer): add AlertObserver output port and AlertPublisher`
   `AlertObserver` en `domain/port/out/`, `AlertPublisher` en `domain/notification/`.
-- [ ] **Task 7.2** — `feat(observer): add DatabaseAlertObserver and LogAlertObserver`
+- [x] **Task 7.2** — `feat(observer): add DatabaseAlertObserver and LogAlertObserver`
   En `adapter/out/notification/`; `DatabaseAlertObserver` guarda usando el puerto `AlertRepository`.
 - [x] **Task 7.3** — `feat(websocket): add STOMP config on /ws`
   Se hizo en la rama de la Task 20 (`feature/task-20-websocket-jwt`) porque el interceptor la necesita.
-- [ ] **Task 7.4** — `feat(observer): add WebSocketAlertObserver publishing to /topic/cages/{id}`
-- [ ] **Task 7.5** — `feat(state): publish alerts on transitions to ALERT and CRITICAL` *(el State llama a `AlertPublisher`)*
+- [x] **Task 7.4** — `feat(observer): add WebSocketAlertObserver publishing to /topic/cages/{id}`
+- [x] **Task 7.5** — `feat(state): publish alerts on transitions to ALERT and CRITICAL` *(el State llama a `AlertPublisher`)*
 
 🔓 **Desbloquea:** `cuy-monitor-dashboard` Task 6
 
