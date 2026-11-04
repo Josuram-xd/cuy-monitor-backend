@@ -51,7 +51,7 @@ public class CageHealthService implements GetCageHealthUseCase {
 
         List<GuineaPig> pigs = guineaPigs.findActiveByCage(cageCode);
         List<Alert> openAlerts = alerts.findByStatus(AlertStatus.OPEN).stream()
-                .filter(alert -> alert.getCageCode().equals(cageCode))
+                .filter(alert -> alert.belongsTo(cageCode))
                 .toList();
 
         var audio = new CageHealthSummary.Audio(

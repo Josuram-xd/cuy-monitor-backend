@@ -1,14 +1,14 @@
 package com.cuymonitor.backend.adapter.in.web;
 
 import com.cuymonitor.backend.config.JwtConfig;
+import com.cuymonitor.backend.domain.access.CageOperations;
+import com.cuymonitor.backend.domain.exception.CageAccessDeniedException;
 import com.cuymonitor.backend.config.SecurityConfig;
 import com.cuymonitor.backend.domain.exception.AlertNotFoundException;
 import com.cuymonitor.backend.domain.model.Alert;
 import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.HealthStatus;
-import com.cuymonitor.backend.domain.port.in.ListAlertsUseCase;
-import com.cuymonitor.backend.domain.port.in.ReviewAlertUseCase;
 import com.cuymonitor.backend.domain.port.out.RevokedTokenRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,8 +21,11 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 import static org.mockito.BDDMockito.given;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -38,14 +41,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AlertControllerTest {
 
     private static final Instant NOW = Instant.parse("2026-10-05T14:32:00Z");
+    private static final UUID ACCOUNT = UUID.fromString("3f2a4b5c-0000-4000-8000-000000000001");
 
     @Autowired
     private MockMvc mvc;
 
     @MockitoBean
-    private ListAlertsUseCase listAlertsUseCase;
-    @MockitoBean
-    private ReviewAlertUseCase reviewAlertUseCase;
+    private CageOperations cageOperations;
     @MockitoBean
     private RevokedTokenRepository revokedTokenRepository;
 
@@ -54,12 +56,12 @@ class AlertControllerTest {
         mvc.perform(get("/api/v1/alerts")).andExpect(status().isUnauthorized());
         mvc.perform(patch("/api/v1/alerts/7").contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"REVIEWED\"}"))
                 .andExpect(status().isUnauthorized());
-        verifyNoInteractions(listAlertsUseCase, reviewAlertUseCase);
+        verifyNoInteractions(cageOperations);
     }
 
     @Test
     void listsAlertsInTheContractShape() throws Exception {
-        given(listAlertsUseCase.list(null)).willReturn(List.of(
+        given(cageOperations.listAlerts(ACCOUNT, null, null)).willReturn(List.of(
                 Alert.restore(7L, "cage-1", 1L, HealthStatus.ALERT, EventType.BEHAVIOR, "Canela is still",
                         AlertStatus.OPEN, NOW, null),
                 Alert.restore(8L, "cage-1", null, HealthStatus.CRITICAL, EventType.AUDIO, "Distress",
@@ -81,7 +83,7 @@ class AlertControllerTest {
 
     @Test
     void filtersByStatus() throws Exception {
-        given(listAlertsUseCase.list(AlertStatus.OPEN)).willReturn(List.of());
+        given(cageOperations.listAlerts(ACCOUNT, null, AlertStatus.OPEN)).willReturn(List.of());
 
         mvc.perform(get("/api/v1/alerts").param("status", "OPEN").with(token()))
                 .andExpect(status().isOk())
@@ -93,12 +95,12 @@ class AlertControllerTest {
         mvc.perform(get("/api/v1/alerts").param("status", "DONE").with(token()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("bad_request"));
-        verifyNoInteractions(listAlertsUseCase);
+        verifyNoInteractions(cageOperations);
     }
 
     @Test
     void marksAnAlertAsReviewed() throws Exception {
-        given(reviewAlertUseCase.markReviewed(7)).willReturn(
+        given(cageOperations.reviewAlert(ACCOUNT, 7)).willReturn(
                 Alert.restore(7L, "cage-1", 1L, HealthStatus.ALERT, EventType.BEHAVIOR, "Canela is still",
                         AlertStatus.REVIEWED, NOW.minusSeconds(300), NOW));
 
@@ -117,12 +119,12 @@ class AlertControllerTest {
                 .andExpect(jsonPath("$.error").value("bad_request"));
         mvc.perform(patch("/api/v1/alerts/7").with(token()).contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest());
-        verify(reviewAlertUseCase, never()).markReviewed(7);
+        verify(cageOperations, never()).reviewAlert(any(), anyLong());
     }
 
     @Test
     void answers404ForAnUnknownAlert() throws Exception {
-        given(reviewAlertUseCase.markReviewed(999)).willThrow(new AlertNotFoundException());
+        given(cageOperations.reviewAlert(ACCOUNT, 999)).willThrow(new AlertNotFoundException());
 
         mvc.perform(patch("/api/v1/alerts/999").with(token()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\":\"REVIEWED\"}"))
@@ -130,7 +132,26 @@ class AlertControllerTest {
                 .andExpect(jsonPath("$.error").value("not_found"));
     }
 
+    @Test
+    void filtersByCage() throws Exception {
+        given(cageOperations.listAlerts(ACCOUNT, "cage-1", AlertStatus.OPEN)).willReturn(List.of());
+
+        mvc.perform(get("/api/v1/alerts").param("status", "OPEN").param("cageId", "cage-1").with(token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    void answers403ForAnAlertOfAnotherAccountsCage() throws Exception {
+        given(cageOperations.reviewAlert(ACCOUNT, 5)).willThrow(new CageAccessDeniedException());
+
+        mvc.perform(patch("/api/v1/alerts/5").with(token()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"REVIEWED\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("forbidden"));
+    }
+
     private static RequestPostProcessor token() {
-        return jwt().jwt(jwt -> jwt.subject("3f2a4b5c-0000-4000-8000-000000000001"));
+        return jwt().jwt(jwt -> jwt.subject(ACCOUNT.toString()));
     }
 }

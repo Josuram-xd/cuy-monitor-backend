@@ -1,5 +1,10 @@
 package com.cuymonitor.backend.config;
 
+import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryAlertRepository;
+import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryCageRepository;
+import com.cuymonitor.backend.domain.access.CageAccessProxy;
+import com.cuymonitor.backend.domain.access.CageOperations;
+import com.cuymonitor.backend.domain.model.Cage;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import org.junit.jupiter.api.Test;
 import org.springframework.messaging.Message;
@@ -37,7 +42,36 @@ class JwtChannelInterceptorTest {
     private static final String ISSUER = "cuy-monitor-backend";
     private static final SecretKey KEY = key("test-secret-with-at-least-32-bytes!!");
 
-    private final JwtChannelInterceptor interceptor = new JwtChannelInterceptor(decoder());
+    private static final UUID OWNER = UUID.fromString("00000000-0000-4000-8000-00000000000a");
+
+    private final JwtChannelInterceptor interceptor = new JwtChannelInterceptor(decoder(), new CageTopicGuard(cageProxy()));
+
+    @Test
+    void subscribingToAnotherAccountsCageIsRejected() {
+        Message<byte[]> subscribe = frame(StompCommand.SUBSCRIBE, null,
+                new TestingAuthenticationToken(UUID.randomUUID().toString(), null));
+
+        assertThatThrownBy(() -> interceptor.preSend(withDestination(subscribe, "/topic/cages/cage-owned"), null))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> interceptor.preSend(withDestination(subscribe, "/topic/cages/cage-nope"), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    // the real proxy over in-memory repositories; the real subject only answers getCage
+    private static CageOperations cageProxy() {
+        InMemoryCageRepository cages = new InMemoryCageRepository();
+        cages.save(new Cage(null, "cage-owned", "Mía", null, OWNER, true, Instant.now()));
+        CageOperations realSubject = (CageOperations) java.lang.reflect.Proxy.newProxyInstance(
+                CageOperations.class.getClassLoader(), new Class<?>[]{CageOperations.class},
+                (proxy, method, args) -> null);
+        return new CageAccessProxy(realSubject, cages, new InMemoryAlertRepository());
+    }
+
+    private static Message<byte[]> withDestination(Message<byte[]> message, String destination) {
+        StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
+        accessor.setDestination(destination);
+        return MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+    }
 
     @Test
     void connectWithValidTokenAttachesTheUser() {
@@ -119,8 +153,9 @@ class JwtChannelInterceptorTest {
     }
 
     @Test
-    void subscribeFromAuthenticatedSessionPasses() {
-        Message<byte[]> subscribe = frame(StompCommand.SUBSCRIBE, null, new TestingAuthenticationToken("user", null));
+    void subscribeFromAuthenticatedSessionToAnOwnCagePasses() {
+        Message<byte[]> subscribe = frame(StompCommand.SUBSCRIBE, null,
+                new TestingAuthenticationToken(OWNER.toString(), null));
 
         assertThat(interceptor.preSend(subscribe, null)).isSameAs(subscribe);
     }
@@ -131,7 +166,7 @@ class JwtChannelInterceptorTest {
             accessor.setNativeHeader("Authorization", authorization);
         }
         if (command == StompCommand.SUBSCRIBE) {
-            accessor.setDestination("/topic/cages/cage-1");
+            accessor.setDestination("/topic/cages/cage-owned");
             accessor.setSubscriptionId("sub-0");
         }
         accessor.setUser(user);

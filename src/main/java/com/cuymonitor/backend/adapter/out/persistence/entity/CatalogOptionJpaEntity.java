@@ -8,6 +8,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.io.Serializable;
 import java.util.Objects;
@@ -29,7 +31,9 @@ public class CatalogOptionJpaEntity {
     @Column(name = "label", nullable = false, length = 60)
     private String label;
 
+    // CHAR(7) in V10: a hex color always has 7 characters ("#2e9e44")
     @Column(name = "hex", length = 7)
+    @JdbcTypeCode(SqlTypes.CHAR)
     private String hex;
 
     @Column(name = "sort_order", nullable = false)

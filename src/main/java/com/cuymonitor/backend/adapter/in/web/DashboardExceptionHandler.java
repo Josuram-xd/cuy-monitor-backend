@@ -1,6 +1,7 @@
 package com.cuymonitor.backend.adapter.in.web;
 
 import com.cuymonitor.backend.domain.exception.AlertNotFoundException;
+import com.cuymonitor.backend.domain.exception.CageAccessDeniedException;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
 import com.cuymonitor.backend.domain.exception.GuineaPigNotFoundException;
 import com.cuymonitor.backend.domain.exception.ColorAlreadyUsedException;
@@ -20,6 +21,12 @@ public class DashboardExceptionHandler {
     @ExceptionHandler(CageNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(CageNotFoundException ex) {
         return error(HttpStatus.NOT_FOUND, ApiError.NOT_FOUND, ex.getMessage());
+    }
+
+    // the cage access proxy refused it: the cage is someone else's
+    @ExceptionHandler(CageAccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(CageAccessDeniedException ex) {
+        return error(HttpStatus.FORBIDDEN, ApiError.FORBIDDEN, ex.getMessage());
     }
 
     @ExceptionHandler(GuineaPigNotFoundException.class)

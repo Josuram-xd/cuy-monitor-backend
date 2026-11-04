@@ -29,6 +29,7 @@ Common errors for every JWT endpoint: `401` without a token, with an invalid or 
 |---|---|---|
 | `400` | `bad_request` | Invalid body, query param or date range |
 | `401` | `unauthorized` | Missing, invalid or expired token |
+| `403` | `forbidden` | The cage (or the alert's cage) belongs to another account |
 | `404` | `not_found` | Cage, guinea pig or alert does not exist |
 | `409` | `conflict` | Duplicate (for example, color already used in the cage) |
 
@@ -54,6 +55,11 @@ Summary:
 
 | Method and path | Purpose | Success |
 |---|---|---|
+| `GET /api/v1/cages` | Cages of the signed-in account | `200` |
+| `POST /api/v1/cages` | Create a cage | `201` |
+| `GET /api/v1/cages/{cageId}` | One cage | `200` |
+| `PUT /api/v1/cages/{cageId}` | Rename a cage / change its location | `200` |
+| `DELETE /api/v1/cages/{cageId}` | Delete a cage (soft delete) | `204` |
 | `GET /api/v1/cages/{cageId}/health` | Cage status summary | `200` |
 | `GET /api/v1/cages/{cageId}/guinea-pigs` | Guinea pigs with current status | `200` |
 | `GET /api/v1/cages/{cageId}/guinea-pigs/{id}/photo` | The photo of a guinea pig | `200` |
@@ -63,6 +69,28 @@ Summary:
 | `GET /api/v1/alerts?status=` | List alerts | `200` |
 | `PATCH /api/v1/alerts/{id}` | Mark an alert as reviewed | `200` |
 | `GET /api/v1/cages/{cageId}/weight?from=&to=` | Weight readings | `200` |
+
+### 3.0 Cages
+
+A farmer can have several cages. Each one belongs to the account that created it (see the cage access proxy in
+`ARCHITECTURE.md`): another account gets `403` on it.
+
+`GET /api/v1/cages` → `200`, the active cages of the account, oldest first:
+
+```json
+[
+  { "cageId": "cage-1", "name": "Jaula piloto", "location": "Galpón", "createdAt": "2026-09-20T10:00:00Z" },
+  { "cageId": "cage-0a1b2c3d", "name": "Jaula del patio", "location": null, "createdAt": "2026-11-02T14:00:00Z" }
+]
+```
+
+`POST /api/v1/cages` and `PUT /api/v1/cages/{cageId}` take `{ "name": "Jaula del patio", "location": "Patio" }`:
+`name` 1–100 characters (trimmed), `location` optional, up to 200 (blank removes it). The backend picks the code of a
+new cage (`cage-` + 8 hex characters); that code is what the camera, the AI service and the scale send as `cageId`.
+Answers `201` / `200` with the cage, `400` for an invalid body, `404` for an unknown cage.
+
+`DELETE /api/v1/cages/{cageId}` → `204`. Soft delete: the cage leaves the list and its events are rejected from then
+on; its guinea pigs, alerts and history are kept.
 
 ### 3.1 `GET /api/v1/cages/{cageId}/health`
 
@@ -164,9 +192,10 @@ No body. `204 No Content`. **Soft delete**: the guinea pig stops appearing in th
 
 Both lists are ordered by `occurredAt`, oldest first. `windows` comes from stored `BEHAVIOR` events. `404` unknown guinea pig.
 
-### 3.5 `GET /api/v1/alerts?status=`
+### 3.5 `GET /api/v1/alerts?status=&cageId=`
 
-`status` is optional (`OPEN` or `REVIEWED`); without it, all alerts. Newest first.
+`status` is optional (`OPEN` or `REVIEWED`); without it, all alerts. `cageId` is optional; without it, the alerts of
+every cage of the account (never another account's). Newest first. `403` if `cageId` is another account's cage.
 
 ```json
 [
@@ -253,7 +282,8 @@ readable. `200 OK`. Needs a session like every other endpoint of section 3.
 
 ### Topic `/topic/cages/{cageId}`
 
-One topic per cage, with the cage **code** (`/topic/cages/cage-1`). Every message has the same envelope:
+One topic per cage, with the cage **code** (`/topic/cages/cage-1`). Only the owner of the cage can subscribe; any other
+account gets a STOMP `ERROR` frame. Every message has the same envelope:
 
 ```json
 { "type": "ALERT", "cageId": "cage-1", "occurredAt": "2026-10-05T14:20:00Z", "data": {} }
