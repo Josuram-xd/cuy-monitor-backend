@@ -13,6 +13,8 @@ import com.cuymonitor.backend.domain.health.chain.BehaviorThresholdHandler;
 import com.cuymonitor.backend.domain.health.chain.HandlerChainBuilder;
 import com.cuymonitor.backend.domain.health.chain.IdentificationHandler;
 import com.cuymonitor.backend.domain.health.chain.SustainedAnomalyHandler;
+import com.cuymonitor.backend.domain.health.chain.SustainedRecoveryHandler;
+import com.cuymonitor.backend.domain.health.state.EscalationPolicy;
 import com.cuymonitor.backend.domain.health.chain.ValidationHandler;
 import com.cuymonitor.backend.domain.model.Alert;
 import com.cuymonitor.backend.domain.model.AudioLabel;
@@ -39,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * The whole health core with plain JUnit: the real chain, the real states and in-memory ports. No Spring and
- * no database. Two anomalous windows in a row confirm an anomaly (consecutiveAnomalyWindows = 2).
+ * no database. Two anomalous windows in a row confirm an anomaly and two normal ones confirm a recovery.
  */
 class EventProcessingServiceTest {
 
@@ -67,14 +69,17 @@ class EventProcessingServiceTest {
                 new ValidationHandler(clock, Duration.ofMinutes(10), 0.5),
                 new IdentificationHandler(guineaPigs),
                 new BehaviorThresholdHandler(new InMemoryBaselineProfileRepository()),
-                new SustainedAnomalyHandler(events, 2)).build();
+                new SustainedAnomalyHandler(events, 2),
+                new SustainedRecoveryHandler(events, 2)).build();
         var recorder = new EventIngestionService(cages, guineaPigs, events, new InMemoryWeightReadingRepository());
         StateTransitionRepository recordTransitions = transition -> {
             transitions.add(transition);
             return transition;
         };
         var publisher = new AlertPublisher(List.of(new DatabaseAlertObserver(alerts), pushed::add));
-        service = new EventProcessingService(recorder, chain, guineaPigs, recordTransitions, publisher, clock, 0.8);
+        // no waiting between levels here: this test is about the flow; the times are in HealthRulesTest
+        service = new EventProcessingService(recorder, chain, guineaPigs, recordTransitions, publisher, clock, 0.8,
+                EscalationPolicy.immediate());
         canela = guineaPigs.save(GuineaPig.register(CAGE, "RED", Photos.png(), NOW.minus(Duration.ofDays(3))));
     }
 
@@ -111,11 +116,14 @@ class EventProcessingServiceTest {
     }
 
     @Test
-    void aNormalWindowBringsItBackToNormalWithoutAnAlert() {
+    void twoNormalWindowsInARowBringItBackToNormalWithoutAnAlert() {
         for (int i = 0; i < 3; i++) {
             service.process(window(0.9));
         }
         int alertsBefore = alerts.findAll().size();
+
+        service.process(window(0.1));
+        assertThat(statusOfCanela()).as("one good window is not enough").isEqualTo(HealthStatus.ALERT);
 
         service.process(window(0.1));
 
@@ -197,6 +205,7 @@ class EventProcessingServiceTest {
         }
         pushed.clear();
 
+        service.process(window(0.1));
         service.process(window(0.1));
 
         assertThat(pushed).isEmpty();

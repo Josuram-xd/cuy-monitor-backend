@@ -2,6 +2,7 @@ package com.cuymonitor.backend.application;
 
 import com.cuymonitor.backend.domain.health.chain.EventHandler;
 import com.cuymonitor.backend.domain.health.chain.EventHandlerContext;
+import com.cuymonitor.backend.domain.health.state.EscalationPolicy;
 import com.cuymonitor.backend.domain.health.state.GuineaPigHealthContext;
 import com.cuymonitor.backend.domain.health.state.HealthStates;
 import com.cuymonitor.backend.domain.model.Alert;
@@ -53,10 +54,11 @@ public class EventProcessingService implements ProcessEventUseCase {
     private final AlertPublisher alertPublisher;
     private final Clock clock;
     private final double distressProbability;
+    private final EscalationPolicy escalation;
 
     public EventProcessingService(RecordEventUseCase recorder, EventHandler chain, GuineaPigRepository guineaPigs,
                                   StateTransitionRepository transitions, AlertPublisher alertPublisher, Clock clock,
-                                  double distressProbability) {
+                                  double distressProbability, EscalationPolicy escalation) {
         this.recorder = Objects.requireNonNull(recorder, "recorder");
         this.chain = Objects.requireNonNull(chain, "chain");
         this.guineaPigs = Objects.requireNonNull(guineaPigs, "guineaPigs");
@@ -64,6 +66,7 @@ public class EventProcessingService implements ProcessEventUseCase {
         this.alertPublisher = Objects.requireNonNull(alertPublisher, "alertPublisher");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.distressProbability = distressProbability;
+        this.escalation = Objects.requireNonNull(escalation, "escalation");
     }
 
     @Override
@@ -87,10 +90,11 @@ public class EventProcessingService implements ProcessEventUseCase {
 
     // State pattern: the current state of the guinea pig decides the next one
     private void evaluateGuineaPig(GuineaPig pig, EventHandlerContext context, Instant now) {
-        var health = new GuineaPigHealthContext(pig.getId(), HealthStates.of(pig.getStatus()));
+        var health = new GuineaPigHealthContext(pig.getId(), HealthStates.of(pig.getStatus()), pig.getStatusSince());
+        // an anomaly goes up only after the escalation time (Task 10.1); a recovery needs M normal windows (10.2)
         Optional<StateTransition> transition = context.anomalyReason()
-                .map(reason -> health.anomalyConfirmed(reason, now))
-                .orElseGet(() -> health.recovered(now));
+                .map(reason -> health.anomalyConfirmed(reason, now, escalation))
+                .orElseGet(() -> context.recoveryConfirmed() ? health.recovered(now) : Optional.empty());
         transition.ifPresent(moved -> {
             transitions.save(moved);
             pig.changeStatus(moved.toStatus(), now);

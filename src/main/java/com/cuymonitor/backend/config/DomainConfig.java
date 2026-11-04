@@ -6,6 +6,8 @@ import com.cuymonitor.backend.domain.health.chain.EventHandler;
 import com.cuymonitor.backend.domain.health.chain.HandlerChainBuilder;
 import com.cuymonitor.backend.domain.health.chain.IdentificationHandler;
 import com.cuymonitor.backend.domain.health.chain.SustainedAnomalyHandler;
+import com.cuymonitor.backend.domain.health.chain.SustainedRecoveryHandler;
+import com.cuymonitor.backend.domain.health.state.EscalationPolicy;
 import com.cuymonitor.backend.domain.health.chain.ValidationHandler;
 import com.cuymonitor.backend.domain.notification.AlertPublisher;
 import com.cuymonitor.backend.domain.port.in.RecordEventUseCase;
@@ -34,7 +36,8 @@ public class DomainConfig {
                 new ValidationHandler(clock, health.maxEventAge(), health.minDetectionConfidence()),
                 new IdentificationHandler(guineaPigs),
                 new BehaviorThresholdHandler(baselines),
-                new SustainedAnomalyHandler(events, health.consecutiveAnomalyWindows())
+                new SustainedAnomalyHandler(events, health.consecutiveAnomalyWindows()),
+                new SustainedRecoveryHandler(events, health.recoveryWindows())
         ).build();
     }
 
@@ -46,6 +49,6 @@ public class DomainConfig {
                                                          AlertPublisher alertPublisher, Clock clock,
                                                          HealthProperties health) {
         return new EventProcessingService(recorder, healthEventChain, guineaPigs, transitions, alertPublisher, clock,
-                health.distressProbability());
+                health.distressProbability(), new EscalationPolicy(health.observedToAlert(), health.alertToCritical()));
     }
 }
