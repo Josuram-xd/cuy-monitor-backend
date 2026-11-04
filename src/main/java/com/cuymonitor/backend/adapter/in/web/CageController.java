@@ -1,6 +1,7 @@
 package com.cuymonitor.backend.adapter.in.web;
 
 import com.cuymonitor.backend.adapter.in.web.dto.CageHealthResponse;
+import com.cuymonitor.backend.adapter.in.web.dto.CageWeightResponse;
 import com.cuymonitor.backend.adapter.in.web.dto.GuineaPigResponse;
 import com.cuymonitor.backend.adapter.in.web.dto.RegisterGuineaPigRequest;
 import com.cuymonitor.backend.domain.access.CageOperations;
@@ -16,11 +17,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.security.Principal;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
 /** What is inside one cage. Every call goes through the cage access proxy, which checks the owner. */
@@ -29,14 +33,25 @@ import java.util.List;
 public class CageController {
 
     private final CageOperations cageOperations;
+    private final Clock clock;
 
-    public CageController(CageOperations cageOperations) {
+    public CageController(CageOperations cageOperations, Clock clock) {
         this.cageOperations = cageOperations;
+        this.clock = clock;
     }
 
     @GetMapping("/health")
     public CageHealthResponse health(Principal principal, @PathVariable String cageId) {
         return CageHealthResponse.from(cageOperations.getHealth(Requester.idOf(principal), cageId));
+    }
+
+    /** Every reading of the scale, stable or not; defaults to the last 24 hours, at most 31 days. */
+    @GetMapping("/weight")
+    public CageWeightResponse weight(Principal principal, @PathVariable String cageId,
+                                     @RequestParam(required = false) Instant from,
+                                     @RequestParam(required = false) Instant to) {
+        return CageWeightResponse.from(cageOperations.getCageWeight(Requester.idOf(principal), cageId,
+                TimeRangeParams.of(from, to, clock)));
     }
 
     @GetMapping("/guinea-pigs")
