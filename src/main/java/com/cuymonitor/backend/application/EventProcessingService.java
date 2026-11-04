@@ -8,6 +8,7 @@ import com.cuymonitor.backend.domain.health.state.HealthStates;
 import com.cuymonitor.backend.domain.model.Alert;
 import com.cuymonitor.backend.domain.model.AudioLabel;
 import com.cuymonitor.backend.domain.model.AudioSignal;
+import com.cuymonitor.backend.domain.model.BehaviorSignal;
 import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.GuineaPig;
 import com.cuymonitor.backend.domain.model.HealthEvent;
@@ -32,6 +33,7 @@ import java.util.Optional;
  *
  * <pre>
  * record it once ─► Chain of Responsibility ─► State of the guinea pig ─► transition ─► AlertPublisher
+ *                                                     └─► BaselineLearner (a normal window of a NORMAL guinea pig)
  * </pre>
  *
  * An alert is never saved here: it is published (Observer) and the subscribers store it, send it to the
@@ -55,10 +57,12 @@ public class EventProcessingService implements ProcessEventUseCase {
     private final Clock clock;
     private final double distressProbability;
     private final EscalationPolicy escalation;
+    private final BaselineLearner baselineLearner;
 
     public EventProcessingService(RecordEventUseCase recorder, EventHandler chain, GuineaPigRepository guineaPigs,
                                   StateTransitionRepository transitions, AlertPublisher alertPublisher, Clock clock,
-                                  double distressProbability, EscalationPolicy escalation) {
+                                  double distressProbability, EscalationPolicy escalation,
+                                  BaselineLearner baselineLearner) {
         this.recorder = Objects.requireNonNull(recorder, "recorder");
         this.chain = Objects.requireNonNull(chain, "chain");
         this.guineaPigs = Objects.requireNonNull(guineaPigs, "guineaPigs");
@@ -67,6 +71,7 @@ public class EventProcessingService implements ProcessEventUseCase {
         this.clock = Objects.requireNonNull(clock, "clock");
         this.distressProbability = distressProbability;
         this.escalation = Objects.requireNonNull(escalation, "escalation");
+        this.baselineLearner = Objects.requireNonNull(baselineLearner, "baselineLearner");
     }
 
     @Override
@@ -85,7 +90,13 @@ public class EventProcessingService implements ProcessEventUseCase {
             evaluateAudio(event, audio, now);
             return;
         }
-        context.guineaPig().ifPresent(pig -> evaluateGuineaPig(pig, context, now));
+        context.guineaPig().ifPresent(pig -> {
+            evaluateGuineaPig(pig, context, now);
+            // after the state is up to date: only a guinea pig that is still NORMAL teaches what normal is
+            if (context.anomalyReason().isEmpty() && event.signal() instanceof BehaviorSignal window) {
+                baselineLearner.learnFrom(pig, window, now);
+            }
+        });
     }
 
     // State pattern: the current state of the guinea pig decides the next one
