@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.adapter.out.security;
 
+import com.cuymonitor.backend.domain.model.auth.TokenClaims;
 import com.cuymonitor.backend.domain.model.auth.AuthToken;
 import com.cuymonitor.backend.domain.model.user.User;
 import com.cuymonitor.backend.domain.port.out.TokenIssuer;
@@ -16,7 +17,6 @@ import java.util.UUID;
 
 public class JwtTokenIssuer implements TokenIssuer {
 
-    public static final String SESSION_CLAIM = "sid";
 
     private final JwtEncoder encoder;
     private final String issuer;
@@ -40,7 +40,7 @@ public class JwtTokenIssuer implements TokenIssuer {
                 .issuedAt(now)
                 .expiresAt(expiresAt)
                 .id(UUID.randomUUID().toString())
-                .claim(SESSION_CLAIM, sessionId.toString())
+                .claim(TokenClaims.SESSION, sessionId.toString())
                 .build();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
 
