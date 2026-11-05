@@ -4,9 +4,12 @@ import com.cuymonitor.backend.domain.model.Alert;
 import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.model.Cage;
 import com.cuymonitor.backend.domain.model.CageHealthSummary;
+import com.cuymonitor.backend.domain.model.CageWeight;
 import com.cuymonitor.backend.domain.model.GuineaPig;
+import com.cuymonitor.backend.domain.model.GuineaPigHistory;
 import com.cuymonitor.backend.domain.model.GuineaPigPhoto;
 import com.cuymonitor.backend.domain.model.GuineaPigProfile;
+import com.cuymonitor.backend.domain.model.TimeRange;
 
 import java.util.List;
 import java.util.UUID;
@@ -43,6 +46,11 @@ public interface CageOperations {
     GuineaPigPhoto getGuineaPigPhoto(UUID requesterId, String cageCode, long guineaPigId);
 
     void deleteGuineaPig(UUID requesterId, String cageCode, long guineaPigId);
+
+    /** The address has no cage: the guinea pig says which cage it is in. */
+    GuineaPigHistory getGuineaPigHistory(UUID requesterId, long guineaPigId, TimeRange range);
+
+    CageWeight getCageWeight(UUID requesterId, String cageCode, TimeRange range);
 
     // ---- alerts
 

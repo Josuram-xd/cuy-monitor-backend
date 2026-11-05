@@ -5,9 +5,12 @@ import com.cuymonitor.backend.domain.model.Alert;
 import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.model.Cage;
 import com.cuymonitor.backend.domain.model.CageHealthSummary;
+import com.cuymonitor.backend.domain.model.CageWeight;
 import com.cuymonitor.backend.domain.model.GuineaPig;
+import com.cuymonitor.backend.domain.model.GuineaPigHistory;
 import com.cuymonitor.backend.domain.model.GuineaPigPhoto;
 import com.cuymonitor.backend.domain.model.GuineaPigProfile;
+import com.cuymonitor.backend.domain.model.TimeRange;
 import com.cuymonitor.backend.domain.port.in.CreateCageCommand;
 import com.cuymonitor.backend.domain.port.in.ListAlertsUseCase;
 import com.cuymonitor.backend.domain.port.in.RegisterGuineaPigCommand;
@@ -80,6 +83,16 @@ public class CageOperationsService implements CageOperations {
     @Override
     public void deleteGuineaPig(UUID requesterId, String cageCode, long guineaPigId) {
         useCases.deleteGuineaPig().delete(cageCode, guineaPigId);
+    }
+
+    @Override
+    public GuineaPigHistory getGuineaPigHistory(UUID requesterId, long guineaPigId, TimeRange range) {
+        return useCases.getGuineaPigHistory().history(guineaPigId, range);
+    }
+
+    @Override
+    public CageWeight getCageWeight(UUID requesterId, String cageCode, TimeRange range) {
+        return useCases.getCageWeight().weight(cageCode, range);
     }
 
     @Override

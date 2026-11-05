@@ -4,6 +4,8 @@ import com.cuymonitor.backend.domain.port.in.CreateCageUseCase;
 import com.cuymonitor.backend.domain.port.in.DeleteCageUseCase;
 import com.cuymonitor.backend.domain.port.in.DeleteGuineaPigUseCase;
 import com.cuymonitor.backend.domain.port.in.GetCageHealthUseCase;
+import com.cuymonitor.backend.domain.port.in.GetCageWeightUseCase;
+import com.cuymonitor.backend.domain.port.in.GetGuineaPigHistoryUseCase;
 import com.cuymonitor.backend.domain.port.in.GetCageUseCase;
 import com.cuymonitor.backend.domain.port.in.GetGuineaPigPhotoUseCase;
 import com.cuymonitor.backend.domain.port.in.ListAlertsUseCase;
@@ -30,6 +32,8 @@ public record CageUseCases(
         RegisterGuineaPigUseCase registerGuineaPig,
         DeleteGuineaPigUseCase deleteGuineaPig,
         GetGuineaPigPhotoUseCase getGuineaPigPhoto,
+        GetGuineaPigHistoryUseCase getGuineaPigHistory,
+        GetCageWeightUseCase getCageWeight,
         ListAlertsUseCase listAlerts,
         ReviewAlertUseCase reviewAlert) {
 
@@ -44,6 +48,8 @@ public record CageUseCases(
         Objects.requireNonNull(registerGuineaPig, "registerGuineaPig");
         Objects.requireNonNull(deleteGuineaPig, "deleteGuineaPig");
         Objects.requireNonNull(getGuineaPigPhoto, "getGuineaPigPhoto");
+        Objects.requireNonNull(getGuineaPigHistory, "getGuineaPigHistory");
+        Objects.requireNonNull(getCageWeight, "getCageWeight");
         Objects.requireNonNull(listAlerts, "listAlerts");
         Objects.requireNonNull(reviewAlert, "reviewAlert");
     }

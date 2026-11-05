@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.adapter.out.persistence;
 
+import java.time.Instant;
 import com.cuymonitor.backend.adapter.out.persistence.entity.GuineaPigJpaEntity;
 import com.cuymonitor.backend.adapter.out.persistence.mapper.EventPersistenceMapper;
 import com.cuymonitor.backend.adapter.out.persistence.repository.CageJpaRepository;
@@ -74,5 +75,15 @@ public class EventPersistenceAdapter implements EventRepository {
     public Optional<HealthEvent> findLatest(String cageCode, EventType type) {
         return eventJpaRepository.findFirstByCage_CodeAndTypeOrderByOccurredAtDesc(cageCode, type)
                 .map(mapper::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<HealthEvent> findBehaviorBetween(long guineaPigId, Instant from, Instant to) {
+        return eventJpaRepository
+                .findByGuineaPig_IdAndTypeAndOccurredAtBetweenOrderByOccurredAtAsc(guineaPigId, EventType.BEHAVIOR,
+                        from, to).stream()
+                .map(mapper::toDomain)
+                .toList();
     }
 }

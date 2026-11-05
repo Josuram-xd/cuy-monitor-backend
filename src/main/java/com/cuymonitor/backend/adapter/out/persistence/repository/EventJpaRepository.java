@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.adapter.out.persistence.repository;
 
+import java.time.Instant;
 import com.cuymonitor.backend.adapter.out.persistence.entity.EventJpaEntity;
 import com.cuymonitor.backend.domain.model.EventType;
 import org.springframework.data.domain.Pageable;
@@ -17,4 +18,8 @@ public interface EventJpaRepository extends JpaRepository<EventJpaEntity, UUID> 
 
     @EntityGraph(attributePaths = "cage")
     Optional<EventJpaEntity> findFirstByCage_CodeAndTypeOrderByOccurredAtDesc(String cageCode, EventType type);
+
+    List<EventJpaEntity> findByGuineaPig_IdAndTypeAndOccurredAtBetweenOrderByOccurredAtAsc(long guineaPigId,
+                                                                                         EventType type,
+                                                                                         Instant from, Instant to);
 }

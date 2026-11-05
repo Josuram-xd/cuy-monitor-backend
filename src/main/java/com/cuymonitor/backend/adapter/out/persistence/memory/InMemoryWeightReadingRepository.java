@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.adapter.out.persistence.memory;
 
+import java.time.Instant;
 import com.cuymonitor.backend.domain.model.WeightReading;
 import com.cuymonitor.backend.domain.port.out.WeightReadingRepository;
 import org.springframework.context.annotation.Profile;
@@ -31,5 +32,18 @@ public class InMemoryWeightReadingRepository implements WeightReadingRepository 
         return readings.stream()
                 .filter(r -> r.cageCode().equals(cageCode))
                 .max(Comparator.comparing(WeightReading::measuredAt));
+    }
+
+    @Override
+    public List<WeightReading> findBetween(String cageCode, Instant from, Instant to) {
+        return readings.stream()
+                .filter(r -> r.cageCode().equals(cageCode) && between(r.measuredAt(), from, to))
+                .sorted(Comparator.comparing(WeightReading::measuredAt))
+                .toList();
+    }
+
+    // from <= t <= to, like BETWEEN in SQL
+    private static boolean between(Instant t, Instant from, Instant to) {
+        return !t.isBefore(from) && !t.isAfter(to);
     }
 }

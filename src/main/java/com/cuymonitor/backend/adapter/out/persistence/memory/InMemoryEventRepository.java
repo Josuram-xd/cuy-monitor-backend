@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.adapter.out.persistence.memory;
 
+import java.time.Instant;
 import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.HealthEvent;
 import com.cuymonitor.backend.domain.port.out.EventRepository;
@@ -53,5 +54,20 @@ public class InMemoryEventRepository implements EventRepository {
                 .sorted(NEWEST_FIRST)
                 .map(StoredEvent::event)
                 .findFirst();
+    }
+
+    @Override
+    public List<HealthEvent> findBehaviorBetween(long guineaPigId, Instant from, Instant to) {
+        return events.values().stream()
+                .filter(s -> s.event().type() == EventType.BEHAVIOR && Objects.equals(s.guineaPigId(), guineaPigId))
+                .map(StoredEvent::event)
+                .filter(e -> between(e.occurredAt(), from, to))
+                .sorted(Comparator.comparing(HealthEvent::occurredAt))
+                .toList();
+    }
+
+    // from <= t <= to, like BETWEEN in SQL
+    private static boolean between(Instant t, Instant from, Instant to) {
+        return !t.isBefore(from) && !t.isAfter(to);
     }
 }

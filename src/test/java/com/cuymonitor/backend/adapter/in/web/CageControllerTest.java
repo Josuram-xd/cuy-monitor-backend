@@ -1,5 +1,8 @@
 package com.cuymonitor.backend.adapter.in.web;
 
+import com.cuymonitor.backend.domain.model.WeightReading;
+import com.cuymonitor.backend.domain.model.TimeRange;
+import com.cuymonitor.backend.domain.model.CageWeight;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.mockito.Mockito.verify;
@@ -48,7 +51,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = CageController.class,
         properties = "app.auth.jwt.secret=test-secret-with-at-least-32-bytes!!")
-@Import({SecurityConfig.class, JwtConfig.class})
+@Import({SecurityConfig.class, JwtConfig.class, TestClockConfig.class})
 class CageControllerTest {
 
     private static final Instant NOW = Instant.parse("2026-10-05T14:32:00Z");
@@ -313,6 +316,29 @@ class CageControllerTest {
                 .andExpect(jsonPath("$.error").value("forbidden"));
         mvc.perform(get("/api/v1/cages/cage-ajena/guinea-pigs/1/photo").with(token()))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void answersTheWeightOfTheCageInTheContractShape() throws Exception {
+        TimeRange day = TimeRange.of(null, null, TestClockConfig.NOW);
+        given(cageOperations.getCageWeight(ACCOUNT, "cage-1", day)).willReturn(new CageWeight("cage-1", day,
+                List.of(new WeightReading(1L, "cage-1", 812.4, true, TestClockConfig.NOW.minusSeconds(60)),
+                        new WeightReading(2L, "cage-1", 990, false, TestClockConfig.NOW))));
+
+        mvc.perform(get("/api/v1/cages/cage-1/weight").with(token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cageId").value("cage-1"))
+                .andExpect(jsonPath("$.readings[0].grams").value(812.4))
+                .andExpect(jsonPath("$.readings[0].stable").value(true))
+                .andExpect(jsonPath("$.readings[1].stable").value(false))
+                .andExpect(jsonPath("$.readings[1].measuredAt").value("2026-11-04T12:00:00Z"));
+    }
+
+    @Test
+    void aWeightRangeLongerThan31DaysIs400() throws Exception {
+        mvc.perform(get("/api/v1/cages/cage-1/weight").with(token())
+                        .param("from", "2026-09-01T00:00:00Z").param("to", "2026-11-01T00:00:00Z"))
+                .andExpect(status().isBadRequest());
     }
 
     private static GuineaPig pig(long id, String color) {

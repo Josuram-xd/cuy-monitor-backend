@@ -1,7 +1,9 @@
 package com.cuymonitor.backend.domain.access;
 
+import com.cuymonitor.backend.domain.exception.GuineaPigNotFoundException;
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryAlertRepository;
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryCageRepository;
+import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryGuineaPigRepository;
 import com.cuymonitor.backend.application.fake.Photos;
 import com.cuymonitor.backend.domain.exception.AlertNotFoundException;
 import com.cuymonitor.backend.domain.exception.CageAccessDeniedException;
@@ -10,6 +12,9 @@ import com.cuymonitor.backend.domain.model.Alert;
 import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.model.Cage;
 import com.cuymonitor.backend.domain.model.CageHealthSummary;
+import com.cuymonitor.backend.domain.model.CageWeight;
+import com.cuymonitor.backend.domain.model.GuineaPigHistory;
+import com.cuymonitor.backend.domain.model.TimeRange;
 import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.GuineaPig;
 import com.cuymonitor.backend.domain.model.GuineaPigPhoto;
@@ -42,6 +47,9 @@ class CageAccessProxyTest {
     private InMemoryCageRepository cages;
     private InMemoryAlertRepository alerts;
     private CageOperations proxy;
+    private InMemoryGuineaPigRepository guineaPigs;
+    private long pigOfLuis;
+    private static final TimeRange DAY = TimeRange.of(null, NOW, NOW);
 
     @BeforeEach
     void setUp() {
@@ -50,7 +58,9 @@ class CageAccessProxyTest {
         alerts = new InMemoryAlertRepository();
         cages.save(new Cage(null, "cage-ana", "Jaula de Ana", null, ANA, true, NOW));
         cages.save(new Cage(null, "cage-luis", "Jaula de Luis", null, LUIS, true, NOW));
-        proxy = new CageAccessProxy(realSubject, cages, alerts);
+        guineaPigs = new InMemoryGuineaPigRepository();
+        pigOfLuis = guineaPigs.save(GuineaPig.register("cage-luis", "RED", Photos.png(), NOW)).getId();
+        proxy = new CageAccessProxy(realSubject, cages, alerts, guineaPigs);
     }
 
     @Test
@@ -140,6 +150,31 @@ class CageAccessProxyTest {
     }
 
     @Test
+    void theHistoryOfAGuineaPigIsOnlyForTheOwnerOfItsCage() {
+        assertThatThrownBy(() -> proxy.getGuineaPigHistory(ANA, pigOfLuis, DAY))
+                .isInstanceOf(CageAccessDeniedException.class);
+        assertThat(realSubject.calls).isEmpty();
+
+        proxy.getGuineaPigHistory(LUIS, pigOfLuis, DAY);
+        assertThat(realSubject.calls).containsExactly("getGuineaPigHistory " + pigOfLuis);
+    }
+
+    @Test
+    void theHistoryOfAnUnknownGuineaPigIsNotFound() {
+        assertThatThrownBy(() -> proxy.getGuineaPigHistory(ANA, 999L, DAY))
+                .isInstanceOf(GuineaPigNotFoundException.class);
+    }
+
+    @Test
+    void theWeightOfAnotherAccountsCageIsRefused() {
+        assertThatThrownBy(() -> proxy.getCageWeight(ANA, "cage-luis", DAY))
+                .isInstanceOf(CageAccessDeniedException.class);
+
+        proxy.getCageWeight(ANA, "cage-ana", DAY);
+        assertThat(realSubject.calls).containsExactly("getCageWeight cage-ana");
+    }
+
+    @Test
     void reviewingAnUnknownAlertIsNotFound() {
         assertThatThrownBy(() -> proxy.reviewAlert(ANA, 999L)).isInstanceOf(AlertNotFoundException.class);
     }
@@ -210,6 +245,18 @@ class CageAccessProxyTest {
         @Override
         public void deleteGuineaPig(UUID requesterId, String cageCode, long guineaPigId) {
             calls.add("deleteGuineaPig " + cageCode + " " + guineaPigId);
+        }
+
+        @Override
+        public GuineaPigHistory getGuineaPigHistory(UUID requesterId, long guineaPigId, TimeRange range) {
+            calls.add("getGuineaPigHistory " + guineaPigId);
+            return null;
+        }
+
+        @Override
+        public CageWeight getCageWeight(UUID requesterId, String cageCode, TimeRange range) {
+            calls.add("getCageWeight " + cageCode);
+            return null;
         }
 
         @Override

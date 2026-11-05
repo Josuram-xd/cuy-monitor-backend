@@ -3,15 +3,20 @@ package com.cuymonitor.backend.domain.access;
 import com.cuymonitor.backend.domain.exception.AlertNotFoundException;
 import com.cuymonitor.backend.domain.exception.CageAccessDeniedException;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
+import com.cuymonitor.backend.domain.exception.GuineaPigNotFoundException;
 import com.cuymonitor.backend.domain.model.Alert;
 import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.model.Cage;
 import com.cuymonitor.backend.domain.model.CageHealthSummary;
+import com.cuymonitor.backend.domain.model.CageWeight;
 import com.cuymonitor.backend.domain.model.GuineaPig;
+import com.cuymonitor.backend.domain.model.GuineaPigHistory;
 import com.cuymonitor.backend.domain.model.GuineaPigPhoto;
 import com.cuymonitor.backend.domain.model.GuineaPigProfile;
+import com.cuymonitor.backend.domain.model.TimeRange;
 import com.cuymonitor.backend.domain.port.out.AlertRepository;
 import com.cuymonitor.backend.domain.port.out.CageRepository;
+import com.cuymonitor.backend.domain.port.out.GuineaPigRepository;
 
 import java.util.List;
 import java.util.Objects;
@@ -39,11 +44,14 @@ public class CageAccessProxy implements CageOperations {
     private final CageOperations realSubject;
     private final CageRepository cages;
     private final AlertRepository alerts;
+    private final GuineaPigRepository guineaPigs;
 
-    public CageAccessProxy(CageOperations realSubject, CageRepository cages, AlertRepository alerts) {
+    public CageAccessProxy(CageOperations realSubject, CageRepository cages, AlertRepository alerts,
+                           GuineaPigRepository guineaPigs) {
         this.realSubject = Objects.requireNonNull(realSubject, "realSubject");
         this.cages = Objects.requireNonNull(cages, "cages");
         this.alerts = Objects.requireNonNull(alerts, "alerts");
+        this.guineaPigs = Objects.requireNonNull(guineaPigs, "guineaPigs");
     }
 
     // ---- no check needed: these only ever touch the requester's own cages
@@ -107,6 +115,20 @@ public class CageAccessProxy implements CageOperations {
     public void deleteGuineaPig(UUID requesterId, String cageCode, long guineaPigId) {
         checkOwner(requesterId, cageCode);
         realSubject.deleteGuineaPig(requesterId, cageCode, guineaPigId);
+    }
+
+    @Override
+    public GuineaPigHistory getGuineaPigHistory(UUID requesterId, long guineaPigId, TimeRange range) {
+        // the guinea pig knows its cage; the owner of that cage is the only one who can see its history
+        GuineaPig pig = guineaPigs.findById(guineaPigId).orElseThrow(GuineaPigNotFoundException::new);
+        checkOwner(requesterId, pig.getCageCode());
+        return realSubject.getGuineaPigHistory(requesterId, guineaPigId, range);
+    }
+
+    @Override
+    public CageWeight getCageWeight(UUID requesterId, String cageCode, TimeRange range) {
+        checkOwner(requesterId, cageCode);
+        return realSubject.getCageWeight(requesterId, cageCode, range);
     }
 
     @Override
