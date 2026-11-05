@@ -221,6 +221,14 @@ NORMAL ─anomaly─► OBSERVED ─anomaly, ≥ observedToAlert─► ALERT ─
 
 N, M and both times live in `application.yml` (`app.health`) and reach the domain through `DomainConfig`; they are tuned with real data.
 
+### 3.7.1 The normal profile of each guinea pig (Task 11)
+
+Each guinea pig is compared with **its own** `BaselineProfile` (seconds still, feeder visits, distance to the group), not with one rule for all.
+
+- **Learning (11.1):** after the chain runs, `BaselineLearner` learns the window only if it looked normal **and** the guinea pig is still `NORMAL`, so a sick animal never teaches the profile that being sick is normal. The profile itself knows how to learn (`BaselineProfile.learnFrom`, Information Expert): plain average for the first `baseline-warmup-samples` windows, then a moving average with that weight, so one odd minute can't rewrite it. `sample_count` (DB V13) says how many windows it comes from.
+- **Using it (11.2):** `BehaviorThresholdHandler` trusts a learned profile from `baseline-min-samples` windows on; before that, the guinea pig is compared with the default profile.
+- **Thresholds (11.4):** `AnomalyThresholds` (classifier probability, still factor, group distance factor) is a value object built from `app.health` by `HealthProperties` and given to the three behavior handlers and the learner, so they all agree on what "anomalous" means.
+
 ### 3.8 Design rules
 
 - Observer is implemented **by hand** (`AlertObserver` port + list in `AlertPublisher`), not with Spring's `ApplicationEventPublisher`, so the pattern is explicit. The order of the subscribers is written out in `config/NotificationConfig` (database first, so the alert has its id; then WebSocket; then the log), not left to `@Order`.

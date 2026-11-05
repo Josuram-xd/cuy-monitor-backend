@@ -172,6 +172,11 @@ class HandlerChainBuilderTest {
             lookups.incrementAndGet();
             return Optional.of(BaselineProfile.defaultFor(guineaPigId));
         }
+
+        @Override
+        public BaselineProfile save(BaselineProfile profile) {
+            throw new UnsupportedOperationException("the chain only reads baselines");
+        }
     }
 
     private static final class RecordingEventRepository implements EventRepository {

@@ -17,6 +17,7 @@ import com.cuymonitor.backend.domain.health.chain.SustainedAnomalyHandler;
 import com.cuymonitor.backend.domain.health.chain.SustainedRecoveryHandler;
 import com.cuymonitor.backend.domain.health.chain.ValidationHandler;
 import com.cuymonitor.backend.domain.health.state.EscalationPolicy;
+import com.cuymonitor.backend.domain.model.AnomalyThresholds;
 import com.cuymonitor.backend.domain.model.BehaviorSignal;
 import com.cuymonitor.backend.domain.model.GuineaPig;
 import com.cuymonitor.backend.domain.model.HealthEvent;
@@ -62,7 +63,9 @@ class HealthRulesTest {
                 new InMemoryWeightReadingRepository());
         service = new EventProcessingService(recorder, chain, guineaPigs, new InMemoryStateTransitionRepository(),
                 new AlertPublisher(List.of(new DatabaseAlertObserver(alerts))), clock, 0.8,
-                new EscalationPolicy(Duration.ofMinutes(30), Duration.ofMinutes(60)));
+                new EscalationPolicy(Duration.ofMinutes(30), Duration.ofMinutes(60)),
+                // learning is covered in BaselineLearnerTest; a separate store keeps these rules fixed
+                new BaselineLearner(new InMemoryBaselineProfileRepository(), AnomalyThresholds.defaults(), 60));
         canela = guineaPigs.save(GuineaPig.register("cage-1", "RED", Photos.png(), START.minus(Duration.ofDays(3))))
                 .getId();
     }

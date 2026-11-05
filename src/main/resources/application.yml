@@ -73,3 +73,9 @@ app:
     observed-to-alert: 30m
     alert-to-critical: 60m
     recovery-windows: 5
+    # Task 11: what counts as anomalous, and how each guinea pig's normal profile is learned
+    classifier-threshold: 0.7
+    still-factor: 1.5
+    group-distance-factor: 2.0
+    baseline-min-samples: 30
+    baseline-warmup-samples: 60

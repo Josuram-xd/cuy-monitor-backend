@@ -157,10 +157,13 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 
 ### Task 11 — Perfil normal y umbrales
 
-- [ ] **Task 11.1** — `feat(domain): compute BaselineProfile per guinea pig`
-- [ ] **Task 11.2** — `feat(chain): compare windows against the baseline in BehaviorThresholdHandler`
-- [ ] **Task 11.3** — `feat(chain): require N consecutive anomalous windows in SustainedAnomalyHandler`
-- [ ] **Task 11.4** — `feat(config): make thresholds and N configurable in application.yml`
+- [x] **Task 11.1** — `feat(domain): compute BaselineProfile per guinea pig`
+  `BaselineLearner` aprende solo de ventanas normales de un cuy en `NORMAL`: promedio simple durante el calentamiento (60 ventanas) y luego promedio móvil. Se guarda en `baseline_profile` con `sample_count` (DB V13).
+- [x] **Task 11.2** — `feat(chain): compare windows against the baseline in BehaviorThresholdHandler`
+  El perfil aprendido se usa desde 30 ventanas; antes se compara contra el perfil por defecto.
+- [x] **Task 11.3** — `feat(chain): require N consecutive anomalous windows in SustainedAnomalyHandler`
+  Ya estaba desde la Task 6; ahora usa los mismos umbrales configurables.
+- [x] **Task 11.4** — `feat(config): make thresholds and N configurable in application.yml`
   Los valores entran al dominio desde `DomainConfig` (el dominio no lee `application.yml` directamente).
 
 ### Task 12 — Audio y peso en el Composite

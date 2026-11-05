@@ -16,6 +16,7 @@ import com.cuymonitor.backend.domain.health.chain.SustainedAnomalyHandler;
 import com.cuymonitor.backend.domain.health.chain.SustainedRecoveryHandler;
 import com.cuymonitor.backend.domain.health.state.EscalationPolicy;
 import com.cuymonitor.backend.domain.health.chain.ValidationHandler;
+import com.cuymonitor.backend.domain.model.AnomalyThresholds;
 import com.cuymonitor.backend.domain.model.Alert;
 import com.cuymonitor.backend.domain.model.AudioLabel;
 import com.cuymonitor.backend.domain.model.AudioSignal;
@@ -54,6 +55,7 @@ class EventProcessingServiceTest {
     private final List<StateTransition> transitions = new ArrayList<>();
     // what the dashboard would receive: the observer after the database one
     private final List<Alert> pushed = new ArrayList<>();
+    private final InMemoryBaselineProfileRepository learned = new InMemoryBaselineProfileRepository();
     private EventProcessingService service;
     private GuineaPig canela;
     private int minute;
@@ -87,8 +89,19 @@ class EventProcessingServiceTest {
         var publisher = new AlertPublisher(List.of(new DatabaseAlertObserver(alerts), pushed::add));
         // no waiting between levels here: this test is about the flow; the times are in HealthRulesTest
         service = new EventProcessingService(recorder, chain, guineaPigs, recordTransitions, publisher, clock, 0.8,
-                EscalationPolicy.immediate());
+                EscalationPolicy.immediate(),
+                // its own store, so what it learns here doesn't move the thresholds of these tests
+                new BaselineLearner(learned, AnomalyThresholds.defaults(), 60));
         canela = guineaPigs.save(GuineaPig.register(CAGE, "RED", Photos.png(), NOW.minus(Duration.ofDays(3))));
+    }
+
+    @Test
+    void onlyTheNormalWindowsOfAHealthyGuineaPigAreLearned() {
+        service.process(window(0.1));
+        service.process(window(0.9));
+        service.process(window(0.1));
+
+        assertThat(learned.findByGuineaPigId(canela.getId()).orElseThrow().sampleCount()).isEqualTo(2);
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.domain.health.chain;
 
+import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryBaselineProfileRepository;
 import com.cuymonitor.backend.domain.model.AudioLabel;
 import com.cuymonitor.backend.domain.model.AudioSignal;
 import com.cuymonitor.backend.domain.model.BaselineProfile;
@@ -128,7 +129,7 @@ class EventHandlerTest {
     @Test
     void thresholdHandlerUsesDefaultBaselineAndMarksAnomalousBehavior() {
         var guineaPig = guineaPig();
-        BaselineProfileRepository profiles = _ -> Optional.empty();
+        BaselineProfileRepository profiles = new InMemoryBaselineProfileRepository();
         var handler = new BehaviorThresholdHandler(profiles);
         var context = new EventHandlerContext(
                 behaviorEvent(UUID.randomUUID(), NOW, 0.8, 0.9)
