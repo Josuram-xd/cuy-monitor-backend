@@ -1,6 +1,8 @@
 package com.cuymonitor.backend.adapter.out.notification;
 
 import com.cuymonitor.backend.domain.model.Alert;
+import com.cuymonitor.backend.domain.model.AlertHistoryPage;
+import com.cuymonitor.backend.domain.model.AlertHistoryQuery;
 import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.HealthStatus;
@@ -62,6 +64,11 @@ class DatabaseAlertObserverTest {
         @Override
         public List<Alert> findByStatus(AlertStatus status) {
             return List.of();
+        }
+
+        @Override
+        public AlertHistoryPage findHistory(AlertHistoryQuery query) {
+            return AlertHistoryPage.empty(query.paging(), query.range());
         }
     }
 }

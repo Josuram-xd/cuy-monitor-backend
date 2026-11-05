@@ -1,6 +1,8 @@
 package com.cuymonitor.backend.adapter.out.persistence.memory;
 
 import com.cuymonitor.backend.domain.model.Alert;
+import com.cuymonitor.backend.domain.model.AlertHistoryPage;
+import com.cuymonitor.backend.domain.model.AlertHistoryQuery;
 import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.port.out.AlertRepository;
 import org.springframework.context.annotation.Profile;
@@ -45,6 +47,16 @@ public class InMemoryAlertRepository implements AlertRepository {
     @Override
     public List<Alert> findByStatus(AlertStatus status) {
         return findAll().stream().filter(a -> a.getStatus() == status).toList();
+    }
+
+    @Override
+    public AlertHistoryPage findHistory(AlertHistoryQuery query) {
+        List<Alert> matching = findAll().stream().filter(query::matches).toList();
+        List<Alert> page = matching.stream()
+                .skip(query.paging().offset())
+                .limit(query.paging().size())
+                .toList();
+        return new AlertHistoryPage(page, query.paging(), matching.size(), query.range());
     }
 
     private static Alert copy(Alert a) {
