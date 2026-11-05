@@ -3,6 +3,7 @@ package com.cuymonitor.backend.application;
 import com.cuymonitor.backend.domain.port.in.CreateCageUseCase;
 import com.cuymonitor.backend.domain.port.in.DeleteCageUseCase;
 import com.cuymonitor.backend.domain.port.in.DeleteGuineaPigUseCase;
+import com.cuymonitor.backend.domain.port.in.GetAlertHistoryUseCase;
 import com.cuymonitor.backend.domain.port.in.GetCageHealthUseCase;
 import com.cuymonitor.backend.domain.port.in.GetCageWeightUseCase;
 import com.cuymonitor.backend.domain.port.in.GetGuineaPigHistoryUseCase;
@@ -35,7 +36,8 @@ public record CageUseCases(
         GetGuineaPigHistoryUseCase getGuineaPigHistory,
         GetCageWeightUseCase getCageWeight,
         ListAlertsUseCase listAlerts,
-        ReviewAlertUseCase reviewAlert) {
+        ReviewAlertUseCase reviewAlert,
+        GetAlertHistoryUseCase getAlertHistory) {
 
     public CageUseCases {
         Objects.requireNonNull(listCages, "listCages");
@@ -52,5 +54,6 @@ public record CageUseCases(
         Objects.requireNonNull(getCageWeight, "getCageWeight");
         Objects.requireNonNull(listAlerts, "listAlerts");
         Objects.requireNonNull(reviewAlert, "reviewAlert");
+        Objects.requireNonNull(getAlertHistory, "getAlertHistory");
     }
 }

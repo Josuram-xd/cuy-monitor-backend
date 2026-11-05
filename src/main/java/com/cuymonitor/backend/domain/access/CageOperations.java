@@ -1,6 +1,8 @@
 package com.cuymonitor.backend.domain.access;
 
 import com.cuymonitor.backend.domain.model.Alert;
+import com.cuymonitor.backend.domain.model.AlertHistoryFilter;
+import com.cuymonitor.backend.domain.model.AlertHistoryPage;
 import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.model.Cage;
 import com.cuymonitor.backend.domain.model.CageHealthSummary;
@@ -58,4 +60,7 @@ public interface CageOperations {
     List<Alert> listAlerts(UUID requesterId, String cageCode, AlertStatus status);
 
     Alert reviewAlert(UUID requesterId, long alertId);
+
+    // the alerts of the requester's cages, filtered and one page at a time; newest first
+    AlertHistoryPage getAlertHistory(UUID requesterId, AlertHistoryFilter filter);
 }

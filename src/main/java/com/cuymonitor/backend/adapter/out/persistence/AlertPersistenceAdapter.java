@@ -6,6 +6,8 @@ import com.cuymonitor.backend.adapter.out.persistence.repository.AlertJpaReposit
 import com.cuymonitor.backend.adapter.out.persistence.repository.CageJpaRepository;
 import com.cuymonitor.backend.adapter.out.persistence.repository.GuineaPigJpaRepository;
 import com.cuymonitor.backend.domain.model.Alert;
+import com.cuymonitor.backend.domain.model.AlertHistoryPage;
+import com.cuymonitor.backend.domain.model.AlertHistoryQuery;
 import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.port.out.AlertRepository;
 import org.springframework.context.annotation.Profile;
@@ -63,5 +65,14 @@ public class AlertPersistenceAdapter implements AlertRepository {
         return alertJpaRepository.findByStatusOrderByCreatedAtDesc(status).stream()
                 .map(mapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AlertHistoryPage findHistory(AlertHistoryQuery query) {
+        var page = alertJpaRepository.findAll(AlertHistorySpecification.of(query),
+                AlertHistorySpecification.pageOf(query));
+        return new AlertHistoryPage(page.map(mapper::toDomain).getContent(), query.paging(),
+                page.getTotalElements(), query.range());
     }
 }

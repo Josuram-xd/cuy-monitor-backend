@@ -5,6 +5,8 @@ import com.cuymonitor.backend.domain.exception.CageAccessDeniedException;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
 import com.cuymonitor.backend.domain.exception.GuineaPigNotFoundException;
 import com.cuymonitor.backend.domain.model.Alert;
+import com.cuymonitor.backend.domain.model.AlertHistoryFilter;
+import com.cuymonitor.backend.domain.model.AlertHistoryPage;
 import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.model.Cage;
 import com.cuymonitor.backend.domain.model.CageHealthSummary;
@@ -152,6 +154,20 @@ public class CageAccessProxy implements CageOperations {
         Alert alert = alerts.findById(alertId).orElseThrow(AlertNotFoundException::new);
         checkOwner(requesterId, alert.getCageCode());
         return realSubject.reviewAlert(requesterId, alertId);
+    }
+
+    @Override
+    public AlertHistoryPage getAlertHistory(UUID requesterId, AlertHistoryFilter filter) {
+        // a cage or a guinea pig named in the filter has to be the requester's; the rest is limited by the real
+        // subject to the requester's own cages
+        if (filter.asksForCage()) {
+            checkOwner(requesterId, filter.cageCode());
+        }
+        if (filter.asksForGuineaPig()) {
+            GuineaPig pig = guineaPigs.findById(filter.guineaPigId()).orElseThrow(GuineaPigNotFoundException::new);
+            checkOwner(requesterId, pig.getCageCode());
+        }
+        return realSubject.getAlertHistory(requesterId, filter);
     }
 
     // the access rule itself, in one place

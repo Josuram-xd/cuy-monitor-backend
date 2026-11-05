@@ -6,6 +6,11 @@ import com.cuymonitor.backend.domain.exception.CageAccessDeniedException;
 import com.cuymonitor.backend.config.SecurityConfig;
 import com.cuymonitor.backend.domain.exception.AlertNotFoundException;
 import com.cuymonitor.backend.domain.model.Alert;
+import com.cuymonitor.backend.domain.model.AlertHistoryFilter;
+import com.cuymonitor.backend.domain.model.AlertHistoryPage;
+import com.cuymonitor.backend.domain.model.Paging;
+import com.cuymonitor.backend.domain.model.TimeRange;
+import org.mockito.ArgumentCaptor;
 import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.HealthStatus;
@@ -19,10 +24,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.any;
@@ -37,7 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = AlertController.class,
         properties = "app.auth.jwt.secret=test-secret-with-at-least-32-bytes!!")
-@Import({SecurityConfig.class, JwtConfig.class})
+@Import({SecurityConfig.class, JwtConfig.class, TestClockConfig.class})
 class AlertControllerTest {
 
     private static final Instant NOW = Instant.parse("2026-10-05T14:32:00Z");
@@ -153,5 +160,62 @@ class AlertControllerTest {
 
     private static RequestPostProcessor token() {
         return jwt().jwt(jwt -> jwt.subject(ACCOUNT.toString()));
+    }
+
+    @Test
+    void theAlertHistoryIsOnePageInTheContractShape() throws Exception {
+        var range = new TimeRange(TestClockConfig.NOW.minus(Duration.ofDays(7)), TestClockConfig.NOW);
+        var alert = Alert.restore(7L, "cage-1", 1L, HealthStatus.CRITICAL, EventType.BEHAVIOR, "Canela is still",
+                AlertStatus.REVIEWED, NOW, NOW.plusSeconds(600));
+        given(cageOperations.getAlertHistory(any(), any()))
+                .willReturn(new AlertHistoryPage(List.of(alert), new Paging(0, 1), 3, range));
+
+        mvc.perform(get("/api/v1/alerts/history").param("size", "1").with(token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].id").value(7))
+                .andExpect(jsonPath("$.items[0].level").value("CRITICAL"))
+                .andExpect(jsonPath("$.items[0].reviewedAt").value("2026-10-05T14:42:00Z"))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(1))
+                .andExpect(jsonPath("$.totalItems").value(3))
+                .andExpect(jsonPath("$.totalPages").value(3))
+                .andExpect(jsonPath("$.hasNext").value(true))
+                .andExpect(jsonPath("$.from").value("2026-10-28T12:00:00Z"))
+                .andExpect(jsonPath("$.to").value("2026-11-04T12:00:00Z"));
+    }
+
+    @Test
+    void theAlertHistoryFiltersReachTheProxyAsTheyCame() throws Exception {
+        var range = TimeRange.of(null, null, TestClockConfig.NOW);
+        given(cageOperations.getAlertHistory(any(), any())).willReturn(AlertHistoryPage.empty(Paging.of(2, 10), range));
+
+        mvc.perform(get("/api/v1/alerts/history").with(token())
+                        .param("cageId", "cage-1").param("guineaPigId", "4").param("level", "ALERT")
+                        .param("type", "BEHAVIOR").param("status", "OPEN")
+                        .param("from", "2026-11-01T00:00:00Z").param("to", "2026-11-03T00:00:00Z")
+                        .param("page", "2").param("size", "10"))
+                .andExpect(status().isOk());
+
+        var filter = ArgumentCaptor.forClass(AlertHistoryFilter.class);
+        verify(cageOperations).getAlertHistory(org.mockito.ArgumentMatchers.eq(ACCOUNT), filter.capture());
+        assertThat(filter.getValue()).isEqualTo(new AlertHistoryFilter("cage-1", 4L, HealthStatus.ALERT,
+                EventType.BEHAVIOR, AlertStatus.OPEN,
+                new TimeRange(Instant.parse("2026-11-01T00:00:00Z"), Instant.parse("2026-11-03T00:00:00Z")),
+                new Paging(2, 10)));
+    }
+
+    @Test
+    void aBadAlertHistoryRequestIsA400AndNeverReachesTheProxy() throws Exception {
+        mvc.perform(get("/api/v1/alerts/history").param("size", "500").with(token()))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/alerts/history").param("page", "-1").with(token()))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/alerts/history").param("level", "NORMAL").with(token()))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/alerts/history").param("level", "SICK").with(token()))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/alerts/history").param("from", "2026-01-01T00:00:00Z").with(token()))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(cageOperations);
     }
 }

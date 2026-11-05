@@ -176,12 +176,14 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 
 ### Task 13 — API de historial y alertas
 
-- [ ] **Task 13.1** — `feat(web): add guinea pig history endpoint by date range`
-  `GetGuineaPigHistoryUseCase` → `GET /api/v1/guinea-pigs/{id}/history`.
-- [ ] **Task 13.2** — `feat(web): add cage weight history endpoint by date range`
-  `GetWeightHistoryUseCase` → `GET /api/v1/cages/{id}/weight`.
-- [ ] **Task 13.3** — `feat(web): add endpoint to mark an alert as reviewed`
+- [x] **Task 13.1** — `feat(web): add guinea pig history endpoint by date range`
+  `GetGuineaPigHistoryUseCase` → `GET /api/v1/guinea-pigs/{id}/history` (hecho en la Task 8).
+- [x] **Task 13.2** — `feat(web): add cage weight history endpoint by date range`
+  `GetCageWeightUseCase` → `GET /api/v1/cages/{id}/weight` (hecho en la Task 8).
+- [x] **Task 13.3** — `feat(web): add endpoint to mark an alert as reviewed`
   `ReviewAlertUseCase` → `PATCH /api/v1/alerts/{id}`.
+- [x] **Task 13.4** — `feat(web): add alert history endpoint with filters and pages`
+  `GetAlertHistoryUseCase` → `GET /api/v1/alerts/history` (contrato 3.9). Filtra y pagina en la base (`cuy-monitor-db` V14).
 
 🔓 **Desbloquea:** `cuy-monitor-dashboard` Task 8, 9 y 10
 

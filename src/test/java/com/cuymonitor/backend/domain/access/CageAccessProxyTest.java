@@ -9,6 +9,9 @@ import com.cuymonitor.backend.domain.exception.AlertNotFoundException;
 import com.cuymonitor.backend.domain.exception.CageAccessDeniedException;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
 import com.cuymonitor.backend.domain.model.Alert;
+import com.cuymonitor.backend.domain.model.AlertHistoryFilter;
+import com.cuymonitor.backend.domain.model.AlertHistoryPage;
+import com.cuymonitor.backend.domain.model.Paging;
 import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.model.Cage;
 import com.cuymonitor.backend.domain.model.CageHealthSummary;
@@ -179,6 +182,31 @@ class CageAccessProxyTest {
         assertThatThrownBy(() -> proxy.reviewAlert(ANA, 999L)).isInstanceOf(AlertNotFoundException.class);
     }
 
+    private static AlertHistoryFilter historyOf(String cageCode, Long guineaPigId) {
+        return new AlertHistoryFilter(cageCode, guineaPigId, null, null, null, DAY, Paging.of(null, null));
+    }
+
+    @Test
+    void theAlertHistoryOfOwnCagesGoesThrough() {
+        proxy.getAlertHistory(ANA, historyOf(null, null));
+        proxy.getAlertHistory(ANA, historyOf("cage-ana", null));
+        proxy.getAlertHistory(LUIS, historyOf(null, pigOfLuis));
+
+        assertThat(realSubject.calls).containsExactly(
+                "getAlertHistory null null", "getAlertHistory cage-ana null", "getAlertHistory null " + pigOfLuis);
+    }
+
+    @Test
+    void theAlertHistoryOfAnotherAccountsCageOrGuineaPigIsRefused() {
+        assertThatThrownBy(() -> proxy.getAlertHistory(ANA, historyOf("cage-luis", null)))
+                .isInstanceOf(CageAccessDeniedException.class);
+        assertThatThrownBy(() -> proxy.getAlertHistory(ANA, historyOf(null, pigOfLuis)))
+                .isInstanceOf(CageAccessDeniedException.class);
+        assertThatThrownBy(() -> proxy.getAlertHistory(ANA, historyOf(null, 999L)))
+                .isInstanceOf(GuineaPigNotFoundException.class);
+        assertThat(realSubject.calls).isEmpty();
+    }
+
     private static Alert alert(long id, String cageCode) {
         return Alert.restore(id, cageCode, null, HealthStatus.ALERT, EventType.AUDIO, "x", AlertStatus.OPEN, NOW, null);
     }
@@ -271,6 +299,12 @@ class CageAccessProxyTest {
         public Alert reviewAlert(UUID requesterId, long alertId) {
             calls.add("reviewAlert " + alertId);
             return null;
+        }
+
+        @Override
+        public AlertHistoryPage getAlertHistory(UUID requesterId, AlertHistoryFilter filter) {
+            calls.add("getAlertHistory " + filter.cageCode() + " " + filter.guineaPigId());
+            return AlertHistoryPage.empty(filter.paging(), filter.range());
         }
     }
 }

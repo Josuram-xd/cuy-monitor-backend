@@ -1,6 +1,8 @@
 package com.cuymonitor.backend.application;
 
 import com.cuymonitor.backend.domain.access.CageOperations;
+import com.cuymonitor.backend.domain.model.AlertHistoryPage;
+import com.cuymonitor.backend.domain.model.AlertHistoryFilter;
 import com.cuymonitor.backend.domain.model.Alert;
 import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.model.Cage;
@@ -16,6 +18,8 @@ import com.cuymonitor.backend.domain.port.in.ListAlertsUseCase;
 import com.cuymonitor.backend.domain.port.in.RegisterGuineaPigCommand;
 import com.cuymonitor.backend.domain.port.in.UpdateCageCommand;
 
+import java.util.stream.Collectors;
+import java.util.Set;
 import java.util.List;
 import java.util.UUID;
 
@@ -104,5 +108,13 @@ public class CageOperationsService implements CageOperations {
     @Override
     public Alert reviewAlert(UUID requesterId, long alertId) {
         return useCases.reviewAlert().markReviewed(alertId);
+    }
+
+    @Override
+    public AlertHistoryPage getAlertHistory(UUID requesterId, AlertHistoryFilter filter) {
+        Set<String> readable = filter.asksForCage()
+                ? Set.of(filter.cageCode())
+                : listCages(requesterId).stream().map(Cage::code).collect(Collectors.toSet());
+        return useCases.getAlertHistory().history(filter.within(readable));
     }
 }
