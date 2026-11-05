@@ -243,6 +243,41 @@ Same defaults and rules for `from`/`to` as 3.4. `403` if it is another account's
 
 Ordered by `measuredAt`, oldest first. Includes unstable readings; the client filters by `stable` if it needs to.
 
+### 3.9 `GET /api/v1/alerts/history?cageId=&guineaPigId=&level=&type=&status=&from=&to=&page=&size=`
+
+The alert history of the account's cages, one page at a time, **newest first** (then by `id`). Every parameter is optional:
+
+| Parameter | Notes |
+|---|---|
+| `cageId` | One cage. Without it, every cage of the account. `403` if it is another account's cage. |
+| `guineaPigId` | One guinea pig. `403` if its cage is another account's · `404` unknown guinea pig. |
+| `level` | `ALERT` or `CRITICAL` (`400` for any other value). |
+| `type` | `BEHAVIOR`, `AUDIO` or `WEIGHT`. |
+| `status` | `OPEN` or `REVIEWED`. |
+| `from`, `to` | ISO-8601. Same rules as 3.4, but the default is the **last 7 days**. Max 31 days. |
+| `page`, `size` | `page` from 0 (default 0); `size` 1 to 100 (default 20). `400` outside. |
+
+```json
+{
+  "items": [
+    {
+      "id": 7, "cageId": "cage-1", "guineaPigId": 1, "level": "CRITICAL", "type": "BEHAVIOR",
+      "message": "Canela has been still for much longer than usual", "status": "REVIEWED",
+      "createdAt": "2026-10-05T14:20:00Z", "reviewedAt": "2026-10-05T14:45:00Z"
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "totalItems": 41,
+  "totalPages": 3,
+  "hasNext": true,
+  "from": "2026-09-28T14:32:00Z",
+  "to": "2026-10-05T14:32:00Z"
+}
+```
+
+`items` have the shape of 3.5. A page past the last one is `200` with no items. Filtering and paging happen in the database (indexes `ix_alert_cage_created` and `ix_alert_guinea_pig_created`, `cuy-monitor-db` V14).
+
 ---
 
 ### 3.8 `GET /api/v1/catalog`

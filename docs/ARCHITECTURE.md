@@ -146,6 +146,11 @@ CageAccessProxy ──── holds a reference to ───► CageOperationsSer
   `java.security.Principal`); the proxy compares it with `cage.ownerId`.
 - Listing every alert is filtered on the way back (only alerts of the requester's cages); reviewing an alert checks the
   owner of the alert's cage.
+- The alert history (`getAlertHistory`): the proxy checks the owner of the cage or of the guinea pig named in the
+  `AlertHistoryFilter` and forwards it unchanged; the real subject limits it to the requester's cages with
+  `filter.within(cages)` (Creator), and `AlertHistoryService` (its own use case, apart from `AlertService`) asks
+  `AlertRepository.findHistory`. The JPA adapter turns the `AlertHistoryQuery` into a `Specification` and a page
+  (`AlertHistorySpecification`, Pure Fabrication), so filtering and paging happen in the database, not in memory.
 - `config/CageAccessConfig` creates the real subject with `new` and returns only the proxy as the `CageOperations`
   bean, so no controller can get the real subject and skip the check.
 - The STOMP `SUBSCRIBE` to `/topic/cages/{cageId}` asks the same proxy (`getCage`), so nobody can listen to someone
@@ -467,10 +472,11 @@ so the breeder can add a color with an `INSERT`.
 | `GET /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | ✅ |
 | `POST /api/v1/cages/{id}/guinea-pigs` | JWT | dashboard | ✅ |
 | `DELETE /api/v1/cages/{id}/guinea-pigs/{guineaPigId}` | JWT | dashboard | ✅ |
-| `GET /api/v1/guinea-pigs/{id}/history?from=&to=` | JWT | dashboard | planned |
-| `GET /api/v1/alerts?status=OPEN` | JWT | dashboard | planned |
-| `PATCH /api/v1/alerts/{id}` | JWT | dashboard | planned |
-| `GET /api/v1/cages/{id}/weight?from=&to=` | JWT | dashboard | planned |
+| `GET /api/v1/guinea-pigs/{id}/history?from=&to=` | JWT | dashboard | ✅ |
+| `GET /api/v1/alerts?status=OPEN` | JWT | dashboard | ✅ |
+| `PATCH /api/v1/alerts/{id}` | JWT | dashboard | ✅ |
+| `GET /api/v1/alerts/history?cageId=&guineaPigId=&level=&type=&status=&from=&to=&page=&size=` | JWT | dashboard | ✅ |
+| `GET /api/v1/cages/{id}/weight?from=&to=` | JWT | dashboard | ✅ |
 | `WS /ws` → STOMP `/topic/cages/{id}` | JWT on `CONNECT` | dashboard | planned |
 
 Conventions: paths in `kebab-case` and plural, JSON in `camelCase`, timestamps in ISO-8601 UTC. Errors as `{ "error": "<code>", "message": "..." }`.
