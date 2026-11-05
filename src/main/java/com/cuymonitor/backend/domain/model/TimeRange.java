@@ -27,8 +27,13 @@ public record TimeRange(Instant from, Instant to) {
 
     /** Fills what was not given: to defaults to now, from to 24 hours before to. */
     public static TimeRange of(Instant from, Instant to, Instant now) {
+        return of(from, to, now, DEFAULT_LENGTH);
+    }
+
+    // the same, for a list that looks further back by default (the alert history: a week)
+    public static TimeRange of(Instant from, Instant to, Instant now, Duration defaultLength) {
         Instant end = to == null ? now : to;
-        Instant start = from == null ? end.minus(DEFAULT_LENGTH) : from;
+        Instant start = from == null ? end.minus(defaultLength) : from;
         return new TimeRange(start, end);
     }
 }
