@@ -4,6 +4,7 @@ import com.cuymonitor.backend.domain.port.out.BaselineProfileRepository;
 import com.cuymonitor.backend.domain.port.out.StateTransitionRepository;
 import com.cuymonitor.backend.application.CageWeightService;
 import com.cuymonitor.backend.application.GuineaPigHistoryService;
+import com.cuymonitor.backend.application.AlertHistoryService;
 import com.cuymonitor.backend.application.AlertService;
 import com.cuymonitor.backend.application.CageHealthService;
 import com.cuymonitor.backend.application.CageService;
@@ -52,6 +53,11 @@ public class DashboardConfig {
     @Bean
     public AlertService alertService(AlertRepository alerts, Clock clock) {
         return new AlertService(alerts, clock);
+    }
+
+    @Bean
+    public AlertHistoryService alertHistoryService(AlertRepository alerts) {
+        return new AlertHistoryService(alerts);
     }
 
     @Bean

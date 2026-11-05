@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.config;
 
+import com.cuymonitor.backend.application.AlertHistoryService;
 import com.cuymonitor.backend.application.AlertService;
 import com.cuymonitor.backend.application.CageHealthService;
 import com.cuymonitor.backend.application.CageOperationsService;
@@ -26,6 +27,7 @@ public class CageAccessConfig {
     @Bean
     public CageOperations cageOperations(CageService cageService, CageHealthService cageHealthService,
                                          GuineaPigService guineaPigService, AlertService alertService,
+                                         AlertHistoryService alertHistoryService,
                                          GuineaPigHistoryService historyService, CageWeightService weightService,
                                          CageRepository cages, AlertRepository alerts,
                                          GuineaPigRepository guineaPigs) {
@@ -43,7 +45,8 @@ public class CageAccessConfig {
                 historyService,     // behavior history
                 weightService,      // weight readings
                 alertService,       // list alerts
-                alertService);      // review an alert
+                alertService,       // review an alert
+                alertHistoryService); // alert history
         CageOperations realSubject = new CageOperationsService(useCases);
         return new CageAccessProxy(realSubject, cages, alerts, guineaPigs);
     }
