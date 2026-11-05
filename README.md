@@ -7,13 +7,15 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18_(RDS)-4169E1?logo=postgresql)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker)
 ![AWS](https://img.shields.io/badge/AWS-EC2_+_RDS-FF9900?logo=amazonaws)
-![Status](https://img.shields.io/badge/status-in_development-yellow)
+![Status](https://img.shields.io/badge/status-pilot-blue)
 
 ---
 
 ## Table of contents
 
 - [Overview](#overview)
+- [Screenshots](#screenshots)
+- [Documentation](#documentation)
 - [System architecture](#system-architecture)
 - [Design patterns](#design-patterns)
 - [Users and authentication](#users-and-authentication)
@@ -47,6 +49,33 @@ This repository is the **heart of the system**. It:
 - Holds the deployment infrastructure (`infra/`) and the cross-repo contracts (`docs/contracts/`).
 
 The **database schema** is not in this repo: it lives in [`cuy-monitor-db`](https://github.com/Josuram-xd/cuy-monitor-db) (Flyway migrations). This backend only validates it.
+
+## Screenshots
+
+What the breeder sees in the dashboard ([`cuy-monitor-dashboard`](https://github.com/Josuram-xd/cuy-monitor-dashboard)), fed by this API.
+
+| Cage view: the Composite's traffic light, guinea pigs and open alerts |
+|---|
+| ![Cage view](docs/screenshots/desktop-cage.png) |
+
+| History of one guinea pig: states (State) and behavior against its learned baseline | Cage weight, stable readings only |
+|---|---|
+| ![Guinea pig history](docs/screenshots/desktop-history.png) | ![Cage weight](docs/screenshots/desktop-weight.png) |
+
+| Login with email code | Alert history (`GET /api/v1/alerts/history`) | Dark mode |
+|---|---|---|
+| ![Login](docs/screenshots/mobile-login.png) | ![Alert history](docs/screenshots/mobile-alerts.png) | ![Dark mode](docs/screenshots/mobile-dark-cage.png) |
+
+## Documentation
+
+| Document | What is in it |
+|---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Hexagon, ports, where each pattern lives, data model, deployment |
+| [docs/diagrams/](docs/diagrams/README.md) | Hexagon diagram, a UML class diagram per pattern and one event end to end (Mermaid) |
+| [docs/adr/](docs/adr/README.md) | Architecture decision records 001–007 (008–011 in ARCHITECTURE section 10) |
+| [docs/contracts/](docs/contracts/) | Event envelope, REST API and auth API: the source of truth for every repo |
+| [docs/FIELD_TEST.md](docs/FIELD_TEST.md) | How the farm test tunes the thresholds and records false positives and negatives |
+| [docs/PRD.md](docs/PRD.md) | What the product does and for whom |
 
 ## System architecture
 
@@ -340,6 +369,22 @@ curl http://localhost:8080/actuator/health
 # {"status":"UP"}
 ```
 
+### 5. Try it end to end
+
+The dev seed of `cuy-monitor-db` creates the account `dev` / `dev-password` (already active), the cage `cage-1`
+with one guinea pig per mark colour and 30 days of alerts. Send the windows of a guinea pig that stops moving, as
+the AI service would:
+
+```bash
+cd ../cuy-monitor-ai-service
+python -m dev.inject_test_data --api-key dev-key --cage-id cage-1 \
+  behavior --scenario lethargic --colors RED,BLUE --windows 12 --interval 5 --backend-url http://localhost:8080
+```
+
+RED goes `NORMAL → OBSERVED` after 3 windows; to see it reach `ALERT` and `CRITICAL` without waiting 30 minutes,
+start the backend with `--app.health.observed-to-alert=5s --app.health.alert-to-critical=5s`. The alerts show up
+in `GET /api/v1/alerts/history` and in the dashboard (`npm run dev` in `cuy-monitor-dashboard`).
+
 ## Configuration
 
 The application reads its configuration from environment variables (with local defaults in `application.yml`).
@@ -390,23 +435,19 @@ Everything runs on AWS: one EC2 instance with Docker Compose and an Amazon RDS f
 Only Caddy exposes ports (80/443). All services use `restart: unless-stopped`, and image versions are always pinned.
 
 ```bash
-# on the EC2, with the repos cloned side by side in ~/cuy
-cd ~/cuy/cuy-monitor-backend/infra
-cp .env.example .env            # fill in secrets
-docker compose up -d --build --remove-orphans
-docker compose logs migrate     # migrations applied on RDS
-docker compose ps
+# on the EC2, with the repos cloned side by side in the home folder
+cp ~/cuy-monitor-backend/infra/.env.example ~/cuy-monitor-backend/infra/.env   # fill in secrets once
+~/cuy-monitor-backend/infra/deploy.sh                       # pulls the 4 repos from main, builds, starts, waits for health
+BACKEND_REF=feature/x AI_REF=feature/y ~/cuy-monitor-backend/infra/deploy.sh   # try other branches
 ```
 
-Update to a new version:
+`deploy.sh` runs `migrate` first (the migrations of `cuy-monitor-db` on RDS) and only then the backend.
+Without SSH, the same command runs from the AWS console or CLI with **Systems Manager → Run Command**
+(`AWS-RunShellScript`) on the instance.
 
-```bash
-git -C ~/cuy/cuy-monitor-db pull && git pull
-cd infra
-docker compose up -d --build
-```
-
-> Until Task 22 is done, production still uses the `postgres:18` container defined in `infra/docker-compose.yml`.
+**Saving credits.** When the project is not being shown, stop the EC2 (`aws ec2 stop-instances`) and the RDS
+(`aws rds stop-db-instance`; AWS starts it again by itself after 7 days). Their disks and data are kept and the
+Elastic IP stays, so the domain still points to the server when it starts again.
 
 ## Testing
 
@@ -421,8 +462,12 @@ docker compose up -d --build
 | Use case services | `src/test/.../application` (in-memory fakes) |
 | Factory + adapters | `src/test/.../adapter/in/ingestion` |
 | Controllers and protected routes | `src/test/.../adapter/in/web` (`@WebMvcTest` + Spring Security test) |
-| Hexagonal dependency rules | `src/test/.../architecture` (ArchUnit) |
-| Persistence + end to end | `src/test/.../integration` (Testcontainers + `../cuy-monitor-db/migrations` — Docker required) |
+| Hexagonal dependency rules and "patterns by hand" | `src/test/.../architecture` (ArchUnit: the domain knows no framework, controllers only call input ports, no Spring events / `@PreAuthorize` / `@Order`, no cycles between layers) |
+| Persistence against the real schema | `src/test/.../adapter/out/persistence` (`@DataJpaTest` on the local Postgres) |
+| End to end | `src/test/.../integration` (Testcontainers: a throwaway Postgres 18 with the migrations of `../cuy-monitor-db`; event over HTTP → chain → state → alert → alert history) |
+
+The integration tests are skipped, not failed, without Docker or without `cuy-monitor-db` next to this repo
+(`CUY_MONITOR_DB_MIGRATIONS` points somewhere else). CI checks out both repos and runs everything.
 
 ## Contributing
 
