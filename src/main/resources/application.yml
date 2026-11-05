@@ -69,3 +69,7 @@ app:
     min-detection-confidence: 0.5
     consecutive-anomaly-windows: 3
     distress-probability: 0.8
+    # Task 10: an anomaly has to last this long at a level to go up; recovering takes several normal windows
+    observed-to-alert: 30m
+    alert-to-critical: 60m
+    recovery-windows: 5

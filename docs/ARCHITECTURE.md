@@ -203,18 +203,23 @@ These rules are checked by an ArchUnit test (`src/test/java/.../architecture/Hex
 | `IdentificationHandler` | Map `(cageId, mark color code)` to a registered `GuineaPig` | `GuineaPigRepository` |
 | `BehaviorThresholdHandler` | Compare the window against the guinea pig's `BaselineProfile` | `BaselineProfileRepository` |
 | `SustainedAnomalyHandler` | Only pass anomalies seen in N consecutive windows | `EventRepository` |
+| `SustainedRecoveryHandler` | Only confirm a recovery after M normal windows in a row (Task 10.2) | `EventRepository` |
 
 Audio and weight events skip `IdentificationHandler` (they are cage-level, `guineaPigId = null`).
 
 ### 3.7 State transitions
 
 ```
-NORMAL ──anomaly confirmed──► OBSERVED ──persists──► ALERT ──persists/worsens──► CRITICAL
-   ▲                             │                     │                            │
-   └──────── recovered ──────────┴──── recovered ──────┴──────── recovered ─────────┘
+NORMAL ─anomaly─► OBSERVED ─anomaly, ≥ observedToAlert─► ALERT ─anomaly, ≥ alertToCritical─► CRITICAL
+   ▲                 │                                     │                                    │
+   └── recovered ────┴────────────── recovered ────────────┴──────────────── recovered ─────────┘
 ```
 
-Every transition is stored through `StateTransitionRepository` and, if it goes up to `ALERT` or `CRITICAL`, it produces an `Alert` through `AlertPublisher`. Exact thresholds and N are tuned in phase 2 with real data.
+- **Up (Task 10.1):** the first confirmed anomaly (N windows in a row) moves NORMAL to OBSERVED. After that a level only goes up when the anomaly is still confirmed after a minimum time at that level (`EscalationPolicy`: 30 min in OBSERVED, 60 min in ALERT). Each state decides with the time spent at its level; the context counts it from `statusSince`.
+- **Down (Task 10.2):** any level goes back to NORMAL, but only after M normal windows in a row (5), so one good minute does not hide a sick animal. An anomalous window in the middle starts the count again.
+- **Stored (Task 10.3):** every transition is stored through `StateTransitionRepository` and, if it goes up to `ALERT` or `CRITICAL`, it produces an `Alert` through `AlertPublisher`.
+
+N, M and both times live in `application.yml` (`app.health`) and reach the domain through `DomainConfig`; they are tuned with real data.
 
 ### 3.8 Design rules
 

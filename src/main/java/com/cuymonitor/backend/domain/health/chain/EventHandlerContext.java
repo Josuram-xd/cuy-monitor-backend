@@ -14,6 +14,7 @@ public final class EventHandlerContext {
     private BaselineProfile baselineProfile;
     private String rejectionReason;
     private String anomalyReason;
+    private boolean recoveryConfirmed;
 
     public EventHandlerContext(HealthEvent event) {
         this.event = Objects.requireNonNull(event, "event");
@@ -61,5 +62,14 @@ public final class EventHandlerContext {
 
     public void clearAnomaly() {
         anomalyReason = null;
+    }
+
+    /** True when the last windows were all normal: the guinea pig may go back to NORMAL (Task 10.2). */
+    public boolean recoveryConfirmed() {
+        return recoveryConfirmed;
+    }
+
+    public void confirmRecovery() {
+        recoveryConfirmed = true;
     }
 }
