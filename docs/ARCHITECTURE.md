@@ -580,6 +580,8 @@ Local development: `docker compose -f ../cuy-monitor-db/docker-compose.yml up -d
 
 ## 10. Architecture decisions
 
+ADR-001 to ADR-007 have their own files in [docs/adr/](adr/README.md); diagrams of the hexagon and of every pattern in [docs/diagrams/](diagrams/README.md).
+
 | ADR | Decision |
 |---|---|
 | ADR-001 | Multi-repo (now 5 repos); contracts live in this repo |
@@ -596,41 +598,13 @@ Local development: `docker compose -f ../cuy-monitor-db/docker-compose.yml up -d
 
 ### ADR-003: Direct HTTP ingestion
 
-**Status:** Accepted
+Moved to [docs/adr/ADR-003-direct-http-ingestion.md](adr/ADR-003-direct-http-ingestion.md).
 
-**Context:** One pilot cage produces ~8 behavior events per minute, a few audio events and one weight reading every 10 s. The EC2 has 2 GB of RAM.
-
-| | Direct HTTP (chosen) | Message queue in the middle |
-|---|---|---|
-| Complexity | Low: one endpoint | Extra service, configuration, consumers |
-| Memory | 0 extra | Hundreds of MB |
-| If the backend is down | The producer retries | The queue buffers events |
-| Enough for 1–few cages | Yes | Yes (overkill) |
-
-**Consequences:**
-- Producers retry with backoff on network errors / 5xx and keep a small bounded buffer.
-- `eventId` is the idempotency key, so retries don't create duplicates.
-- The ai-service calls the backend inside the Docker network; the laptop (serial bridge) calls it over HTTPS through Caddy with the API key. The database and the backend port are never exposed.
-- If the system grows to many cages, a queue (e.g. Amazon SQS) can be put in front of the backend with the same envelope, without touching the health core.
 
 ### ADR-007: Pragmatic hexagonal architecture inside the backend
 
-**Status:** Accepted (2026-09-27)
+Moved to [docs/adr/ADR-007-pragmatic-hexagonal.md](adr/ADR-007-pragmatic-hexagonal.md).
 
-**Context:** The backend hosts the six design patterns of the course. The health rules (Chain, State, Composite) must be easy to test and to explain, and the work splits naturally into data input vs. health core. Almost no code existed yet, so changing the structure was cheap.
-
-| | Layered (previous) | Strict hexagonal | Pragmatic hexagonal (chosen) |
-|---|---|---|---|
-| Core testable without Spring/DB | Partly | Yes | Yes |
-| Boilerplate | Low | High (commands, manual wiring, no framework anywhere near the core) | Medium (ports + JPA mappers) |
-| Fit with the course patterns | Neutral | Good | Good: Adapter = input adapter, Observer = output port + adapters |
-| Work split | By layer | By port | By port: input side / core |
-
-**Consequences:**
-- `domain` is pure Java; an ArchUnit test fails the build if it imports Spring, JPA or an adapter.
-- ~15 extra interfaces (ports) and one mapper per table.
-- Controllers depend on use case interfaces, so they can be tested with fakes.
-- Replacing a technology (e.g. Postgres, WebSocket, adding a push-notification observer) means writing a new adapter, not touching the core.
 
 ### ADR-008: Database schema in its own repo
 
