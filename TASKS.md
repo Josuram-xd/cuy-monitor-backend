@@ -135,7 +135,7 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 - [x] **Task 8.6** — `feat(web): add guinea pig history and cage weight endpoints`
   `GET /api/v1/guinea-pigs/{id}/history` y `GET /api/v1/cages/{id}/weight` (contrato 3.4 y 3.7); los necesita el dashboard para sus gráficas (Tasks 9 y 10 del dashboard).
 - [ ] **Task 8.5** — *(sin commit)* desplegar y probar cada endpoint en Postman
-  Colección en `docs/postman/` (32 peticiones, 48 aserciones) y `run-local.sh`: todo en verde contra el backend local con el seed de desarrollo. Falta correrla contra el desplegado.
+  Colección en `docs/postman/` (32 peticiones, 48 aserciones) y `run-local.sh`: todo en verde contra el backend local con el seed de desarrollo. Importada en el workspace de Postman del equipo con los entornos local y producción. En producción pasa la parte pública (health y `401` sin sesión); falta la carpeta 2 con una cuenta real (el código llega por correo).
 
 🔓 **Desbloquea:** `cuy-monitor-dashboard` Task 5
 
@@ -222,7 +222,8 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 ### Task 17 — Limpieza e infraestructura
 
 - [x] **Task 17.1** — `refactor(web): remove SystemController smoke endpoint`
-- [ ] **Task 17.2** — *(sin commit)* medir RAM con el ai-service y decidir si subir la EC2 a c7i-flex.large
+- [x] **Task 17.2** — *(sin commit)* medir RAM con el ai-service y decidir si subir la EC2 a c7i-flex.large
+  Medido el 2026-11-06 en la `t3.small` con todo arriba (ai-service con Bedrock): 1.1 GB usados de 1.9 GB, 838 MB disponibles, 41 MB de swap; backend 440 MB, ai-service 138 MB, Caddy + dashboard 48 MB. **Se queda en `t3.small`**: los modelos ONNX suman unos 100–150 MB al ai-service; volver a medir con `dev/benchmark.py` cuando estén entrenados.
 - [x] **Task 17.3** — `ci: add GitHub Actions build and test on pull requests` *(opcional)*
   Hace checkout también de `cuy-monitor-db` al lado, para que los tests de integración encuentren las migraciones.
 
@@ -419,7 +420,8 @@ Rama: `chore/task-22-rds`.
   ⏸️ Pendiente: `cuy-monitor-db` aún no tiene migraciones ni Dockerfile. Mientras tanto Flyway corre dentro del backend y crea el esquema en la RDS.
   `build: ../../cuy-monitor-db`, mismas variables `DB_*`; el backend con `depends_on: migrate: condition: service_completed_successfully`.
 - [x] **Task 22.5** — `chore(infra): update env example for RDS, JWT and SMTP`
-- [ ] **Task 22.6** — *(sin commit)* clonar `cuy-monitor-db` al lado del backend en la EC2, `docker compose up -d --build --remove-orphans`, revisar `docker compose logs migrate` y `/actuator/health`
+- [x] **Task 22.6** — *(sin commit)* clonar `cuy-monitor-db` al lado del backend en la EC2, `docker compose up -d --build --remove-orphans`, revisar `docker compose logs migrate` y `/actuator/health`
+  Desplegado el 2026-11-06 con `infra/deploy.sh` por SSM: `migrate` aplicó V13 y V14 en la RDS (de 12 a 14); `/actuator/health` y `/ai/health` en `UP`, dashboard en `/`.
   La RDS empieza vacía (solo había datos de prueba); los usuarios de prueba se registran de nuevo.
 - [ ] **Task 22.7** — *(sin commit)* configurar AWS Budgets (50 % y 80 %) y anotar cómo detener la RDS cuando no se use
 
