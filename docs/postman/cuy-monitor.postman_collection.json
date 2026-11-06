@@ -1,0 +1,852 @@
+{
+  "info": {
+    "name": "Cuy Monitor — backend",
+    "description": "Every endpoint of docs/contracts (Task 8.5). Run folder 1, read the code (email, or the backend log with the dev profile), put it in otpCode and run folder 2. See docs/postman/README.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1 Pedir código",
+      "item": [
+        {
+          "name": "Health (público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/health"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"answers 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"is UP\", () => pm.expect(pm.response.json().status).to.eql(\"UP\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sin sesión no hay jaulas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/cages"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"answers 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"error unauthorized\", () => pm.expect(pm.response.json().error).to.eql(\"unauthorized\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (manda el código)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"answers 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"has a challenge\", () => pm.expect(b.challengeId).to.be.a(\"string\"));",
+                  "pm.environment.set(\"challengeId\", b.challengeId);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2 Sesión y API",
+      "item": [
+        {
+          "name": "Sesión y cuenta",
+          "item": [
+            {
+              "name": "Verificar código (cookies)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/otp/verify",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"challengeId\": \"{{challengeId}}\",\n  \"code\": \"{{otpCode}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 204\", () => pm.response.to.have.status(204));",
+                      "pm.test(\"sets the access cookie\", () => pm.expect(pm.cookies.has(\"access_token\")).to.be.true);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Perfil",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/v1/account/profile"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"is the account of the session\", () => pm.expect(pm.response.json().username).to.eql(pm.environment.get(\"username\")));",
+                      "pm.environment.set(\"fullName\", pm.response.json().fullName);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Cambiar nombre",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/account/profile",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"fullName\": \"{{fullName}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Catálogo",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/v1/catalog"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"has mark colors\", () => pm.expect(pm.response.json().markColors).to.be.an(\"array\").that.is.not.empty);"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Jaulas y cuyes",
+          "item": [
+            {
+              "name": "Mis jaulas",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/v1/cages"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"is a list\", () => pm.expect(pm.response.json()).to.be.an(\"array\"));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Crear jaula",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/cages",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Jaula Postman\",\n  \"location\": \"Prueba\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 201\", () => pm.response.to.have.status(201));",
+                      "const c = pm.response.json();",
+                      "pm.test(\"gets a code\", () => pm.expect(c.cageId).to.match(/^cage-[0-9a-f]{8}$/));",
+                      "pm.environment.set(\"newCageId\", c.cageId);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Ver jaula",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/v1/cages/{{newCageId}}"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Renombrar jaula",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/cages/{{newCageId}}",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Jaula Postman 2\",\n  \"location\": \"\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"blank location is removed\", () => pm.expect(pm.response.json().location).to.be.null);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Salud de la jaula",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/v1/cages/{{newCageId}}/health"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"has a status\", () => pm.expect(pm.response.json().status).to.be.a(\"string\"));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Registrar cuy",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/cages/{{newCageId}}/guinea-pigs",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"photo\": \"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==\",\n  \"photoContentType\": \"image/png\",\n  \"markColor\": \"RED\",\n  \"initialWeightGrams\": 850,\n  \"notes\": \"Postman\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 201\", () => pm.response.to.have.status(201));",
+                      "const g = pm.response.json();",
+                      "pm.environment.set(\"guineaPigId\", g.id);",
+                      "pm.test(\"starts NORMAL\", () => pm.expect(g.status).to.eql(\"NORMAL\"));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Mismo color otra vez",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/cages/{{newCageId}}/guinea-pigs",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"photo\": \"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==\",\n  \"photoContentType\": \"image/png\",\n  \"markColor\": \"RED\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"color already used: 409\", () => pm.response.to.have.status(409));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Cuyes de la jaula",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/v1/cages/{{newCageId}}/guinea-pigs"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"one guinea pig\", () => pm.expect(pm.response.json()).to.have.lengthOf(1));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Foto del cuy",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/v1/cages/{{newCageId}}/guinea-pigs/{{guineaPigId}}/photo"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"is the PNG\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"image/png\"));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Historial del cuy",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/v1/guinea-pigs/{{guineaPigId}}/history"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Peso de la jaula",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/v1/cages/{{newCageId}}/weight"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Ingesta (X-API-Key)",
+          "item": [
+            {
+              "name": "Lectura de peso",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-API-Key",
+                    "value": "{{apiKey}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/ingestion/events",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"eventId\": \"{{$guid}}\",\n  \"type\": \"WEIGHT\",\n  \"cageId\": \"{{newCageId}}\",\n  \"timestamp\": \"{{now}}\",\n  \"source\": \"postman\",\n  \"schemaVersion\": 1,\n  \"payload\": {\n    \"grams\": 1840.5,\n    \"stable\": true\n  }\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set(\"now\", new Date().toISOString().replace(/\\.\\d{3}Z$/, \"Z\"));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 202\", () => pm.response.to.have.status(202));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Ventana de comportamiento",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-API-Key",
+                    "value": "{{apiKey}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/ingestion/events",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"eventId\": \"{{$guid}}\",\n  \"type\": \"BEHAVIOR\",\n  \"cageId\": \"{{newCageId}}\",\n  \"timestamp\": \"{{now}}\",\n  \"source\": \"postman\",\n  \"schemaVersion\": 1,\n  \"payload\": {\n    \"color\": \"RED\",\n    \"windowSeconds\": 60,\n    \"stillSeconds\": 20,\n    \"feederVisits\": 2,\n    \"watererVisits\": 1,\n    \"avgGroupDistance\": 0.3,\n    \"probAnomaly\": 0.1,\n    \"detectionConfidence\": 0.92\n  }\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set(\"now\", new Date().toISOString().replace(/\\.\\d{3}Z$/, \"Z\"));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 202\", () => pm.response.to.have.status(202));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Chillido de angustia",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-API-Key",
+                    "value": "{{apiKey}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/ingestion/events",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"eventId\": \"{{$guid}}\",\n  \"type\": \"AUDIO\",\n  \"cageId\": \"{{newCageId}}\",\n  \"timestamp\": \"{{now}}\",\n  \"source\": \"postman\",\n  \"schemaVersion\": 1,\n  \"payload\": {\n    \"label\": \"DISTRESS\",\n    \"probability\": 0.95,\n    \"durationMs\": 960\n  }\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set(\"now\", new Date().toISOString().replace(/\\.\\d{3}Z$/, \"Z\"));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 202\", () => pm.response.to.have.status(202));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Llave equivocada",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-API-Key",
+                    "value": "wrong"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/ingestion/events",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"eventId\": \"{{$guid}}\",\n  \"type\": \"WEIGHT\",\n  \"cageId\": \"{{newCageId}}\",\n  \"timestamp\": \"{{now}}\",\n  \"source\": \"postman\",\n  \"schemaVersion\": 1,\n  \"payload\": {\n    \"grams\": 1,\n    \"stable\": true\n  }\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set(\"now\", new Date().toISOString().replace(/\\.\\d{3}Z$/, \"Z\"));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 401\", () => pm.response.to.have.status(401));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Alertas",
+          "item": [
+            {
+              "name": "Alertas abiertas de la jaula",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/v1/alerts?status=OPEN&cageId={{newCageId}}"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 200\", () => pm.response.to.have.status(200));",
+                      "const audio = pm.response.json().find(a => a.type === \"AUDIO\");",
+                      "pm.test(\"the distress clip opened an alert\", () => pm.expect(audio).to.exist);",
+                      "if (audio) pm.environment.set(\"alertId\", audio.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Marcar revisada",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/alerts/{{alertId}}",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"REVIEWED\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"is reviewed\", () => pm.expect(pm.response.json().status).to.eql(\"REVIEWED\"));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Historial de alertas",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/v1/alerts/history?cageId={{newCageId}}&page=0&size=20"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"has the reviewed alert\", () => pm.expect(pm.response.json().items.length).to.be.at.least(1));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Asistente",
+          "item": [
+            {
+              "name": "Pregunta a Cuchi",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/assistant/messages",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"language\": \"es\",\n  \"messages\": [\n    {\n      \"role\": \"USER\",\n      \"text\": \"¿Qué significa En observación?\"\n    }\n  ]\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers, or says it is off (503)\", () => pm.expect(pm.response.code).to.be.oneOf([200, 503]));",
+                      "if (pm.response.code === 200) pm.test(\"has a reply\", () => pm.expect(pm.response.json().reply).to.be.a(\"string\"));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Limpieza y cierre de sesión",
+          "item": [
+            {
+              "name": "Borrar cuy",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{baseUrl}}/api/v1/cages/{{newCageId}}/guinea-pigs/{{guineaPigId}}"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 204\", () => pm.response.to.have.status(204));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Borrarlo otra vez",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{baseUrl}}/api/v1/cages/{{newCageId}}/guinea-pigs/{{guineaPigId}}"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 404\", () => pm.response.to.have.status(404));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Borrar jaula",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{baseUrl}}/api/v1/cages/{{newCageId}}"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 204\", () => pm.response.to.have.status(204));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Renovar sesión",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrl}}/api/v1/auth/refresh"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 204\", () => pm.response.to.have.status(204));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Cerrar sesión",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrl}}/api/v1/auth/logout"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 204\", () => pm.response.to.have.status(204));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Ya sin sesión",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/v1/cages"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"answers 401\", () => pm.response.to.have.status(401));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
