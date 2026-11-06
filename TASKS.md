@@ -135,7 +135,7 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 - [x] **Task 8.6** — `feat(web): add guinea pig history and cage weight endpoints`
   `GET /api/v1/guinea-pigs/{id}/history` y `GET /api/v1/cages/{id}/weight` (contrato 3.4 y 3.7); los necesita el dashboard para sus gráficas (Tasks 9 y 10 del dashboard).
 - [ ] **Task 8.5** — *(sin commit)* desplegar y probar cada endpoint en Postman
-  Colección en `docs/postman/` (32 peticiones, 48 aserciones) y `run-local.sh`: todo en verde contra el backend local con el seed de desarrollo. Falta correrla contra el desplegado (la EC2 está detenida).
+  Colección en `docs/postman/` (32 peticiones, 48 aserciones) y `run-local.sh`: todo en verde contra el backend local con el seed de desarrollo. Falta correrla contra el desplegado.
 
 🔓 **Desbloquea:** `cuy-monitor-dashboard` Task 5
 
