@@ -1,5 +1,9 @@
 package com.cuymonitor.backend.adapter.out.persistence;
 
+import com.cuymonitor.backend.integration.TestPostgres;
+import org.junit.jupiter.api.condition.EnabledIf;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import com.cuymonitor.backend.adapter.out.persistence.mapper.RefreshTokenPersistenceMapper;
 import com.cuymonitor.backend.domain.model.auth.RefreshToken;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,13 +21,20 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Runs against the real Postgres with the cuy-monitor-db schema (same as contextLoads), so Hibernate
+ * Runs against a throwaway Postgres (Testcontainers) with the cuy-monitor-db schema, so Hibernate
  * validates the entities against V5 and V6. Each test rolls back, nothing is left in the database.
  */
 @DataJpaTest(properties = "app.auth.jwt.secret=test-secret-with-at-least-32-bytes!!")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@EnabledIf("com.cuymonitor.backend.integration.TestPostgres#canRun")
 @Import({RevokedTokenPersistenceAdapter.class, RefreshTokenPersistenceAdapter.class, RefreshTokenPersistenceMapper.class})
 class TokenPersistenceAdaptersTest {
+
+    // Task 4.8: a throwaway Postgres with the cuy-monitor-db migrations, not a database on localhost
+    @DynamicPropertySource
+    static void database(DynamicPropertyRegistry registry) {
+        TestPostgres.register(registry);
+    }
 
     private static final Instant NOW = Instant.now().truncatedTo(ChronoUnit.SECONDS);
 

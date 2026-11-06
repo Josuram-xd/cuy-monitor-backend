@@ -1,5 +1,9 @@
 package com.cuymonitor.backend.adapter.out.persistence;
 
+import com.cuymonitor.backend.integration.TestPostgres;
+import org.junit.jupiter.api.condition.EnabledIf;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import com.cuymonitor.backend.adapter.out.persistence.mapper.AlertPersistenceMapper;
 import com.cuymonitor.backend.domain.model.Alert;
 import com.cuymonitor.backend.domain.model.AlertHistoryQuery;
@@ -27,8 +31,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 // Against the real Postgres: the JPA Specification filters and pages in the database. Each test rolls back.
 @DataJpaTest(properties = "app.auth.jwt.secret=test-secret-with-at-least-32-bytes!!")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@EnabledIf("com.cuymonitor.backend.integration.TestPostgres#canRun")
 @Import({AlertPersistenceAdapter.class, AlertPersistenceMapper.class})
 class AlertHistoryPersistenceTest {
+
+    // Task 4.8: a throwaway Postgres with the cuy-monitor-db migrations, not a database on localhost
+    @DynamicPropertySource
+    static void database(DynamicPropertyRegistry registry) {
+        TestPostgres.register(registry);
+    }
 
     private static final Instant NOW = Instant.now().truncatedTo(ChronoUnit.SECONDS);
     private static final TimeRange WEEK = new TimeRange(NOW.minus(Duration.ofDays(7)), NOW);
