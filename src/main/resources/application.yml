@@ -79,3 +79,15 @@ app:
     group-distance-factor: 2.0
     baseline-min-samples: 30
     baseline-warmup-samples: 60
+  # the help assistant of the dashboard (AssistantProperties). On the EC2 the Bedrock credentials come from the
+  # instance role; ASSISTANT_ENABLED=false turns it off (the chat then says it is not available)
+  assistant:
+    enabled: ${ASSISTANT_ENABLED:true}
+    region: ${ASSISTANT_REGION:us-east-1}
+    # Amazon Nova needs no extra form; Claude models work after Anthropic's use-case form
+    model-id: ${ASSISTANT_MODEL_ID:us.amazon.nova-2-lite-v1:0}
+    max-tokens: 400
+    timeout: 20s
+    # every question is a paid call: at most 20 per account every 10 minutes
+    max-questions: 20
+    question-window: 10m
