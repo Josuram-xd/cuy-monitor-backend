@@ -74,7 +74,7 @@
 - [x] **Task 4.6** — `feat(persistence): add JPA entities, Spring Data repositories and mappers`
   `adapter/out/persistence/{entity,repository,mapper}/`.
 - [x] **Task 4.7** — `feat(persistence): add persistence adapters implementing the repository ports`
-- [ ] **Task 4.8** — `test(persistence): cover adapters and mappers with Testcontainers`
+- [x] **Task 4.8** — `test(persistence): cover adapters and mappers with Testcontainers`
 
 ### Task 5 — Factory Method + Adapter (entrada)
 
@@ -170,9 +170,9 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 
 🔗 **Depende de:** `cuy-monitor-ai-service` Task 11 (audio real) y `cuy-monitor-arduino` Task 5 (peso real) para probar con datos reales
 
-- [ ] **Task 12.1** — `feat(composite): evaluate cage audio health from DISTRESS events`
-- [ ] **Task 12.2** — `feat(composite): evaluate cage weight trend from stable readings`
-- [ ] **Task 12.3** — `feat(application): store WEIGHT events through WeightReadingRepository`
+- [x] **Task 12.1** — `feat(composite): evaluate cage audio health from DISTRESS events`
+- [x] **Task 12.2** — `feat(composite): evaluate cage weight trend from stable readings`
+- [x] **Task 12.3** — `feat(application): store WEIGHT events through WeightReadingRepository`
 
 ### Task 13 — API de historial y alertas
 
@@ -219,7 +219,7 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 
 ### Task 17 — Limpieza e infraestructura
 
-- [ ] **Task 17.1** — `refactor(web): remove SystemController smoke endpoint`
+- [x] **Task 17.1** — `refactor(web): remove SystemController smoke endpoint`
 - [ ] **Task 17.2** — *(sin commit)* medir RAM con el ai-service y decidir si subir la EC2 a c7i-flex.large
 - [x] **Task 17.3** — `ci: add GitHub Actions build and test on pull requests` *(opcional)*
   Hace checkout también de `cuy-monitor-db` al lado, para que los tests de integración encuentren las migraciones.
@@ -391,15 +391,15 @@ Decisiones: ADR-008 (repo `cuy-monitor-db`), ADR-009 (Amazon RDS en vez de Supab
 Rama: `refactor/task-21-split-database`.
 🔗 **Depende de:** `cuy-monitor-db` Task 1 y Task 2 (repo creado con `V1` y `V2` copiadas tal cual)
 
-- [ ] **Task 21.1** — `refactor(db): remove Flyway migrations moved to cuy-monitor-db`
+- [x] **Task 21.1** — `refactor(db): remove Flyway migrations moved to cuy-monitor-db`
   Borrar `src/main/resources/db/migration/`. Los archivos ya viven en `cuy-monitor-db/migrations/` con el mismo nombre y contenido (mismo checksum).
-- [ ] **Task 21.2** — `chore(config): disable Flyway at runtime and keep ddl-auto validate`
+- [x] **Task 21.2** — `chore(config): disable Flyway at runtime and keep ddl-auto validate`
   `spring.flyway.enabled: false`. Flyway queda solo como dependencia de test *(propón el cambio del `pom.xml` y espera confirmación)*.
-- [ ] **Task 21.3** — `test(integration): apply migrations from ../cuy-monitor-db in Testcontainers`
+- [x] **Task 21.3** — `test(integration): apply migrations from ../cuy-monitor-db in Testcontainers`
   Perfil de test con `spring.flyway.enabled: true` y `spring.flyway.locations: filesystem:../cuy-monitor-db/migrations`.
-- [ ] **Task 21.4** — `chore(infra): remove local Postgres compose file`
+- [x] **Task 21.4** — `chore(infra): remove local Postgres compose file`
   Borrar `infra/docker-compose.dev.yml`; la base local ahora se levanta con `cuy-monitor-db/docker-compose.yml`. Actualizar comandos del README.
-- [ ] **Task 21.5** — `chore(config): add dev profile with log OTP sender and local CORS`
+- [x] **Task 21.5** — `chore(config): add dev profile with log OTP sender and local CORS`
 
 ### Task 22 — Pasar a Amazon RDS
 
@@ -413,7 +413,7 @@ Rama: `chore/task-22-rds`.
   Quitar el servicio `postgres` y el volumen `pgdata` de `infra/docker-compose.yml`. Backend con `DB_HOST` (endpoint de la RDS), `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`.
 - [x] **Task 22.3** — `chore(config): require TLS on the JDBC connection in prod`
   `?sslmode=require` en la URL del perfil `prod`.
-- [ ] **Task 22.4** — `chore(infra): add one-shot migrate service built from cuy-monitor-db`
+- [x] **Task 22.4** — `chore(infra): add one-shot migrate service built from cuy-monitor-db`
   ⏸️ Pendiente: `cuy-monitor-db` aún no tiene migraciones ni Dockerfile. Mientras tanto Flyway corre dentro del backend y crea el esquema en la RDS.
   `build: ../../cuy-monitor-db`, mismas variables `DB_*`; el backend con `depends_on: migrate: condition: service_completed_successfully`.
 - [x] **Task 22.5** — `chore(infra): update env example for RDS, JWT and SMTP`
