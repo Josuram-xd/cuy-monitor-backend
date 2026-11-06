@@ -8,6 +8,7 @@ import com.cuymonitor.backend.domain.health.state.HealthStates;
 import com.cuymonitor.backend.domain.model.Alert;
 import com.cuymonitor.backend.domain.model.AudioLabel;
 import com.cuymonitor.backend.domain.model.AudioSignal;
+import com.cuymonitor.backend.domain.model.WeightSignal;
 import com.cuymonitor.backend.domain.model.BehaviorSignal;
 import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.GuineaPig;
@@ -34,6 +35,7 @@ import java.util.Optional;
  * <pre>
  * record it once ─► Chain of Responsibility ─► State of the guinea pig ─► transition ─► AlertPublisher
  *                                                     └─► BaselineLearner (a normal window of a NORMAL guinea pig)
+ *                 └─► CageWeightEvaluator (a stable WEIGHT reading: is the cage getting lighter?)
  * </pre>
  *
  * An alert is never saved here: it is published (Observer) and the subscribers store it, send it to the
@@ -58,11 +60,12 @@ public class EventProcessingService implements ProcessEventUseCase {
     private final double distressProbability;
     private final EscalationPolicy escalation;
     private final BaselineLearner baselineLearner;
+    private final CageWeightEvaluator weightEvaluator;
 
     public EventProcessingService(RecordEventUseCase recorder, EventHandler chain, GuineaPigRepository guineaPigs,
                                   StateTransitionRepository transitions, AlertPublisher alertPublisher, Clock clock,
                                   double distressProbability, EscalationPolicy escalation,
-                                  BaselineLearner baselineLearner) {
+                                  BaselineLearner baselineLearner, CageWeightEvaluator weightEvaluator) {
         this.recorder = Objects.requireNonNull(recorder, "recorder");
         this.chain = Objects.requireNonNull(chain, "chain");
         this.guineaPigs = Objects.requireNonNull(guineaPigs, "guineaPigs");
@@ -72,6 +75,7 @@ public class EventProcessingService implements ProcessEventUseCase {
         this.distressProbability = distressProbability;
         this.escalation = Objects.requireNonNull(escalation, "escalation");
         this.baselineLearner = Objects.requireNonNull(baselineLearner, "baselineLearner");
+        this.weightEvaluator = Objects.requireNonNull(weightEvaluator, "weightEvaluator");
     }
 
     @Override
@@ -88,6 +92,13 @@ public class EventProcessingService implements ProcessEventUseCase {
         Instant now = clock.instant();
         if (event.signal() instanceof AudioSignal audio) {
             evaluateAudio(event, audio, now);
+            return;
+        }
+        // the scale is a cage-level signal too; only a stable reading says something about the trend (Task 12.2)
+        if (event.signal() instanceof WeightSignal weight) {
+            if (weight.stable()) {
+                weightEvaluator.evaluate(event.cageId(), now);
+            }
             return;
         }
         context.guineaPig().ifPresent(pig -> {

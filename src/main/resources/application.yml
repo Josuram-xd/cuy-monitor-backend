@@ -79,6 +79,12 @@ app:
     group-distance-factor: 2.0
     baseline-min-samples: 30
     baseline-warmup-samples: 60
+    # Task 12.2: the cage is getting lighter when the median of the stable readings of the last day is 10 % below
+    # the median of the 6 days before (at least 5 stable readings in each)
+    weight-drop-ratio: 0.1
+    weight-recent-window: 24h
+    weight-baseline-window: 6d
+    weight-min-readings: 5
   # the help assistant of the dashboard (AssistantProperties). On the EC2 the Bedrock credentials come from the
   # instance role; ASSISTANT_ENABLED=false turns it off (the chat then says it is not available)
   assistant:

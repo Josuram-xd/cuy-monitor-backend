@@ -2,6 +2,7 @@ package com.cuymonitor.backend.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import com.cuymonitor.backend.domain.health.weight.WeightTrendPolicy;
 import com.cuymonitor.backend.domain.model.AnomalyThresholds;
 
 import java.time.Duration;
@@ -22,14 +23,24 @@ import java.time.Duration;
  * @param groupDistanceFactor        this many times farther from the group than usual
  * @param baselineMinSamples         a learned profile is trusted over the default from this many windows on
  * @param baselineWarmupSamples      plain average up to this many windows, then a slow moving average
+ * @param weightDropRatio            the cage is getting lighter from this drop on (0.1 = 10 %), Task 12.2
+ * @param weightRecentWindow         the stable readings compared ...
+ * @param weightBaselineWindow       ... against the ones of this window just before
+ * @param weightMinReadings          stable readings needed in each window to say anything
  */
 @ConfigurationProperties(prefix = "app.health")
 public record HealthProperties(Duration maxEventAge, double minDetectionConfidence, int consecutiveAnomalyWindows,
                                double distressProbability, Duration observedToAlert, Duration alertToCritical,
                                int recoveryWindows, double classifierThreshold, double stillFactor,
-                               double groupDistanceFactor, int baselineMinSamples, int baselineWarmupSamples) {
+                               double groupDistanceFactor, int baselineMinSamples, int baselineWarmupSamples,
+                               double weightDropRatio, Duration weightRecentWindow, Duration weightBaselineWindow,
+                               int weightMinReadings) {
 
     public AnomalyThresholds anomalyThresholds() {
         return new AnomalyThresholds(classifierThreshold, stillFactor, groupDistanceFactor);
+    }
+
+    public WeightTrendPolicy weightTrendPolicy() {
+        return new WeightTrendPolicy(weightDropRatio, weightRecentWindow, weightBaselineWindow, weightMinReadings);
     }
 }
