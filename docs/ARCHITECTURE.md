@@ -175,6 +175,8 @@ The user/auth part adds **no new GoF pattern** for the course. `OtpSender` behav
 | `PasswordHasher`, `TokenIssuer` | out | `BCryptPasswordHasher`, `JwtTokenIssuer` (`adapter.out.security`) |
 | `OtpSender` | out | `EmailOtpSender`, `LogOtpSender` (`adapter.out.mail`) |
 | `AlertObserver` | out | `WebSocketAlertObserver`, `DatabaseAlertObserver`, `LogAlertObserver` |
+| `AskAssistantUseCase` | in | `AssistantService` (help assistant "Cuchi": reads the cages through the `CageOperations` proxy, never decides health) |
+| `AssistantModel` | out | `BedrockAssistantModel` (Amazon Bedrock Converse API, instance role), `DisabledAssistantModel` (`adapter.out.assistant`) |
 
 Port names describe the business need, not the technology (`GuineaPigRepository`, not `GuineaPigJpaRepository`).
 

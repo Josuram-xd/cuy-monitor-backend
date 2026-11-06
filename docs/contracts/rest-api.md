@@ -32,6 +32,8 @@ Common errors for every JWT endpoint: `401` without a token, with an invalid or 
 | `403` | `forbidden` | The cage (or the alert's cage) belongs to another account |
 | `404` | `not_found` | Cage, guinea pig or alert does not exist |
 | `409` | `conflict` | Duplicate (for example, color already used in the cage) |
+| `429` | `too_many_requests` | Too many requests of one kind (codes, assistant questions) |
+| `503` | `service_unavailable` | A dependency is down (the assistant's model) |
 
 ---
 
@@ -303,6 +305,47 @@ this repo or to the dashboard.
 Each list is already in the order it should be shown, and only holds the **active** options. A retired option
 (`active = false`) disappears from here but the guinea pigs that use it keep their code, so an old record stays
 readable. `200 OK`. Needs a session like every other endpoint of section 3.
+
+### 3.10 `POST /api/v1/assistant/messages`
+
+The help assistant ("Cuchi") of the dashboard. It answers how to use the app, general guinea pig care and what the
+state of the breeder's **own** cages means. It runs on Amazon Bedrock (Converse API); it never decides or changes
+anything, and it is not a veterinarian.
+
+The backend keeps no chat history: the dashboard sends the conversation it shows, oldest first, ending with the new
+question.
+
+```json
+{
+  "language": "es",
+  "messages": [
+    { "role": "ASSISTANT", "text": "¡Hola! Soy Cuchi. ¿En qué te ayudo?" },
+    { "role": "USER", "text": "¿Por qué Rojo está en observación?" }
+  ]
+}
+```
+
+| Field | Rule |
+|---|---|
+| `language` | `es` (default) or `en`: the language of the answer |
+| `messages` | 1 to 12 messages. The last one must be `USER` |
+| `role` | `USER` or `ASSISTANT` |
+| `text` | 1 to 1000 characters |
+
+`200 OK`:
+
+```json
+{ "reply": "Rojo está en observación desde las 11:00 porque se movió menos de lo normal. ..." }
+```
+
+| Status | `error` | When |
+|---|---|---|
+| `400` | `bad_request` | The rules of the table above are broken |
+| `429` | `too_many_requests` | More than 20 questions from the account in 10 minutes |
+| `503` | `service_unavailable` | The assistant is turned off or the model did not answer: show "try again later" |
+
+The answer only uses the cages of the account in the session (read through the cage access proxy). Needs a session
+like every other endpoint of section 3.
 
 ## 4. WebSocket (STOMP)
 
