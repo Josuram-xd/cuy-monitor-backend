@@ -1,6 +1,7 @@
 package com.cuymonitor.backend.config;
 
 import com.cuymonitor.backend.application.BaselineLearner;
+import com.cuymonitor.backend.application.CageWeightEvaluator;
 import com.cuymonitor.backend.application.EventProcessingService;
 import com.cuymonitor.backend.domain.health.chain.BehaviorThresholdHandler;
 import com.cuymonitor.backend.domain.health.chain.EventHandler;
@@ -12,10 +13,12 @@ import com.cuymonitor.backend.domain.health.state.EscalationPolicy;
 import com.cuymonitor.backend.domain.health.chain.ValidationHandler;
 import com.cuymonitor.backend.domain.notification.AlertPublisher;
 import com.cuymonitor.backend.domain.port.in.RecordEventUseCase;
+import com.cuymonitor.backend.domain.port.out.AlertRepository;
 import com.cuymonitor.backend.domain.port.out.BaselineProfileRepository;
 import com.cuymonitor.backend.domain.port.out.EventRepository;
 import com.cuymonitor.backend.domain.port.out.GuineaPigRepository;
 import com.cuymonitor.backend.domain.port.out.StateTransitionRepository;
+import com.cuymonitor.backend.domain.port.out.WeightReadingRepository;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -54,9 +57,17 @@ public class DomainConfig {
                                                          GuineaPigRepository guineaPigs,
                                                          StateTransitionRepository transitions,
                                                          AlertPublisher alertPublisher, Clock clock,
-                                                         HealthProperties health, BaselineLearner baselineLearner) {
+                                                         HealthProperties health, BaselineLearner baselineLearner,
+                                                         CageWeightEvaluator cageWeightEvaluator) {
         return new EventProcessingService(recorder, healthEventChain, guineaPigs, transitions, alertPublisher, clock,
                 health.distressProbability(), new EscalationPolicy(health.observedToAlert(), health.alertToCritical()),
-                baselineLearner);
+                baselineLearner, cageWeightEvaluator);
+    }
+
+    /** Task 12.2: opens a WEIGHT alert of the cage when its stable readings go down. */
+    @Bean
+    public CageWeightEvaluator cageWeightEvaluator(WeightReadingRepository weights, AlertRepository alerts,
+                                                   AlertPublisher alertPublisher, HealthProperties health) {
+        return new CageWeightEvaluator(weights, alerts, alertPublisher, health.weightTrendPolicy());
     }
 }

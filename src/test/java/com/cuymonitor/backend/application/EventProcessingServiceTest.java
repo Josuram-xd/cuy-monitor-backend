@@ -7,6 +7,9 @@ import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryCageReposit
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryEventRepository;
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryGuineaPigRepository;
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryWeightReadingRepository;
+import com.cuymonitor.backend.domain.health.weight.WeightTrendPolicy;
+import com.cuymonitor.backend.domain.model.WeightSignal;
+import com.cuymonitor.backend.domain.model.WeightReading;
 import com.cuymonitor.backend.application.fake.MutableClock;
 import com.cuymonitor.backend.application.fake.Photos;
 import com.cuymonitor.backend.domain.health.chain.BehaviorThresholdHandler;
@@ -46,6 +49,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class EventProcessingServiceTest {
 
+    // small windows so a test can build a trend with a handful of readings
+    private static final WeightTrendPolicy WEIGHT_TREND =
+            new WeightTrendPolicy(0.1, Duration.ofMinutes(30), Duration.ofHours(2), 3);
+
     private static final Instant NOW = Instant.parse("2026-11-04T10:00:00Z");
     private static final String CAGE = "cage-1";
 
@@ -59,6 +66,7 @@ class EventProcessingServiceTest {
     private EventProcessingService service;
     private GuineaPig canela;
     private int minute;
+    private InMemoryWeightReadingRepository weights;
 
     @BeforeEach
     void setUp() {
@@ -73,7 +81,8 @@ class EventProcessingServiceTest {
                 new BehaviorThresholdHandler(new InMemoryBaselineProfileRepository()),
                 new SustainedAnomalyHandler(events, 2),
                 new SustainedRecoveryHandler(events, 2)).build();
-        var recorder = new EventIngestionService(cages, guineaPigs, events, new InMemoryWeightReadingRepository());
+        weights = new InMemoryWeightReadingRepository();
+        var recorder = new EventIngestionService(cages, guineaPigs, events, weights);
         StateTransitionRepository recordTransitions = new StateTransitionRepository() {
             @Override
             public StateTransition save(StateTransition transition) {
@@ -91,7 +100,8 @@ class EventProcessingServiceTest {
         service = new EventProcessingService(recorder, chain, guineaPigs, recordTransitions, publisher, clock, 0.8,
                 EscalationPolicy.immediate(),
                 // its own store, so what it learns here doesn't move the thresholds of these tests
-                new BaselineLearner(learned, AnomalyThresholds.defaults(), 60));
+                new BaselineLearner(learned, AnomalyThresholds.defaults(), 60),
+                new CageWeightEvaluator(weights, alerts, publisher, WEIGHT_TREND));
         canela = guineaPigs.save(GuineaPig.register(CAGE, "RED", Photos.png(), NOW.minus(Duration.ofDays(3))));
     }
 
@@ -189,6 +199,27 @@ class EventProcessingServiceTest {
 
     private HealthStatus statusOfCanela() {
         return guineaPigs.findById(canela.getId()).orElseThrow().getStatus();
+    }
+
+    @Test
+    void aStableReadingOfALighterCageOpensOneWeightAlertOfTheCage() {
+        for (int i = 0; i < 3; i++) {
+            weights.save(new WeightReading(null, CAGE, 2000, true, NOW.minus(Duration.ofMinutes(100 - 10 * i))));
+            weights.save(new WeightReading(null, CAGE, 1700, true, NOW.minus(Duration.ofMinutes(20 - 5 * i))));
+        }
+
+        service.process(event(new WeightSignal(1690, false)));
+        assertThat(alerts.findAll()).isEmpty();
+
+        service.process(event(new WeightSignal(1690, true)));
+        service.process(event(new WeightSignal(1680, true)));
+
+        assertThat(alerts.findAll()).singleElement().satisfies(alert -> {
+            assertThat(alert.getType()).isEqualTo(EventType.WEIGHT);
+            assertThat(alert.getLevel()).isEqualTo(HealthStatus.ALERT);
+            assertThat(alert.getGuineaPigId()).isNull();
+            assertThat(alert.getMessage()).contains("15 %");
+        });
     }
 
     private HealthEvent window(double probAnomaly) {

@@ -8,6 +8,7 @@ import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryEventReposi
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryGuineaPigRepository;
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryStateTransitionRepository;
 import com.cuymonitor.backend.adapter.out.persistence.memory.InMemoryWeightReadingRepository;
+import com.cuymonitor.backend.domain.health.weight.WeightTrendPolicy;
 import com.cuymonitor.backend.application.fake.MutableClock;
 import com.cuymonitor.backend.application.fake.Photos;
 import com.cuymonitor.backend.domain.health.chain.BehaviorThresholdHandler;
@@ -59,13 +60,16 @@ class HealthRulesTest {
                 new BehaviorThresholdHandler(new InMemoryBaselineProfileRepository()),
                 new SustainedAnomalyHandler(events, 3),
                 new SustainedRecoveryHandler(events, 5)).build();
-        var recorder = new EventIngestionService(new InMemoryCageRepository(), guineaPigs, events,
-                new InMemoryWeightReadingRepository());
+        var weights = new InMemoryWeightReadingRepository();
+        var recorder = new EventIngestionService(new InMemoryCageRepository(), guineaPigs, events, weights);
+        var publisher = new AlertPublisher(List.of(new DatabaseAlertObserver(alerts)));
         service = new EventProcessingService(recorder, chain, guineaPigs, new InMemoryStateTransitionRepository(),
-                new AlertPublisher(List.of(new DatabaseAlertObserver(alerts))), clock, 0.8,
+                publisher, clock, 0.8,
                 new EscalationPolicy(Duration.ofMinutes(30), Duration.ofMinutes(60)),
                 // learning is covered in BaselineLearnerTest; a separate store keeps these rules fixed
-                new BaselineLearner(new InMemoryBaselineProfileRepository(), AnomalyThresholds.defaults(), 60));
+                new BaselineLearner(new InMemoryBaselineProfileRepository(), AnomalyThresholds.defaults(), 60),
+                new CageWeightEvaluator(weights, alerts, publisher,
+                        new WeightTrendPolicy(0.1, Duration.ofHours(24), Duration.ofDays(6), 5)));
         canela = guineaPigs.save(GuineaPig.register("cage-1", "RED", Photos.png(), START.minus(Duration.ofDays(3))))
                 .getId();
     }

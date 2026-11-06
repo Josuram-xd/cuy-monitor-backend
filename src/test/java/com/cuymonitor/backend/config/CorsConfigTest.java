@@ -1,12 +1,12 @@
 package com.cuymonitor.backend.config;
 
-import com.cuymonitor.backend.adapter.in.web.SystemController;
+import com.cuymonitor.backend.adapter.in.web.CatalogController;
+import com.cuymonitor.backend.domain.port.in.ListCatalogOptionsUseCase;
 import com.cuymonitor.backend.domain.port.out.RevokedTokenRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -15,7 +15,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = SystemController.class,
+@WebMvcTest(controllers = CatalogController.class,
         properties = "app.auth.jwt.secret=test-secret-with-at-least-32-bytes!!")
 @Import({SecurityConfig.class, JwtConfig.class, CorsConfig.class})
 @ActiveProfiles("dev")
@@ -25,13 +25,13 @@ class CorsConfigTest {
     private MockMvc mvc;
 
     @MockitoBean
-    private JdbcTemplate jdbcTemplate;
+    private ListCatalogOptionsUseCase listCatalogOptionsUseCase;
     @MockitoBean
     private RevokedTokenRepository revokedTokenRepository;
 
     @Test
     void viteDevServerPassesThePreflight() throws Exception {
-        mvc.perform(options("/api/v1/system/status")
+        mvc.perform(options("/api/v1/catalog")
                         .header("Origin", "http://localhost:5173")
                         .header("Access-Control-Request-Method", "GET")
                         .header("Access-Control-Request-Headers", "Authorization"))
@@ -43,7 +43,7 @@ class CorsConfigTest {
 
     @Test
     void otherOriginsAreRejected() throws Exception {
-        mvc.perform(options("/api/v1/system/status")
+        mvc.perform(options("/api/v1/catalog")
                         .header("Origin", "https://evil.example.com")
                         .header("Access-Control-Request-Method", "GET"))
                 .andExpect(status().isForbidden());

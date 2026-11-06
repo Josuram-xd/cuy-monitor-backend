@@ -1,10 +1,10 @@
 package com.cuymonitor.backend;
 
+import com.cuymonitor.backend.integration.PostgresIntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest(properties = "app.auth.jwt.secret=test-secret-with-at-least-32-bytes!!")
-class BackendApplicationTests {
+// the whole context against the real schema (Testcontainers): Hibernate validates every entity against it
+class BackendApplicationTests extends PostgresIntegrationTest {
 
 	@Test
 	void contextLoads() {

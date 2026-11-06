@@ -305,7 +305,7 @@ Mark colors, breeds and coat colors are **not** enums. They are rows of the `cat
 | `GET /api/v1/cages/{id}/weight?from=&to=` | JWT | dashboard | Weight history |
 | `WS /ws` → `/topic/cages/{id}` | JWT on STOMP `CONNECT` | dashboard | Live updates |
 
-Only `/actuator/health`, `/api/v1/system/status` (temporary) and `/api/v1/ingestion/events` exist today; the rest is in progress (see [`TASKS.md`](TASKS.md)).
+The full list of endpoints is in [`docs/contracts/rest-api.md`](docs/contracts/rest-api.md).
 
 ## Data model
 
@@ -351,8 +351,6 @@ Compose and the integration tests rely on `../cuy-monitor-db` (and `../cuy-monit
 ```bash
 docker compose -f ../cuy-monitor-db/docker-compose.yml up -d   # Postgres 18 on localhost:5432 + migrations + dev seeds
 ```
-
-> `infra/docker-compose.dev.yml` starts an **empty** Postgres (no tables); use it only if you apply the migrations of `cuy-monitor-db` yourself.
 
 ### 3. Run the backend
 
