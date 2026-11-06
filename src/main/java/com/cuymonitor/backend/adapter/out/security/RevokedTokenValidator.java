@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.adapter.out.security;
 
+import com.cuymonitor.backend.domain.model.auth.TokenClaims;
 import com.cuymonitor.backend.domain.port.out.RevokedTokenRepository;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
@@ -26,7 +27,7 @@ public class RevokedTokenValidator implements OAuth2TokenValidator<Jwt> {
     public OAuth2TokenValidatorResult validate(Jwt jwt) {
         try {
             UUID tokenId = UUID.fromString(jwt.getId());
-            UUID sessionId = UUID.fromString(jwt.getClaimAsString(JwtTokenIssuer.SESSION_CLAIM));
+            UUID sessionId = UUID.fromString(jwt.getClaimAsString(TokenClaims.SESSION));
             if (revokedTokens.isRevoked(tokenId) || revokedTokens.isRevoked(sessionId)) {
                 return OAuth2TokenValidatorResult.failure(REVOKED);
             }

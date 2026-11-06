@@ -5,7 +5,7 @@ import com.cuymonitor.backend.adapter.in.web.dto.GoogleLoginRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.LoginRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.RegisterRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.VerifyOtpRequest;
-import com.cuymonitor.backend.adapter.out.security.JwtTokenIssuer;
+import com.cuymonitor.backend.domain.model.auth.TokenClaims;
 import com.cuymonitor.backend.domain.model.auth.AuthSession;
 import com.cuymonitor.backend.domain.port.in.GoogleSignInUseCase;
 import com.cuymonitor.backend.domain.port.in.LoginCommand;
@@ -99,7 +99,7 @@ public class AuthController {
             @CookieValue(name = AuthCookies.REFRESH, required = false) String refreshToken) {
         Jwt jwt = readLeniently(accessToken);
         UUID tokenId = jwt == null ? null : UUID.fromString(jwt.getId());
-        UUID sessionId = jwt == null ? null : UUID.fromString(jwt.getClaimAsString(JwtTokenIssuer.SESSION_CLAIM));
+        UUID sessionId = jwt == null ? null : UUID.fromString(jwt.getClaimAsString(TokenClaims.SESSION));
         logoutUseCase.logout(
                 new LogoutCommand(tokenId, sessionId, jwt == null ? null : jwt.getExpiresAt(), refreshToken));
         return ResponseEntity.noContent().headers(cookies.clear()).build();

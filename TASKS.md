@@ -189,11 +189,14 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 
 ### Task 14 — Pruebas de arquitectura e integración
 
-- [ ] **Task 14.1** — `test(architecture): enforce hexagonal dependency rules with ArchUnit`
+- [x] **Task 14.1** — `test(architecture): enforce hexagonal dependency rules with ArchUnit`
   Agrega `com.tngtech.archunit:archunit-junit5` (scope test) y las reglas de la sección 3.4 de `ARCHITECTURE.md`. *Conviene hacerla apenas termine la Task 2.2.*
-- [ ] **Task 14.2** — `test(integration): add Testcontainers Postgres setup`
-- [ ] **Task 14.3** — `test(integration): cover event → state change → alert end to end`
-- [ ] **Task 14.4** — `test(web): cover controllers responses with WebMvcTest and fake use cases`
+- [x] **Task 14.2** — `test(integration): add Testcontainers Postgres setup`
+  Postgres 18 desechable con las migraciones de `cuy-monitor-db`; se salta (no falla) sin Docker o sin el repo.
+- [x] **Task 14.3** — `test(integration): cover event → state change → alert end to end`
+  `HealthFlowIntegrationTest`: evento por HTTP → cadena → estado → alerta → historial, y otra cuenta recibe 403.
+- [x] **Task 14.4** — `test(web): cover controllers responses with WebMvcTest and fake use cases`
+  Faltaba `IngestionControllerTest` (caso de uso falso hecho a mano); el resto de controladores ya tenía su `@WebMvcTest`.
 
 ---
 
@@ -205,12 +208,14 @@ Cada endpoint = puerto de entrada en `domain/port/in` + servicio en `application
 
 - [ ] **Task 15.1** — `chore(config): tune thresholds after the farm test`
 - [ ] **Task 15.2** — `docs: record false positives and negatives from the farm test`
+  Pendiente de la prueba en la jaula. El protocolo, las consultas SQL y la tabla para llenar están en `docs/FIELD_TEST.md`.
 
 ### Task 16 — Informe y sustentación
 
-- [ ] **Task 16.1** — `docs(diagrams): add hexagon diagram and UML class diagram per pattern`
-- [ ] **Task 16.2** — `docs(adr): add ADR files 001 to 007`
-- [ ] **Task 16.3** — `docs: update README with setup, deploy and screenshots`
+- [x] **Task 16.1** — `docs(diagrams): add hexagon diagram and UML class diagram per pattern`
+  `docs/diagrams/README.md` (Mermaid): hexágono, los 7 patrones y una secuencia de punta a punta.
+- [x] **Task 16.2** — `docs(adr): add ADR files 001 to 007`
+- [x] **Task 16.3** — `docs: update README with setup, deploy and screenshots`
 
 ### Task 17 — Limpieza e infraestructura
 
