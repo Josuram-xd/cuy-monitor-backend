@@ -8,7 +8,7 @@ them into measured values. It needs the system mounted on the cage (`cuy-monitor
 
 - [ ] Manual RDS snapshot (`cuy-monitor-db` Task 8.3, `docs/BACKUP.md` there): the test writes real data.
 - [ ] Every guinea pig of the cage registered with its mark colour; the camera sees the feeder and the waterer.
-- [ ] `/ai/health` and `/api/v1/system/status` answer; the dashboard shows the cage live.
+- [ ] `/ai/health` and `/actuator/health` answer; the dashboard shows the cage live.
 - [ ] Write down the values of `app.health` in use (they are the "before" of the table in section 4).
 
 ## 2. During the test (at least 3 days)

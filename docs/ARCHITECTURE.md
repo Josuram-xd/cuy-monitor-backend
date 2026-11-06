@@ -200,7 +200,6 @@ These rules are checked by an ArchUnit test (`src/test/java/.../architecture/Hex
 | Domain objects without annotations (chain, states, publisher) are created as beans in `config/DomainConfig` | The core stays framework-free and Spring still injects everything |
 | JPA entities are separate classes (`GuineaPigJpaEntity`) with a small mapper to the domain model | Few tables; the domain model doesn't depend on Hibernate |
 | Small command records in `domain.port.in` (`LoginCommand`, `RegisterUserCommand`, …) only where a use case needs several fields | Less boilerplate for a 2-person team |
-| `SystemController` uses `JdbcTemplate` directly | Temporary smoke-test endpoint; removed in Task 17.1 |
 
 ### 3.6 Chain handlers
 
@@ -355,7 +354,7 @@ src/main/java/com/cuymonitor/backend/
 │                                         AuthenticationService, UserAccountService
 ├── adapter/
 │   ├── in/
-│   │   ├── web/                          IngestionController ✅, SystemController ✅ (temporary),
+│   │   ├── web/                          IngestionController ✅,
 │   │   │   │                             CageController, GuineaPigController, AlertController,
 │   │   │   │                             AuthController, UserAccountController, AuthExceptionHandler
 │   │   │   └── dto/                      request/response records for the REST API
@@ -466,7 +465,6 @@ so the breeder can add a color with an `INSERT`.
 | Method and path | Auth | Client | Status |
 |---|---|---|---|
 | `GET /actuator/health` | public | Caddy, everyone | ✅ |
-| `GET /api/v1/system/status` | JWT (once security is on) | smoke test (counts cages) | ✅ (removed in Task 17.1) |
 | `POST /api/v1/ingestion/events` | `X-API-Key` | ai-service, serial_bridge | ✅ (receives and logs; pipeline pending) |
 | `/api/v1/auth/**` | public | dashboard | planned (Task 18) |
 | `/api/v1/account/**` | JWT | dashboard | planned (Task 19) |

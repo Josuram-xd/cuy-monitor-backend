@@ -140,7 +140,7 @@ Decisiones de despliegue (detalle en `ARCHITECTURE.md`, ADR-008 a ADR-011):
 - ✅ EC2 con Elastic IP, dominio `cuymonitor.duckdns.org`, HTTPS con Caddy.
 - ✅ Postgres 18 (contenedor) y backend Spring Boot 4.1 corriendo en Docker Compose.
 - ✅ Endpoint de ingesta `POST /api/v1/ingestion/events` recibiendo eventos (por ahora solo los registra).
-- ✅ Endpoints de prueba: `/actuator/health`, `/api/v1/system/status`.
+- ✅ Endpoint de prueba: `/actuator/health` (el temporal `/api/v1/system/status` se quitó en la Task 17.1).
 - ✅ Auth: modelos de dominio, puertos, migración `V2` (`app_user`, `otp_challenge`) y adaptadores JPA.
 - ⏳ Separar migraciones a `cuy-monitor-db` y pasar a RDS.
 - ⏳ Servicio de auth, controllers, seguridad, pantallas de login en el dashboard.

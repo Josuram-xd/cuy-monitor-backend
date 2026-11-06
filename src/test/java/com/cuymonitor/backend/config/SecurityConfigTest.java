@@ -3,10 +3,11 @@ package com.cuymonitor.backend.config;
 import com.cuymonitor.backend.adapter.in.ingestion.adapter.EventSourceAdapter;
 import com.cuymonitor.backend.adapter.in.ingestion.factory.AdapterFactorySelector;
 import com.cuymonitor.backend.adapter.in.web.IngestionController;
-import com.cuymonitor.backend.adapter.in.web.SystemController;
+import com.cuymonitor.backend.adapter.in.web.CatalogController;
 import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.HealthEvent;
 import com.cuymonitor.backend.domain.model.WeightSignal;
+import com.cuymonitor.backend.domain.port.in.ListCatalogOptionsUseCase;
 import com.cuymonitor.backend.domain.port.in.ProcessEventUseCase;
 import com.cuymonitor.backend.domain.port.out.RevokedTokenRepository;
 import jakarta.servlet.http.Cookie;
@@ -16,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
@@ -27,10 +27,10 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -40,7 +40,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = {SystemController.class, IngestionController.class},
+// any JWT route works as the protected one; the catalog is the simplest
+@WebMvcTest(controllers = {CatalogController.class, IngestionController.class},
         properties = {"app.auth.jwt.secret=test-secret-with-at-least-32-bytes!!", "app.api-key=test-key"})
 @Import({SecurityConfig.class, JwtConfig.class})
 class SecurityConfigTest {
@@ -57,7 +58,7 @@ class SecurityConfigTest {
     private JwtEncoder jwtEncoder;
 
     @MockitoBean
-    private JdbcTemplate jdbcTemplate;
+    private ListCatalogOptionsUseCase listCatalogOptionsUseCase;
 
     @MockitoBean
     private AdapterFactorySelector adapterFactorySelector;
@@ -81,7 +82,7 @@ class SecurityConfigTest {
 
     @Test
     void protectedRouteWithoutTokenReturns401() throws Exception {
-        mvc.perform(get("/api/v1/system/status"))
+        mvc.perform(get("/api/v1/catalog"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(header().exists("WWW-Authenticate"))
                 .andExpect(jsonPath("$.error").value("unauthorized"));
@@ -89,17 +90,17 @@ class SecurityConfigTest {
 
     @Test
     void protectedRouteWithValidTokenReturns200() throws Exception {
-        given(jdbcTemplate.queryForObject(anyString(), any(Class.class))).willReturn(1);
+        given(listCatalogOptionsUseCase.list()).willReturn(Map.of());
 
-        mvc.perform(get("/api/v1/system/status").header("Authorization", "Bearer " + token("cuy-monitor-backend")))
+        mvc.perform(get("/api/v1/catalog").header("Authorization", "Bearer " + token("cuy-monitor-backend")))
                 .andExpect(status().isOk());
     }
 
     @Test
     void theAccessCookieAuthenticatesProtectedRoutes() throws Exception {
-        given(jdbcTemplate.queryForObject(anyString(), any(Class.class))).willReturn(1);
+        given(listCatalogOptionsUseCase.list()).willReturn(Map.of());
 
-        mvc.perform(get("/api/v1/system/status").cookie(new Cookie("access_token", token("cuy-monitor-backend"))))
+        mvc.perform(get("/api/v1/catalog").cookie(new Cookie("access_token", token("cuy-monitor-backend"))))
                 .andExpect(status().isOk());
     }
 
@@ -108,7 +109,7 @@ class SecurityConfigTest {
         UUID jti = UUID.randomUUID();
         given(revokedTokenRepository.isRevoked(jti)).willReturn(true);
 
-        mvc.perform(get("/api/v1/system/status")
+        mvc.perform(get("/api/v1/catalog")
                         .cookie(new Cookie("access_token", token("cuy-monitor-backend", jti))))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("unauthorized"));
@@ -120,7 +121,7 @@ class SecurityConfigTest {
         given(revokedTokenRepository.isRevoked(sid)).willReturn(true);
 
         // a brand new token (new jti), but it belongs to the revoked session
-        mvc.perform(get("/api/v1/system/status")
+        mvc.perform(get("/api/v1/catalog")
                         .cookie(new Cookie("access_token", token("cuy-monitor-backend", UUID.randomUUID(), sid))))
                 .andExpect(status().isUnauthorized());
     }
@@ -134,19 +135,19 @@ class SecurityConfigTest {
         String noJti = jwtEncoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims))
                 .getTokenValue();
 
-        mvc.perform(get("/api/v1/system/status").cookie(new Cookie("access_token", noJti)))
+        mvc.perform(get("/api/v1/catalog").cookie(new Cookie("access_token", noJti)))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void tokenFromAnotherIssuerIsRejected() throws Exception {
-        mvc.perform(get("/api/v1/system/status").header("Authorization", "Bearer " + token("someone-else")))
+        mvc.perform(get("/api/v1/catalog").header("Authorization", "Bearer " + token("someone-else")))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void garbageTokenIsRejected() throws Exception {
-        mvc.perform(get("/api/v1/system/status").header("Authorization", "Bearer not-a-jwt"))
+        mvc.perform(get("/api/v1/catalog").header("Authorization", "Bearer not-a-jwt"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("unauthorized"));
     }
