@@ -35,7 +35,25 @@ class WebSocketAlertObserverTest {
         assertEquals("cage-1", message.cageId());
         assertEquals(createdAt, message.occurredAt());
         assertEquals(new AlertWebSocketMessage.Data(7L, "cage-1", 3L, HealthStatus.CRITICAL, EventType.BEHAVIOR,
-                "Canela is unwell", AlertStatus.OPEN, createdAt, null), message.data());
+                "Canela is unwell", AlertStatus.OPEN, createdAt, null, null, null), message.data());
+    }
+
+    @Test
+    void carriesTheAssistantsNoteOnceItIsWritten() {
+        var messagingTemplate = mock(SimpMessagingTemplate.class);
+        var observer = new WebSocketAlertObserver(messagingTemplate);
+        var createdAt = Instant.parse("2026-10-05T14:20:00Z");
+        var writtenAt = Instant.parse("2026-10-05T14:20:04Z");
+        var alert = Alert.restore(7L, "cage-1", 3L, HealthStatus.CRITICAL, EventType.BEHAVIOR,
+                "Canela is unwell", AlertStatus.OPEN, createdAt, null);
+        alert.attachAiNote("Revisa si come y si bebe agua.", writtenAt);
+
+        observer.onAlert(alert);
+
+        var messageCaptor = ArgumentCaptor.forClass(AlertWebSocketMessage.class);
+        verify(messagingTemplate).convertAndSend(eq("/topic/cages/cage-1"), messageCaptor.capture());
+        assertEquals("Revisa si come y si bebe agua.", messageCaptor.getValue().data().aiNote());
+        assertEquals(writtenAt, messageCaptor.getValue().data().aiNoteAt());
     }
 
     @Test

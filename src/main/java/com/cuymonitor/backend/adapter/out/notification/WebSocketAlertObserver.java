@@ -25,7 +25,9 @@ public final class WebSocketAlertObserver implements AlertObserver {
                 nonNullAlert.getMessage(),
                 nonNullAlert.getStatus(),
                 nonNullAlert.getCreatedAt(),
-                nonNullAlert.getReviewedAt()
+                nonNullAlert.getReviewedAt(),
+                nonNullAlert.getAiNote(),
+                nonNullAlert.getAiNoteAt()
         );
         var message = new AlertWebSocketMessage(
                 "ALERT",

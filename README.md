@@ -43,7 +43,7 @@ This repository is the **heart of the system**. It:
 - Receives normalized events (`BEHAVIOR`, `AUDIO`, `WEIGHT`) through a single endpoint: `POST /api/v1/ingestion/events`.
 - Evaluates them through a **Chain of Responsibility** and updates each guinea pig's **health state**: `NORMAL → OBSERVED → ALERT → CRITICAL` (and back).
 - Aggregates the health of the whole cage with a **Composite** tree.
-- Notifies subscribers (dashboard via WebSocket, database, application log) through an **Observer**.
+- Notifies subscribers (database, dashboard via WebSocket, the assistant's note, application log) through an **Observer**.
 - Manages **user accounts**: registration, login with password + a one-time code sent by email, and JWT-protected access to the API and WebSocket. There is a single kind of user (whoever looks at the dashboard), no roles.
 - Exposes a REST API and a WebSocket endpoint for the dashboard, plus the HTTPS ingestion endpoint used by the AI service and the weight sensor.
 - Holds the deployment infrastructure (`infra/`) and the cross-repo contracts (`docs/contracts/`).
@@ -118,7 +118,7 @@ What the breeder sees in the dashboard ([`cuy-monitor-dashboard`](https://github
 4. The **Chain of Responsibility** validates, identifies, evaluates thresholds and confirms the anomaly is sustained.
 5. The guinea pig's **State** transitions (e.g. `NORMAL → OBSERVED`).
 6. The **Composite** (`CageHealth`) recomputes the cage-level health.
-7. The **Observer** (`AlertPublisher`) notifies the WebSocket, database and log observers.
+7. The **Observer** (`AlertPublisher`) notifies the database, WebSocket, assistant-note and log observers.
 8. The logged-in dashboard receives the update in real time.
 
 ## Design patterns
@@ -139,7 +139,7 @@ These classes carry no `@Component`, no `@Autowired` and no AOP. Spring is told 
 | **Chain of Responsibility** | `domain.health.chain` | `ValidationHandler → IdentificationHandler → BehaviorThresholdHandler → SustainedAnomalyHandler` |
 | **State** | `domain.health.state` | Per-guinea-pig lifecycle: `NormalState`, `ObservedState`, `AlertState`, `CriticalState` |
 | **Composite** | `domain.health.composite` | `CageHealth` aggregates `GuineaPigHealth`, `CageAudioHealth` and `CageWeightHealth` |
-| **Observer** | `domain.notification` + `adapter.out.notification` | `AlertPublisher` fans out to `WebSocketAlertObserver`, `DatabaseAlertObserver`, `LogAlertObserver` through the `AlertObserver` port |
+| **Observer** | `domain.notification` + `adapter.out.notification` + `application` | `AlertPublisher` fans out to `DatabaseAlertObserver`, `WebSocketAlertObserver`, `AlertNoteService`, `LogAlertObserver` through the `AlertObserver` port |
 | **Proxy** (protection) | `domain.access` + `application` | `CageAccessProxy` and `CageOperationsService` implement `CageOperations`; the proxy checks that the account owns the cage before forwarding to the real service |
 
 ```
@@ -147,7 +147,18 @@ AdapterFactory ─► EventSourceAdapter ─► HealthEvent ─► EventHandler 
                                                                                                │
 AlertPublisher ◄──────────────────────── (status change / alert) ◄─────────────────────────────┘
    └─► WebSocketAlertObserver ─────────────────────────────────────────────────────► Dashboard
+   └─► AlertNoteService ─► (another thread) ─► AssistantModel ─► alert.ai_note ─► Dashboard
 ```
+
+> **The assistant reacts to the alert by itself.** It used to answer only when the breeder typed a question, so
+> the explanation of an alert was never there when it was needed. `AlertNoteService` is a fourth subscriber: it
+> asks the model what this alert means and what to check, and stores the answer in `alert.ai_note` (V15).
+>
+> Asking the model takes seconds and `publish` runs inside the ingestion request, so the call is handed to a
+> small bounded pool (`alertNoteExecutor`, 2 threads) and the note arrives a moment after the alert — the camera
+> is never kept waiting. A model that is off or throttled costs the alert nothing: it is stored, sent and shown
+> without a note. The note is written once, so the same answer is not paid for again every time the alert is
+> opened.
 
 > The Observer is implemented explicitly (port + list of observers) rather than with Spring's `ApplicationEventPublisher`, so the pattern stays visible in the code.
 >

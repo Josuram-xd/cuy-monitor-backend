@@ -8,6 +8,7 @@ import java.time.Instant;
 public record AlertWebSocketMessage(String type, String cageId, Instant occurredAt, Data data) {
 
     public record Data(Long id, String cageId, Long guineaPigId, HealthStatus level, EventType type,
-                       String message, AlertStatus status, Instant createdAt, Instant reviewedAt) {
+                       String message, AlertStatus status, Instant createdAt, Instant reviewedAt,
+                       String aiNote, Instant aiNoteAt) {
     }
 }

@@ -5,6 +5,9 @@ import java.util.Objects;
 
 public class Alert {
 
+    /** alert.ai_note is VARCHAR(2000) (V15), so a longer answer is cut instead of failing to store. */
+    public static final int MAX_AI_NOTE_LENGTH = 2000;
+
     private Long id;
     private final String cageCode;
     private final Long guineaPigId;
@@ -14,6 +17,8 @@ public class Alert {
     private AlertStatus status;
     private final Instant createdAt;
     private Instant reviewedAt;
+    private String aiNote;
+    private Instant aiNoteAt;
 
     private Alert(Long id, String cageCode, Long guineaPigId, HealthStatus level, EventType type, String message,
                   AlertStatus status, Instant createdAt, Instant reviewedAt) {
@@ -44,6 +49,31 @@ public class Alert {
     public static Alert restore(Long id, String cageCode, Long guineaPigId, HealthStatus level, EventType type,
                                 String message, AlertStatus status, Instant createdAt, Instant reviewedAt) {
         return new Alert(id, cageCode, guineaPigId, level, type, message, status, createdAt, reviewedAt);
+    }
+
+    /**
+     * What the assistant wrote about this alert on its own. Set after the alert is stored, by the background task
+     * that asks the model, and again when it is read back from the database.
+     */
+    public void attachAiNote(String note, Instant writtenAt) {
+        String trimmed = Objects.requireNonNull(note, "note").strip();
+        if (trimmed.isEmpty()) {
+            throw new IllegalArgumentException("an ai note can't be empty");
+        }
+        aiNote = trimmed.length() > MAX_AI_NOTE_LENGTH ? trimmed.substring(0, MAX_AI_NOTE_LENGTH) : trimmed;
+        aiNoteAt = Objects.requireNonNull(writtenAt, "writtenAt");
+    }
+
+    public boolean hasAiNote() {
+        return aiNote != null;
+    }
+
+    public String getAiNote() {
+        return aiNote;
+    }
+
+    public Instant getAiNoteAt() {
+        return aiNoteAt;
     }
 
     // set once by the repository when the alert is stored

@@ -211,7 +211,9 @@ every cage of the account (never another account's). Newest first. `403` if `cag
     "message": "Canela has been still for much longer than usual",
     "status": "OPEN",
     "createdAt": "2026-10-05T14:20:00Z",
-    "reviewedAt": null
+    "reviewedAt": null,
+    "aiNote": "Canela se movió mucho menos de lo normal en la última media hora. Revisa si está comiendo y bebiendo, y si se esconde o se aparta del grupo. Si sigue así mañana, llama al veterinario.",
+    "aiNoteAt": "2026-10-05T14:20:04Z"
   }
 ]
 ```
@@ -221,6 +223,8 @@ every cage of the account (never another account's). Newest first. `403` if `cag
 | `guineaPigId` | `null` for cage-level alerts (`AUDIO`, `WEIGHT`). |
 | `level` | `ALERT` or `CRITICAL`. |
 | `type` | `BEHAVIOR`, `AUDIO` or `WEIGHT`. |
+| `aiNote` | What the assistant wrote about this alert **on its own**, with no question from the breeder. `null` for a few seconds after the alert is raised, while the note is being written, and `null` for good if the model was off or throttled. The dashboard shows the alert either way, and receives the note over WebSocket when it is ready. |
+| `aiNoteAt` | When the note was written. `null` exactly when `aiNote` is. |
 
 ### 3.6 `PATCH /api/v1/alerts/{id}`
 

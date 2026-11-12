@@ -53,6 +53,12 @@ public class AlertJpaEntity {
     @Column(name = "reviewed_at")
     private Instant reviewedAt;
 
+    @Column(name = "ai_note", length = 2000)
+    private String aiNote;
+
+    @Column(name = "ai_note_at")
+    private Instant aiNoteAt;
+
     protected AlertJpaEntity() {
     }
 
@@ -67,6 +73,20 @@ public class AlertJpaEntity {
         this.status = status;
         this.createdAt = createdAt;
         this.reviewedAt = reviewedAt;
+    }
+
+    /** V15: written later than the rest of the row, by the task that asks the model. */
+    public void setAiNote(String note, Instant writtenAt) {
+        this.aiNote = note;
+        this.aiNoteAt = writtenAt;
+    }
+
+    public String getAiNote() {
+        return aiNote;
+    }
+
+    public Instant getAiNoteAt() {
+        return aiNoteAt;
     }
 
     public Long getId() {
