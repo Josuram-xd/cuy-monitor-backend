@@ -4,14 +4,12 @@ import com.cuymonitor.backend.adapter.out.persistence.mapper.OtpChallengePersist
 import com.cuymonitor.backend.adapter.out.persistence.repository.OtpChallengeJpaRepository;
 import com.cuymonitor.backend.domain.model.auth.OtpChallenge;
 import com.cuymonitor.backend.domain.port.out.OtpChallengeRepository;
-import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-@Component
 public class OtpChallengePersistenceAdapter implements OtpChallengeRepository {
 
     private final OtpChallengeJpaRepository otpChallengeJpaRepository;

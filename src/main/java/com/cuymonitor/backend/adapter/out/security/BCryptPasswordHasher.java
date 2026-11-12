@@ -2,9 +2,7 @@ package com.cuymonitor.backend.adapter.out.security;
 
 import com.cuymonitor.backend.domain.port.out.PasswordHasher;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.stereotype.Component;
 
-@Component
 public class BCryptPasswordHasher implements PasswordHasher {
 
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
