@@ -2,13 +2,11 @@ package com.cuymonitor.backend.adapter.out.code;
 
 import com.cuymonitor.backend.domain.port.out.CageCodeGenerator;
 import com.cuymonitor.backend.domain.port.out.CageRepository;
-import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
 import java.util.HexFormat;
 
 /** "cage-" + 8 hex characters: short enough to type on the camera and the scale, random so it is not guessable. */
-@Component
 public class RandomCageCodeGenerator implements CageCodeGenerator {
 
     private static final String PREFIX = "cage-";

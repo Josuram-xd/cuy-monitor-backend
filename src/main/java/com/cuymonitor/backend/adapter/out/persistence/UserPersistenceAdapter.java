@@ -4,12 +4,10 @@ import com.cuymonitor.backend.adapter.out.persistence.mapper.UserPersistenceMapp
 import com.cuymonitor.backend.adapter.out.persistence.repository.UserJpaRepository;
 import com.cuymonitor.backend.domain.model.user.User;
 import com.cuymonitor.backend.domain.port.out.UserRepository;
-import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 import java.util.UUID;
 
-@Component
 public class UserPersistenceAdapter implements UserRepository {
 
     private final UserJpaRepository userJpaRepository;

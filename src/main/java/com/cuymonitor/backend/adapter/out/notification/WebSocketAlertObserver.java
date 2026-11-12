@@ -4,9 +4,7 @@ import com.cuymonitor.backend.domain.model.Alert;
 import com.cuymonitor.backend.domain.port.out.AlertObserver;
 import java.util.Objects;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.stereotype.Component;
 
-@Component
 public final class WebSocketAlertObserver implements AlertObserver {
 
     private final SimpMessagingTemplate messagingTemplate;

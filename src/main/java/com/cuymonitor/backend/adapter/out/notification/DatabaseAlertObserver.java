@@ -4,9 +4,7 @@ import com.cuymonitor.backend.domain.model.Alert;
 import com.cuymonitor.backend.domain.port.out.AlertObserver;
 import com.cuymonitor.backend.domain.port.out.AlertRepository;
 import java.util.Objects;
-import org.springframework.stereotype.Component;
 
-@Component
 public final class DatabaseAlertObserver implements AlertObserver {
 
     private final AlertRepository alertRepository;

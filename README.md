@@ -123,7 +123,14 @@ What the breeder sees in the dashboard ([`cuy-monitor-dashboard`](https://github
 
 ## Design patterns
 
-The health evaluation logic and the access to each cage are intentionally built around seven GoF patterns, written by hand inside a hexagonal core:
+The health evaluation logic and the access to each cage are built around GoF patterns written **by hand** inside a
+hexagonal core. The table below says, for each one, whether the pattern *is* the code or whether a framework
+supplies it — the distinction that matters when the pattern is the point.
+
+### Written in plain Java (the pattern is the code)
+
+These classes carry no `@Component`, no `@Autowired` and no AOP. Spring is told about them in the composition root
+(`config/`), so taking Spring away would leave every one of them working:
 
 | Pattern | Package | Role in the system |
 |---|---|---|
@@ -152,7 +159,51 @@ AlertPublisher ◄────────────────────�
 >                                 └─ CageOperationsService            (403 if the cage is someone else's)
 > ```
 
+### Also written by hand
+
+| Pattern | Where | Note |
+|---|---|---|
+| **Builder** | `HandlerChainBuilder` | Assembles the handler chain in order; plain Java |
+| **Command** | `domain.port.in` | `LoginCommand`, `CreateCageCommand`… one immutable `record` per use case |
+| **Ports & Adapters** | `domain.port.in` (21 use cases), `domain.port.out` (12 ports) | The ports are interfaces with no framework import |
+
+### Where a framework does the work
+
+Said plainly, so nobody claims more than the code shows:
+
+| Pattern | Ours | The framework's |
+|---|---|---|
+| **Repository** | The port (`CatalogOptionRepository`, no framework import) and the adapter that implements it | `CatalogOptionJpaRepository extends JpaRepository` — Spring Data writes the query |
+| **Mapper** | Every line of the conversion, by hand (there is no MapStruct in `pom.xml`) | Only `@Component`, to inject it |
+| **Specification** | The predicates in `AlertHistorySpecification` | `org.springframework.data.jpa.domain.Specification` is Spring Data's interface. The class calls itself *Pure Fabrication* (GRASP), not a GoF Specification |
+
+Two things this project does **not** claim: **Singleton**, because Spring beans are singletons by default and that is
+the container's doing, not ours; and **Dependency Injection**, which is the framework, not a GoF pattern.
+
+### The adapters are plain Java too
+
+An output adapter used to be an adapter because of `@Component`. It no longer is: `AdapterConfig` and
+`NotificationConfig` build them with `new`, so the pattern lives in the class — a Target interface, an Adaptee it
+holds, and the translation between them.
+
+```java
+// adapter/out/persistence/UserPersistenceAdapter.java — not one framework import
+public class UserPersistenceAdapter implements UserRepository {   // Target
+    private final UserJpaRepository userJpaRepository;            // Adaptee
+    private final UserPersistenceMapper mapper;
+    ...
+}
+```
+
+`WebSocketAlertObserver` and `BCryptPasswordHasher` each keep a single import, for `SimpMessagingTemplate` and
+`BCryptPasswordEncoder`: those are their Adaptee, which is what an adapter exists to wrap.
+
+Ten persistence adapters keep `@Transactional`. That annotation is a transaction boundary, not wiring, and the
+service layer already opens the transaction (15 of 21 services declare it), so they were left alone rather than
+risk changing behaviour for the sake of appearances.
+
 Each class has one job and depends on ports, following SOLID and GRASP: see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), section 4.5.
+`HexagonalArchitectureTest` (10 tests) fails the build if the domain ever imports Spring or an adapter.
 
 ## Users and authentication
 
