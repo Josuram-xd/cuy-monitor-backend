@@ -6,6 +6,7 @@ import com.cuymonitor.backend.domain.port.out.RevokedTokenRepository;
 import com.cuymonitor.backend.domain.exception.AccountDisabledException;
 import com.cuymonitor.backend.domain.exception.InvalidCredentialsException;
 import com.cuymonitor.backend.domain.model.user.User;
+import com.cuymonitor.backend.domain.model.user.UserRole;
 import com.cuymonitor.backend.domain.model.user.UserStatus;
 import com.cuymonitor.backend.domain.port.in.ChangePasswordCommand;
 import com.cuymonitor.backend.domain.port.in.ChangePasswordUseCase;
@@ -79,7 +80,21 @@ class UserAccountControllerTest {
                 .andExpect(jsonPath("$.id").doesNotExist())
                 .andExpect(jsonPath("$.email").doesNotExist())
                 .andExpect(jsonPath("$.status").doesNotExist())
-                .andExpect(jsonPath("$.passwordHash").doesNotExist());
+                .andExpect(jsonPath("$.passwordHash").doesNotExist())
+                // the dashboard decides whether to draw the admin section from this, since it cannot read
+                // the HttpOnly session cookie
+                .andExpect(jsonPath("$.role").value("BREEDER"));
+    }
+
+    @Test
+    void theProfileSaysWhenTheAccountIsAnAdmin() throws Exception {
+        User admin = user("Juan Perez");
+        admin.changeRoleTo(UserRole.ADMIN, CREATED);
+        given(getCurrentUserUseCase.getCurrentUser(USER_ID)).willReturn(admin);
+
+        mvc.perform(get("/api/v1/account/profile").with(token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("ADMIN"));
     }
 
     @Test
