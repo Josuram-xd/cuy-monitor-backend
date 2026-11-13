@@ -15,10 +15,21 @@ The shared enum. Column `app_user.role` in `cuy-monitor-db` (migration `V16`), `
 
 A new account is always `BREEDER`. Nothing in the sign-up flow can produce an `ADMIN`.
 
+## How the dashboard knows
+
+`GET /api/v1/account/profile` now answers with the role as well:
+
+```json
+{ "username": "dev", "fullName": "Dev", "hasPassword": true, "role": "ADMIN" }
+```
+
+That is what the dashboard uses to decide whether to draw the admin section — the session cookie is HttpOnly,
+so the page cannot read the token's claim itself.
+
 ## How the permission works
 
-The session's JWT carries a `role` claim, and the dashboard reads it to decide whether to draw the admin
-section. **That claim is not the permission.** Every call below is checked by `AdminAccessProxy`, which reads
+The session's JWT also carries a `role` claim, for anything that reads the token server side. **Neither that
+claim nor the profile field is the permission.** Every call below is checked by `AdminAccessProxy`, which reads
 the account's role from the database at that moment — a token still saying `ADMIN` after the account was
 demoted buys nothing, and nobody has to wait for a token to expire.
 
