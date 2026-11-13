@@ -35,6 +35,8 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       APP_API_KEY: ${API_KEY}
+      # the "Simulación" button asks the AI service to run its demo
+      AI_SERVICE_URL: http://ai-service:8000
       APP_JWT_SECRET: ${APP_JWT_SECRET}
       # public client id of the Google OAuth web client; empty = "Continuar con Google" is off
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
