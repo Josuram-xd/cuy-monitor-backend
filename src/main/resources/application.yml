@@ -90,8 +90,8 @@ app:
   assistant:
     enabled: ${ASSISTANT_ENABLED:true}
     region: ${ASSISTANT_REGION:us-east-1}
-    # Amazon Nova needs no extra form; Claude models work after Anthropic's use-case form
-    model-id: ${ASSISTANT_MODEL_ID:us.amazon.nova-2-lite-v1:0}
+    # Claude Haiku 4.5: open access in Bedrock (no use-case form), the same model the ai-service uses
+    model-id: ${ASSISTANT_MODEL_ID:us.anthropic.claude-haiku-4-5-20251001-v1:0}
     max-tokens: 400
     timeout: 20s
     # every question is a paid call: at most 20 per account every 10 minutes
