@@ -97,3 +97,5 @@ app:
     # every question is a paid call: at most 20 per account every 10 minutes
     max-questions: 20
     question-window: 10m
+    # the note the assistant writes about an alert on its own, with no question (AlertNoteService)
+    alert-note-language: ${ASSISTANT_ALERT_NOTE_LANGUAGE:es}

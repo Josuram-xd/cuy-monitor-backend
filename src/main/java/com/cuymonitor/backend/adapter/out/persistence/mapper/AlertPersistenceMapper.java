@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class AlertPersistenceMapper {
     public AlertJpaEntity toEntity(Alert alert, CageJpaEntity cage, GuineaPigJpaEntity guineaPig) {
-        return new AlertJpaEntity(
+        var entity = new AlertJpaEntity(
                 alert.getId(),
                 cage,
                 guineaPig,
@@ -19,11 +19,13 @@ public class AlertPersistenceMapper {
                 alert.getStatus(),
                 alert.getCreatedAt(),
                 alert.getReviewedAt());
+        entity.setAiNote(alert.getAiNote(), alert.getAiNoteAt());
+        return entity;
     }
 
     public Alert toDomain(AlertJpaEntity entity) {
         Long guineaPigId = entity.getGuineaPig() == null ? null : entity.getGuineaPig().getId();
-        return Alert.restore(
+        Alert alert = Alert.restore(
                 entity.getId(),
                 entity.getCage().getCode(),
                 guineaPigId,
@@ -33,5 +35,9 @@ public class AlertPersistenceMapper {
                 entity.getStatus(),
                 entity.getCreatedAt(),
                 entity.getReviewedAt());
+        if (entity.getAiNote() != null) {
+            alert.attachAiNote(entity.getAiNote(), entity.getAiNoteAt());
+        }
+        return alert;
     }
 }
