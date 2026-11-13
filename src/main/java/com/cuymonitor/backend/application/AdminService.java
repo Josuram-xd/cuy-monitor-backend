@@ -102,6 +102,12 @@ public class AdminService implements AdminOperations {
         return users.save(target);
     }
 
+    /**
+     * A safety net, not a rule anybody meets through the API: to demote or disable the only admin you would
+     * have to be an admin, and the only admin is yourself, which the checks above already refuse. It stays
+     * because this service is callable without the proxy — a job, a command, a use case added later — and
+     * losing the last admin would leave the catalog uneditable with no way back through the application.
+     */
     private void requireAnotherAdminRemains() {
         if (users.countAdmins() <= 1) {
             throw new InvalidAdminActionException(

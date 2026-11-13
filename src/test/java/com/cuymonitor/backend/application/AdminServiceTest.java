@@ -106,8 +106,11 @@ class AdminServiceTest {
                 .hasMessageContaining("your own role");
     }
 
+    // The two below call the service straight, without AdminAccessProxy. Through the API nobody reaches
+    // this state: demoting the only admin takes an admin, and the only admin is you, which is refused above.
+    // They cover the service as a safety net for a caller that does not go through the proxy.
     @Test
-    void theLastAdminCannotBeDemoted() {
+    void theLastAdminCannotBeDemotedEvenWithoutTheProxy() {
         UUID second = save("otro-admin", UserRole.ADMIN, UserStatus.ACTIVE);
         // with two admins, demoting one is fine
         service.changeUserRole(admin, second, UserRole.BREEDER);
@@ -119,7 +122,7 @@ class AdminServiceTest {
     }
 
     @Test
-    void theLastAdminCannotBeSwitchedOffEither() {
+    void theLastAdminCannotBeSwitchedOffEitherWithoutTheProxy() {
         UUID second = save("otro-admin", UserRole.ADMIN, UserStatus.ACTIVE);
         service.changeUserRole(admin, second, UserRole.BREEDER);
 

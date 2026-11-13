@@ -104,7 +104,10 @@ These are `400`, not `403` — the caller is allowed, the system just must not d
 |---|---|
 | can't change your own role | so the one admin left can't demote themselves by mistake |
 | can't disable your own account from here | same, and `DELETE /api/v1/account` is the way to leave |
-| can't demote or disable the **last** admin | the catalog would become uneditable with no way back through the app |
+
+Between them those two already make it impossible to lose the last admin: demoting or disabling the only
+admin would take an admin, and the only admin is you. `AdminService` checks it again anyway, as a safety net
+for a caller that does not come through the proxy, but no request to this API can produce that error.
 
 ## Errors
 
