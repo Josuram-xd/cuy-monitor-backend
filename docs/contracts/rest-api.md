@@ -351,6 +351,22 @@ question.
 The answer only uses the cages of the account in the session (read through the cage access proxy). Needs a session
 like every other endpoint of section 3.
 
+### 3.11 `POST /api/v1/cages/{cageId}/simulation`
+
+The dashboard's **Simulación** button, a demo of the real chain for practice. No body. The backend reads the marks of
+the cage's guinea pigs (through the cage access proxy: only the owner) and asks the AI service
+(`POST /ai/v1/simulation`, `X-API-Key`) to feed a drawn cage into its frame chain for 35 minutes, the first mark
+drawn sick. The model analyses those frames like a camera's and the usual rules decide: the guinea pig goes to
+OBSERVED after 3 anomalous windows and to ALERT after 30 minutes. A synthetic squeal also goes through the audio
+classifier, so a cage alert (AUDIO) arrives at once. Pressing it again while it runs does not start a second one.
+
+| Status | `error` | When |
+|---|---|---|
+| `202` | — | Started |
+| `400` | `bad_request` | The cage has no guinea pigs to draw |
+| `403` / `404` | `forbidden` / `not_found` | Not the account's cage / no such cage |
+| `503` | `service_unavailable` | The AI service did not answer |
+
 ## 4. WebSocket (STOMP)
 
 | Item | Value |
