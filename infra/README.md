@@ -48,7 +48,7 @@ PGPASSWORD="$(aws secretsmanager get-secret-value --secret-id 'rds!db-…' --que
 
 ## IA con Bedrock
 
-El contenedor no tiene claves de AWS: usa el **rol de la instancia** (`cuy-ec2-role`: invocar modelos de Bedrock, SSM y leer solo el secreto de la base). Para que el contenedor alcance las credenciales de la instancia, `setup.sh` sube el límite de saltos del servicio de metadatos a 2. Modelo por defecto: Claude Haiku 4.5 (`us.anthropic.claude-haiku-4-5-20251001-v1:0`, acceso abierto en Bedrock, sin formulario). Para usar otro basta cambiar `BEDROCK_MODEL_ID`.
+El contenedor no tiene claves de AWS: usa el **rol de la instancia** (`cuy-ec2-role`: invocar modelos de Bedrock, SSM y leer solo el secreto de la base). Para que el contenedor alcance las credenciales de la instancia, `setup.sh` sube el límite de saltos del servicio de metadatos a 2. Modelo por defecto: Claude Haiku 4.5 (`us.anthropic.claude-haiku-4-5-20251001-v1:0`). Como todo modelo de Anthropic en Bedrock, pide llenar **una vez por cuenta** el formulario de caso de uso de Anthropic en la consola de Bedrock; sin él cada llamada falla con `ResourceNotFoundException`. Amazon Nova 2 Lite (`us.amazon.nova-2-lite-v1:0`) no pide formulario. Para usar otro basta cambiar `BEDROCK_MODEL_ID`.
 
 ## Operación
 

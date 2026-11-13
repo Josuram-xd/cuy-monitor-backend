@@ -90,7 +90,7 @@ app:
   assistant:
     enabled: ${ASSISTANT_ENABLED:true}
     region: ${ASSISTANT_REGION:us-east-1}
-    # Claude Haiku 4.5: open access in Bedrock (no use-case form), the same model the ai-service uses
+    # Claude Haiku 4.5, the same model the ai-service uses. Needs Anthropic's use-case form in Bedrock
     model-id: ${ASSISTANT_MODEL_ID:us.anthropic.claude-haiku-4-5-20251001-v1:0}
     max-tokens: 400
     timeout: 20s
