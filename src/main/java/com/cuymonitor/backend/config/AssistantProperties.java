@@ -9,7 +9,7 @@ import java.time.Duration;
  *
  * @param enabled        false = the assistant always answers that it is off (no AWS call)
  * @param region         AWS region of Amazon Bedrock
- * @param modelId        Bedrock model or inference profile, e.g. us.anthropic.claude-haiku-4-5-20251001-v1:0
+ * @param modelId        Bedrock model or inference profile, e.g. moonshotai.kimi-k2.5
  * @param maxTokens      longest answer the model may write
  * @param timeout        longest wait for the model before telling the breeder to try later
  * @param maxQuestions   questions an account may ask in each questionWindow (every one is a paid call)

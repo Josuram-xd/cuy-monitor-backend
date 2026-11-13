@@ -48,7 +48,7 @@ PGPASSWORD="$(aws secretsmanager get-secret-value --secret-id 'rds!db-…' --que
 
 ## IA con Bedrock
 
-El contenedor no tiene claves de AWS: usa el **rol de la instancia** (`cuy-ec2-role`: invocar modelos de Bedrock, SSM y leer solo el secreto de la base). Para que el contenedor alcance las credenciales de la instancia, `setup.sh` sube el límite de saltos del servicio de metadatos a 2. Modelo por defecto: Claude Haiku 4.5 (`us.anthropic.claude-haiku-4-5-20251001-v1:0`, acceso abierto en Bedrock, sin formulario). Para usar otro basta cambiar `BEDROCK_MODEL_ID`.
+El contenedor no tiene claves de AWS: usa el **rol de la instancia** (`cuy-ec2-role`: invocar modelos de Bedrock, SSM y leer solo el secreto de la base). Para que el contenedor alcance las credenciales de la instancia, `setup.sh` sube el límite de saltos del servicio de metadatos a 2. Modelo por defecto, para los frames y para el asistente: Kimi K2.5 (`moonshotai.kimi-k2.5`), el que mejor salió al comparar con el prompt real del ai-service (ver su README). La cuenta está en el **plan gratuito** de AWS, que no deja suscribirse en AWS Marketplace: por eso no sirve ningún modelo de Anthropic (falla con `aws-marketplace:Subscribe`). Para usar otro basta cambiar `BEDROCK_MODEL_ID`.
 
 ## Operación
 

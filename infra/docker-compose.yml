@@ -78,7 +78,7 @@ services:
       # No AWS key here: the container uses the EC2 instance role (see infra/aws/setup.sh).
       MOCK_MODE: ${AI_MOCK_MODE:-false}
       AWS_REGION: ${AWS_REGION:-us-east-1}
-      BEDROCK_MODEL_ID: ${BEDROCK_MODEL_ID:-us.anthropic.claude-haiku-4-5-20251001-v1:0}
+      BEDROCK_MODEL_ID: ${BEDROCK_MODEL_ID:-moonshotai.kimi-k2.5}
 
   caddy:
     image: caddy:2.11
