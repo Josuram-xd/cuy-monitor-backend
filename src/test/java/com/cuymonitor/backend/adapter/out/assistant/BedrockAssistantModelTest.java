@@ -25,7 +25,7 @@ import static org.mockito.Mockito.verify;
 class BedrockAssistantModelTest {
 
     private final BedrockRuntimeClient client = mock(BedrockRuntimeClient.class);
-    private final BedrockAssistantModel model = new BedrockAssistantModel(client, "us.anthropic.claude-haiku-4-5-20251001-v1:0", 400);
+    private final BedrockAssistantModel model = new BedrockAssistantModel(client, "moonshotai.kimi-k2.5", 400);
 
     private static ConverseResponse answer(String... texts) {
         Message message = Message.builder().role(ConversationRole.ASSISTANT)
@@ -44,7 +44,7 @@ class BedrockAssistantModelTest {
         ArgumentCaptor<ConverseRequest> sent = ArgumentCaptor.forClass(ConverseRequest.class);
         verify(client).converse(sent.capture());
         ConverseRequest request = sent.getValue();
-        assertThat(request.modelId()).isEqualTo("us.anthropic.claude-haiku-4-5-20251001-v1:0");
+        assertThat(request.modelId()).isEqualTo("moonshotai.kimi-k2.5");
         assertThat(request.system().getFirst().text()).isEqualTo("be nice");
         assertThat(request.messages()).extracting(Message::role)
                 .containsExactly(ConversationRole.USER, ConversationRole.ASSISTANT, ConversationRole.USER);
