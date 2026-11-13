@@ -3,7 +3,9 @@ package com.cuymonitor.backend.application.fake;
 import com.cuymonitor.backend.domain.model.user.User;
 import com.cuymonitor.backend.domain.port.out.UserRepository;
 
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,6 +23,18 @@ public class InMemoryUserRepository implements UserRepository {
     @Override
     public Optional<User> findById(UUID id) {
         return Optional.ofNullable(users.get(id)).map(InMemoryUserRepository::copy);
+    }
+
+    @Override
+    public List<User> findAll() {
+        return users.values().stream()
+                .sorted(Comparator.comparing(User::getCreatedAt).reversed())
+                .toList();
+    }
+
+    @Override
+    public long countAdmins() {
+        return users.values().stream().filter(User::isAdmin).count();
     }
 
     @Override
@@ -58,6 +72,6 @@ public class InMemoryUserRepository implements UserRepository {
     // stored as copies so a test fails if the service forgets to call save()
     private static User copy(User u) {
         return User.restore(u.getId(), u.getUsername(), u.getFullName(), u.getEmail(), u.getPasswordHash(),
-                u.getGoogleSubject(), u.getStatus(), u.getCreatedAt(), u.getUpdatedAt());
+                u.getGoogleSubject(), u.getStatus(), u.getRole(), u.getCreatedAt(), u.getUpdatedAt());
     }
 }

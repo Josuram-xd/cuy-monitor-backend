@@ -17,11 +17,12 @@ public class User {
     private String passwordHash;
     private String googleSubject;
     private UserStatus status;
+    private UserRole role;
     private final Instant createdAt;
     private Instant updatedAt;
 
     private User(UUID id, String username, String fullName, String email, String passwordHash,
-                 String googleSubject, UserStatus status, Instant createdAt, Instant updatedAt) {
+                 String googleSubject, UserStatus status, UserRole role, Instant createdAt, Instant updatedAt) {
         this.id = Objects.requireNonNull(id, "id");
         this.username = requireText(username, "username");
         this.fullName = requireText(fullName, "fullName");
@@ -32,6 +33,7 @@ public class User {
         this.passwordHash = passwordHash;
         this.googleSubject = googleSubject;
         this.status = Objects.requireNonNull(status, "status");
+        this.role = Objects.requireNonNull(role, "role");
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
         this.updatedAt = Objects.requireNonNull(updatedAt, "updatedAt");
     }
@@ -39,7 +41,7 @@ public class User {
     public static User register(String username, String fullName, String email, String passwordHash, Instant now) {
         return new User(UUID.randomUUID(), normalize(username, "username"), requireText(fullName, "fullName").trim(),
                 normalize(email, "email"), requireText(passwordHash, "passwordHash"), null,
-                UserStatus.PENDING_VERIFICATION, now, now);
+                UserStatus.PENDING_VERIFICATION, UserRole.BREEDER, now, now);
     }
 
     /** Google already proved the email, so the account is active from the start and has no password. */
@@ -47,17 +49,24 @@ public class User {
                                           Instant now) {
         return new User(UUID.randomUUID(), normalize(username, "username"), requireText(fullName, "fullName").trim(),
                 normalize(email, "email"), null, requireText(googleSubject, "googleSubject"), UserStatus.ACTIVE,
-                now, now);
+                UserRole.BREEDER, now, now);
     }
 
+    /**
+     * Restores an ordinary breeder account. Shorthand for tests and for callers that have no role to restore:
+     * it does not read a role, it <b>sets</b> BREEDER. Anything reading a stored account — the persistence
+     * mapper above all — must use the overload that takes the role, or it quietly demotes an admin.
+     */
     public static User restore(UUID id, String username, String fullName, String email, String passwordHash,
                                UserStatus status, Instant createdAt, Instant updatedAt) {
-        return new User(id, username, fullName, email, passwordHash, null, status, createdAt, updatedAt);
+        return new User(id, username, fullName, email, passwordHash, null, status, UserRole.BREEDER, createdAt,
+                updatedAt);
     }
 
     public static User restore(UUID id, String username, String fullName, String email, String passwordHash,
                                String googleSubject, UserStatus status, Instant createdAt, Instant updatedAt) {
-        return new User(id, username, fullName, email, passwordHash, googleSubject, status, createdAt, updatedAt);
+        return new User(id, username, fullName, email, passwordHash, googleSubject, status, UserRole.BREEDER,
+                createdAt, updatedAt);
     }
 
     /**
@@ -108,6 +117,17 @@ public class User {
         updatedAt = Objects.requireNonNull(now, "now");
     }
 
+    /**
+     * An admin switches a disabled account back on. {@link #activate(Instant)} refuses to, on purpose: that one
+     * is the end of signing up, and an account disabled for a reason should not come back by verifying a code.
+     */
+    public void reinstate(Instant now) {
+        if (status == UserStatus.DISABLED) {
+            status = UserStatus.ACTIVE;
+            updatedAt = Objects.requireNonNull(now, "now");
+        }
+    }
+
     public void deactivate(Instant now) {
         ensureNotDisabled();
         status = UserStatus.DISABLED;
@@ -142,6 +162,31 @@ public class User {
 
     public String getGoogleSubject() {
         return googleSubject;
+    }
+
+    /** Restoring an account that knows its role: what the database actually has. */
+    public static User restore(UUID id, String username, String fullName, String email, String passwordHash,
+                               String googleSubject, UserStatus status, UserRole role, Instant createdAt,
+                               Instant updatedAt) {
+        return new User(id, username, fullName, email, passwordHash, googleSubject, status, role, createdAt,
+                updatedAt);
+    }
+
+    /**
+     * An admin changes another account's role. An account can't change its own, so the last admin can't lock
+     * everybody out of the catalog by mistake; the service checks that before calling this.
+     */
+    public void changeRoleTo(UserRole newRole, Instant now) {
+        role = Objects.requireNonNull(newRole, "newRole");
+        updatedAt = Objects.requireNonNull(now, "now");
+    }
+
+    public boolean isAdmin() {
+        return role.isAdmin();
+    }
+
+    public UserRole getRole() {
+        return role;
     }
 
     public UserStatus getStatus() {

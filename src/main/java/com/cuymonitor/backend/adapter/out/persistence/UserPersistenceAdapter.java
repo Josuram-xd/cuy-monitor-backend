@@ -3,8 +3,10 @@ package com.cuymonitor.backend.adapter.out.persistence;
 import com.cuymonitor.backend.adapter.out.persistence.mapper.UserPersistenceMapper;
 import com.cuymonitor.backend.adapter.out.persistence.repository.UserJpaRepository;
 import com.cuymonitor.backend.domain.model.user.User;
+import com.cuymonitor.backend.domain.model.user.UserRole;
 import com.cuymonitor.backend.domain.port.out.UserRepository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,6 +28,16 @@ public class UserPersistenceAdapter implements UserRepository {
     @Override
     public Optional<User> findById(UUID id) {
         return userJpaRepository.findById(id).map(mapper::toDomain);
+    }
+
+    @Override
+    public List<User> findAll() {
+        return userJpaRepository.findAllByOrderByCreatedAtDesc().stream().map(mapper::toDomain).toList();
+    }
+
+    @Override
+    public long countAdmins() {
+        return userJpaRepository.countByRole(UserRole.ADMIN);
     }
 
     @Override

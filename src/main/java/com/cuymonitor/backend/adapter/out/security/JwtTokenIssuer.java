@@ -41,6 +41,7 @@ public class JwtTokenIssuer implements TokenIssuer {
                 .expiresAt(expiresAt)
                 .id(UUID.randomUUID().toString())
                 .claim(TokenClaims.SESSION, sessionId.toString())
+                .claim(TokenClaims.ROLE, user.getRole().name())
                 .build();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
 
