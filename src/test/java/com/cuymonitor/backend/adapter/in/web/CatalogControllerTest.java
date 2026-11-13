@@ -40,10 +40,10 @@ class CatalogControllerTest {
     @Test
     void returnsTheThreeListsWithTheirLabelAndColor() throws Exception {
         given(listCatalogOptionsUseCase.list()).willReturn(Map.of(
-                CatalogKind.MARK_COLOR, List.of(new CatalogOption(CatalogKind.MARK_COLOR, "RED", "Rojo", "#d62828", 1)),
+                CatalogKind.MARK_COLOR, List.of(CatalogOption.active(CatalogKind.MARK_COLOR, "RED", "Rojo", "#d62828", 1)),
                 CatalogKind.COAT_COLOR,
-                List.of(new CatalogOption(CatalogKind.COAT_COLOR, "CINNAMON", "Canela", "#c9763d", 6)),
-                CatalogKind.BREED, List.of(new CatalogOption(CatalogKind.BREED, "TEDDY", "Teddy", null, 4))));
+                List.of(CatalogOption.active(CatalogKind.COAT_COLOR, "CINNAMON", "Canela", "#c9763d", 6)),
+                CatalogKind.BREED, List.of(CatalogOption.active(CatalogKind.BREED, "TEDDY", "Teddy", null, 4))));
 
         mvc.perform(get("/api/v1/catalog").with(token()))
                 .andExpect(status().isOk())

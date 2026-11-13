@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @Transactional(readOnly = true)
@@ -28,6 +29,27 @@ public class CatalogOptionPersistenceAdapter implements CatalogOptionRepository 
         return catalogOptionJpaRepository.findAllByActiveTrueOrderByKindAscSortOrderAsc().stream()
                 .map(mapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    public List<CatalogOption> findAll() {
+        return catalogOptionJpaRepository.findAllByOrderByKindAscSortOrderAsc().stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public Optional<CatalogOption> find(CatalogKind kind, String code) {
+        String normalized = CatalogOption.normalize(code);
+        return normalized == null
+                ? Optional.empty()
+                : catalogOptionJpaRepository.findByKindAndCode(kind, normalized).map(mapper::toDomain);
+    }
+
+    @Override
+    @Transactional
+    public CatalogOption save(CatalogOption option) {
+        return mapper.toDomain(catalogOptionJpaRepository.save(mapper.toEntity(option)));
     }
 
     @Override

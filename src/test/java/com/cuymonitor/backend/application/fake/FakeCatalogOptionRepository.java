@@ -6,6 +6,7 @@ import com.cuymonitor.backend.domain.port.out.CatalogOptionRepository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /** The rows migration V10 of cuy-monitor-db inserts, so a test sees the same codes as a real database. */
 public class FakeCatalogOptionRepository implements CatalogOptionRepository {
@@ -27,6 +28,29 @@ public class FakeCatalogOptionRepository implements CatalogOptionRepository {
     }
 
     @Override
+    public List<CatalogOption> findAll() {
+        // this fake only holds options that are on, so "all" and "active" are the same list here
+        return List.copyOf(options);
+    }
+
+    @Override
+    public Optional<CatalogOption> find(CatalogKind kind, String code) {
+        String normalized = CatalogOption.normalize(code);
+        return options.stream()
+                .filter(option -> option.kind() == kind && option.code().equals(normalized))
+                .findFirst();
+    }
+
+    @Override
+    public CatalogOption save(CatalogOption option) {
+        options.removeIf(o -> o.kind() == option.kind() && o.code().equals(option.code()));
+        if (option.active()) {
+            options.add(option);
+        }
+        return option;
+    }
+
+    @Override
     public List<CatalogOption> findAllActive() {
         return List.copyOf(options);
     }
@@ -39,7 +63,7 @@ public class FakeCatalogOptionRepository implements CatalogOptionRepository {
 
     private void add(CatalogKind kind, String[] codes) {
         for (int i = 0; i < codes.length; i++) {
-            options.add(new CatalogOption(kind, codes[i], codes[i].charAt(0) + codes[i].substring(1).toLowerCase(),
+            options.add(CatalogOption.active(kind, codes[i], codes[i].charAt(0) + codes[i].substring(1).toLowerCase(),
                     kind == CatalogKind.BREED ? null : "#000000", i + 1));
         }
     }
