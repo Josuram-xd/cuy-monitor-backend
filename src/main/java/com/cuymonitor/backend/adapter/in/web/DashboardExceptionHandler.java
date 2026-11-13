@@ -1,7 +1,10 @@
 package com.cuymonitor.backend.adapter.in.web;
 
 import com.cuymonitor.backend.domain.exception.AlertNotFoundException;
+import com.cuymonitor.backend.domain.exception.AdminAccessDeniedException;
 import com.cuymonitor.backend.domain.exception.CageAccessDeniedException;
+import com.cuymonitor.backend.domain.exception.InvalidAdminActionException;
+import com.cuymonitor.backend.domain.exception.UserNotFoundException;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
 import com.cuymonitor.backend.domain.exception.GuineaPigNotFoundException;
 import com.cuymonitor.backend.domain.exception.ColorAlreadyUsedException;
@@ -20,6 +23,23 @@ public class DashboardExceptionHandler {
 
     @ExceptionHandler(CageNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(CageNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, ApiError.NOT_FOUND, ex.getMessage());
+    }
+
+    // the admin access proxy refused it: the account is not an admin
+    @ExceptionHandler(AdminAccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAdminDenied(AdminAccessDeniedException ex) {
+        return error(HttpStatus.FORBIDDEN, ApiError.FORBIDDEN, ex.getMessage());
+    }
+
+    // an admin asked for something the system must not do, such as removing the last admin
+    @ExceptionHandler(InvalidAdminActionException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidAdminAction(InvalidAdminActionException ex) {
+        return error(HttpStatus.BAD_REQUEST, ApiError.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleUserNotFound(UserNotFoundException ex) {
         return error(HttpStatus.NOT_FOUND, ApiError.NOT_FOUND, ex.getMessage());
     }
 
