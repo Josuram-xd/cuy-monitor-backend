@@ -74,6 +74,8 @@ services:
       BACKEND_URL: http://backend:8080
       API_KEY: ${API_KEY}
       CAGE_ID: ${CAGE_ID:-cage-1}
+      # more cages, comma separated ("cage-1,cage-0a1b2c3d"); empty = only CAGE_ID
+      CAGE_IDS: ${CAGE_IDS:-}
       # false = Amazon Bedrock analyses the frames and audio it receives; true = fake events.
       # No AWS key here: the container uses the EC2 instance role (see infra/aws/setup.sh).
       MOCK_MODE: ${AI_MOCK_MODE:-false}
