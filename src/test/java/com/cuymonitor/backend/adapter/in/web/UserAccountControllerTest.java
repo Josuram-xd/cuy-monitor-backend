@@ -6,12 +6,15 @@ import com.cuymonitor.backend.domain.port.out.RevokedTokenRepository;
 import com.cuymonitor.backend.domain.exception.AccountDisabledException;
 import com.cuymonitor.backend.domain.exception.InvalidCredentialsException;
 import com.cuymonitor.backend.domain.model.user.User;
+import com.cuymonitor.backend.domain.model.user.UserRole;
 import com.cuymonitor.backend.domain.model.user.UserStatus;
 import com.cuymonitor.backend.domain.port.in.ChangePasswordCommand;
 import com.cuymonitor.backend.domain.port.in.ChangePasswordUseCase;
 import com.cuymonitor.backend.domain.port.in.DeactivateAccountCommand;
 import com.cuymonitor.backend.domain.port.in.DeactivateAccountUseCase;
+import com.cuymonitor.backend.domain.model.user.ProfilePhoto;
 import com.cuymonitor.backend.domain.port.in.GetCurrentUserUseCase;
+import com.cuymonitor.backend.domain.port.in.ProfilePhotoUseCase;
 import com.cuymonitor.backend.domain.port.in.UpdateProfileCommand;
 import com.cuymonitor.backend.domain.port.in.UpdateProfileUseCase;
 import org.junit.jupiter.api.Test;
@@ -35,6 +38,8 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -58,6 +63,8 @@ class UserAccountControllerTest {
     @MockitoBean
     private DeactivateAccountUseCase deactivateAccountUseCase;
     @MockitoBean
+    private ProfilePhotoUseCase profilePhotoUseCase;
+    @MockitoBean
     private RevokedTokenRepository revokedTokenRepository;
 
     @Test
@@ -79,7 +86,96 @@ class UserAccountControllerTest {
                 .andExpect(jsonPath("$.id").doesNotExist())
                 .andExpect(jsonPath("$.email").doesNotExist())
                 .andExpect(jsonPath("$.status").doesNotExist())
-                .andExpect(jsonPath("$.passwordHash").doesNotExist());
+                .andExpect(jsonPath("$.passwordHash").doesNotExist())
+                // the dashboard decides whether to draw the admin section from this, since it cannot read
+                // the HttpOnly session cookie
+                .andExpect(jsonPath("$.role").value("BREEDER"));
+    }
+
+    @Test
+    void theProfileCarriesTheNicknameAndTheNameToPrint() throws Exception {
+        User user = user("Juan Perez");
+        user.changeNickname("Juanito", CREATED);
+        given(getCurrentUserUseCase.getCurrentUser(USER_ID)).willReturn(user);
+
+        mvc.perform(get("/api/v1/account/profile").with(token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nickname").value("Juanito"))
+                // so no screen has to repeat the "nickname, or the full name" rule
+                .andExpect(jsonPath("$.displayName").value("Juanito"))
+                .andExpect(jsonPath("$.hasPhoto").value(false));
+    }
+
+    @Test
+    void theProfileFallsBackToTheFullNameWithoutANickname() throws Exception {
+        given(getCurrentUserUseCase.getCurrentUser(USER_ID)).willReturn(user("Juan Perez"));
+
+        mvc.perform(get("/api/v1/account/profile").with(token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nickname").doesNotExist())
+                .andExpect(jsonPath("$.displayName").value("Juan Perez"));
+    }
+
+    @Test
+    void servesThePhotoWithItsOwnTypeAndWithoutSniffing() throws Exception {
+        byte[] bytes = {1, 2, 3};
+        given(profilePhotoUseCase.getPhoto(USER_ID)).willReturn(new ProfilePhoto(bytes, "image/webp"));
+
+        mvc.perform(get("/api/v1/account/photo").with(token()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("image/webp"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(content().bytes(bytes));
+    }
+
+    @Test
+    void thePhotoNeedsTheSession() throws Exception {
+        mvc.perform(get("/api/v1/account/photo"))
+                .andExpect(status().isUnauthorized());
+        verifyNoInteractions(profilePhotoUseCase);
+    }
+
+    @Test
+    void savesThePhotoItIsSent() throws Exception {
+        String base64 = java.util.Base64.getEncoder().encodeToString(new byte[] {1, 2, 3});
+
+        mvc.perform(put("/api/v1/account/photo").with(token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"photo\":\"" + base64 + "\",\"photoContentType\":\"image/png\"}"))
+                .andExpect(status().isNoContent());
+
+        verify(profilePhotoUseCase).setPhoto(USER_ID, new ProfilePhoto(new byte[] {1, 2, 3}, "image/png"));
+    }
+
+    @Test
+    void refusesAnImageTypeTheBrowserCouldBeTrickedWith() throws Exception {
+        String base64 = java.util.Base64.getEncoder().encodeToString(new byte[] {1, 2, 3});
+
+        mvc.perform(put("/api/v1/account/photo").with(token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"photo\":\"" + base64 + "\",\"photoContentType\":\"image/svg+xml\"}"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(profilePhotoUseCase);
+    }
+
+    @Test
+    void removesThePhoto() throws Exception {
+        mvc.perform(delete("/api/v1/account/photo").with(token()))
+                .andExpect(status().isNoContent());
+
+        verify(profilePhotoUseCase).removePhoto(USER_ID);
+    }
+
+    @Test
+    void theProfileSaysWhenTheAccountIsAnAdmin() throws Exception {
+        User admin = user("Juan Perez");
+        admin.changeRoleTo(UserRole.ADMIN, CREATED);
+        given(getCurrentUserUseCase.getCurrentUser(USER_ID)).willReturn(admin);
+
+        mvc.perform(get("/api/v1/account/profile").with(token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("ADMIN"));
     }
 
     @Test
@@ -94,7 +190,7 @@ class UserAccountControllerTest {
 
     @Test
     void updateProfileReturnsTheUpdatedAccount() throws Exception {
-        given(updateProfileUseCase.updateProfile(new UpdateProfileCommand(USER_ID, "Juan Carlos")))
+        given(updateProfileUseCase.updateProfile(new UpdateProfileCommand(USER_ID, "Juan Carlos", null)))
                 .willReturn(user("Juan Carlos"));
 
         mvc.perform(put("/api/v1/account/profile").with(token()).contentType(MediaType.APPLICATION_JSON)

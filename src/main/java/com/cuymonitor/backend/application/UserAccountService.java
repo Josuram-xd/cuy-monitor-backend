@@ -2,13 +2,16 @@ package com.cuymonitor.backend.application;
 
 import com.cuymonitor.backend.domain.exception.AccountDisabledException;
 import com.cuymonitor.backend.domain.exception.InvalidCredentialsException;
+import com.cuymonitor.backend.domain.exception.UserNotFoundException;
 import com.cuymonitor.backend.domain.model.user.PasswordPolicy;
+import com.cuymonitor.backend.domain.model.user.ProfilePhoto;
 import com.cuymonitor.backend.domain.model.user.User;
 import com.cuymonitor.backend.domain.port.in.ChangePasswordCommand;
 import com.cuymonitor.backend.domain.port.in.ChangePasswordUseCase;
 import com.cuymonitor.backend.domain.port.in.DeactivateAccountCommand;
 import com.cuymonitor.backend.domain.port.in.DeactivateAccountUseCase;
 import com.cuymonitor.backend.domain.port.in.GetCurrentUserUseCase;
+import com.cuymonitor.backend.domain.port.in.ProfilePhotoUseCase;
 import com.cuymonitor.backend.domain.port.in.UpdateProfileCommand;
 import com.cuymonitor.backend.domain.port.in.UpdateProfileUseCase;
 import com.cuymonitor.backend.domain.port.out.PasswordHasher;
@@ -19,7 +22,7 @@ import java.time.Clock;
 import java.util.UUID;
 
 public class UserAccountService implements GetCurrentUserUseCase, UpdateProfileUseCase, ChangePasswordUseCase,
-        DeactivateAccountUseCase {
+        DeactivateAccountUseCase, ProfilePhotoUseCase {
 
     private final UserRepository userRepository;
     private final PasswordHasher passwordHasher;
@@ -42,7 +45,34 @@ public class UserAccountService implements GetCurrentUserUseCase, UpdateProfileU
     public User updateProfile(UpdateProfileCommand command) {
         User user = loadActiveUser(command.userId());
         user.updateProfile(command.fullName(), clock.instant());
+        user.changeNickname(command.nickname(), clock.instant());
         return userRepository.save(user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProfilePhoto getPhoto(UUID userId) {
+        return userRepository.findPhoto(userId)
+                .orElseThrow(() -> new UserNotFoundException("this account has no photo"));
+    }
+
+    @Override
+    @Transactional
+    public void setPhoto(UUID userId, ProfilePhoto photo) {
+        User user = loadActiveUser(userId);
+        userRepository.savePhoto(userId, photo);
+        // the account itself only remembers that it has one, so hasPhoto is right in the next answer
+        user.attachPhoto(photo.contentType(), clock.instant());
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public void removePhoto(UUID userId) {
+        User user = loadActiveUser(userId);
+        userRepository.deletePhoto(userId);
+        user.attachPhoto(null, clock.instant());
+        userRepository.save(user);
     }
 
     @Override

@@ -9,6 +9,11 @@ public class CatalogOptionPersistenceMapper {
 
     public CatalogOption toDomain(CatalogOptionJpaEntity entity) {
         return new CatalogOption(entity.getKind(), entity.getCode(), entity.getLabel(), entity.getHex(),
-                entity.getSortOrder());
+                entity.getSortOrder(), entity.isActive());
+    }
+
+    public CatalogOptionJpaEntity toEntity(CatalogOption option) {
+        return new CatalogOptionJpaEntity(option.kind(), option.code(), option.label(), option.hex(),
+                (short) option.sortOrder(), option.active());
     }
 }

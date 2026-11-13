@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.adapter.out.persistence.entity;
 
+import com.cuymonitor.backend.domain.model.user.UserRole;
 import com.cuymonitor.backend.domain.model.user.UserStatus;
 import jakarta.persistence.*;
 
@@ -22,6 +23,17 @@ public class UserJpaEntity {
     @Column(name = "status", nullable = false, length = 30)
     private UserStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 20)
+    private UserRole role;
+
+    @Column(name = "nickname", length = 30)
+    private String nickname;
+
+    // the bytes live in the same row but are only read when the picture is asked for: see photo()
+    @Column(name = "photo_content_type", length = 30)
+    private String photoContentType;
+
     @Column(name = "email", nullable = false, length = 254)
     private String email;
 
@@ -41,7 +53,8 @@ public class UserJpaEntity {
     protected UserJpaEntity() {}
 
     public UserJpaEntity(UUID id, String username, String fullName, String email, String passwordHash,
-                         String googleSubject, UserStatus status, Instant createdAt, Instant updatedAt) {
+                         String googleSubject, UserStatus status, UserRole role, String nickname,
+                         String photoContentType, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.username = username;
         this.fullName = fullName;
@@ -49,6 +62,9 @@ public class UserJpaEntity {
         this.passwordHash = passwordHash;
         this.googleSubject = googleSubject;
         this.status = status;
+        this.role = role;
+        this.nickname = nickname;
+        this.photoContentType = photoContentType;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -67,6 +83,18 @@ public class UserJpaEntity {
 
     public UserStatus getStatus() {
         return status;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public String getNickname() {
+        return nickname;
+    }
+
+    public String getPhotoContentType() {
+        return photoContentType;
     }
 
     public String getEmail() {

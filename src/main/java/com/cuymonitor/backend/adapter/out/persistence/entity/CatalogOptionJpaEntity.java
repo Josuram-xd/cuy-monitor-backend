@@ -45,6 +45,16 @@ public class CatalogOptionJpaEntity {
     protected CatalogOptionJpaEntity() {
     }
 
+    public CatalogOptionJpaEntity(CatalogKind kind, String code, String label, String hex, short sortOrder,
+                                  boolean active) {
+        this.kind = kind;
+        this.code = code;
+        this.label = label;
+        this.hex = hex;
+        this.sortOrder = sortOrder;
+        this.active = active;
+    }
+
     public CatalogKind getKind() {
         return kind;
     }

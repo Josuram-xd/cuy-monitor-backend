@@ -6,6 +6,9 @@ import com.cuymonitor.backend.application.fake.MutableClock;
 import com.cuymonitor.backend.domain.exception.AccountDisabledException;
 import com.cuymonitor.backend.domain.exception.InvalidCredentialsException;
 import com.cuymonitor.backend.domain.exception.WeakPasswordException;
+import com.cuymonitor.backend.domain.exception.UserNotFoundException;
+import com.cuymonitor.backend.domain.model.ImageRules;
+import com.cuymonitor.backend.domain.model.user.ProfilePhoto;
 import com.cuymonitor.backend.domain.model.user.User;
 import com.cuymonitor.backend.domain.model.user.UserStatus;
 import com.cuymonitor.backend.domain.port.in.ChangePasswordCommand;
@@ -54,12 +57,119 @@ class UserAccountServiceTest {
 
     @Test
     void updateProfileChangesAndSavesTheName() {
-        User updated = service.updateProfile(new UpdateProfileCommand(userId, "Juan Carlos"));
+        User updated = service.updateProfile(new UpdateProfileCommand(userId, "Juan Carlos", null));
 
         assertThat(updated.getFullName()).isEqualTo("Juan Carlos");
         User stored = users.findById(userId).orElseThrow();
         assertThat(stored.getFullName()).isEqualTo("Juan Carlos");
         assertThat(stored.getUpdatedAt()).isEqualTo(clock.instant());
+    }
+
+    // --- the nickname: a short name the breeder picks, with the full name as the fallback ---
+
+    @Test
+    void anAccountWithoutANicknameIsShownByItsFullName() {
+        assertThat(service.getCurrentUser(userId).displayName()).isEqualTo("Juan");
+    }
+
+    @Test
+    void savesTheNicknameAndShowsItInsteadOfTheFullName() {
+        User updated = service.updateProfile(new UpdateProfileCommand(userId, "Juan Perez", "Juanito"));
+
+        assertThat(updated.getNickname()).isEqualTo("Juanito");
+        assertThat(updated.displayName()).isEqualTo("Juanito");
+        assertThat(users.findById(userId).orElseThrow().getNickname()).isEqualTo("Juanito");
+    }
+
+    @Test
+    void clearingTheNicknameGoesBackToTheFullName() {
+        service.updateProfile(new UpdateProfileCommand(userId, "Juan Perez", "Juanito"));
+
+        User cleared = service.updateProfile(new UpdateProfileCommand(userId, "Juan Perez", "   "));
+
+        assertThat(cleared.getNickname()).isNull();
+        assertThat(cleared.displayName()).isEqualTo("Juan Perez");
+    }
+
+    @Test
+    void refusesANicknameLongerThanTheColumn() {
+        String tooLong = "a".repeat(User.MAX_NICKNAME_LENGTH + 1);
+
+        assertThatThrownBy(() -> service.updateProfile(new UpdateProfileCommand(userId, "Juan", tooLong)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    // --- the photo ---
+
+    @Test
+    void anAccountStartsWithoutAPhoto() {
+        assertThat(service.getCurrentUser(userId).hasPhoto()).isFalse();
+        assertThatThrownBy(() -> service.getPhoto(userId)).isInstanceOf(UserNotFoundException.class);
+    }
+
+    @Test
+    void savesThePhotoAndHandsItBack() {
+        var photo = new ProfilePhoto(new byte[] {1, 2, 3}, "image/webp");
+
+        service.setPhoto(userId, photo);
+
+        assertThat(service.getPhoto(userId)).isEqualTo(photo);
+        // the account remembers it has one, so the dashboard knows to ask for it
+        assertThat(service.getCurrentUser(userId).hasPhoto()).isTrue();
+    }
+
+    @Test
+    void replacingThePhotoKeepsOnlyTheNewOne() {
+        service.setPhoto(userId, new ProfilePhoto(new byte[] {1}, "image/png"));
+        var second = new ProfilePhoto(new byte[] {9, 9}, "image/jpeg");
+
+        service.setPhoto(userId, second);
+
+        assertThat(service.getPhoto(userId)).isEqualTo(second);
+    }
+
+    @Test
+    void removingThePhotoLeavesTheAccountWithout() {
+        service.setPhoto(userId, new ProfilePhoto(new byte[] {1}, "image/png"));
+
+        service.removePhoto(userId);
+
+        assertThat(service.getCurrentUser(userId).hasPhoto()).isFalse();
+        assertThatThrownBy(() -> service.getPhoto(userId)).isInstanceOf(UserNotFoundException.class);
+    }
+
+    @Test
+    void removingAPhotoNobodySetIsNotAnError() {
+        service.removePhoto(userId);
+
+        assertThat(service.getCurrentUser(userId).hasPhoto()).isFalse();
+    }
+
+    @Test
+    void changingTheNameDoesNotLoseThePhoto() {
+        var photo = new ProfilePhoto(new byte[] {1, 2, 3}, "image/webp");
+        service.setPhoto(userId, photo);
+
+        service.updateProfile(new UpdateProfileCommand(userId, "Otro nombre", "Juanito"));
+
+        // the bytes are written on their own, so an ordinary save of the account cannot blank them
+        assertThat(service.getPhoto(userId)).isEqualTo(photo);
+        assertThat(service.getCurrentUser(userId).hasPhoto()).isTrue();
+    }
+
+    @Test
+    void refusesAPictureBiggerThanTheColumnAllows() {
+        byte[] tooBig = new byte[ImageRules.MAX_BYTES + 1];
+
+        assertThatThrownBy(() -> new ProfilePhoto(tooBig, "image/png"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining(String.valueOf(ImageRules.MAX_BYTES));
+    }
+
+    @Test
+    void refusesATypeTheBrowserCouldBeTrickedWith() {
+        assertThatThrownBy(() -> new ProfilePhoto(new byte[] {1}, "image/svg+xml"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -133,7 +243,7 @@ class UserAccountServiceTest {
 
         assertThatThrownBy(() -> service.getCurrentUser(disabledId))
                 .isInstanceOf(AccountDisabledException.class);
-        assertThatThrownBy(() -> service.updateProfile(new UpdateProfileCommand(disabledId, "Other")))
+        assertThatThrownBy(() -> service.updateProfile(new UpdateProfileCommand(disabledId, "Other", null)))
                 .isInstanceOf(AccountDisabledException.class);
         assertThatThrownBy(() -> service.changePassword(
                 new ChangePasswordCommand(disabledId, "Secret-pass-1", "new-Secret-pass-1")))
