@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.application.fake;
 
+import com.cuymonitor.backend.domain.model.user.ProfilePhoto;
 import com.cuymonitor.backend.domain.model.user.User;
 import com.cuymonitor.backend.domain.port.out.UserRepository;
 
@@ -13,6 +14,8 @@ import java.util.UUID;
 public class InMemoryUserRepository implements UserRepository {
 
     private final Map<UUID, User> users = new HashMap<>();
+    // kept apart from the accounts, the same way the real adapter keeps the bytes out of the row it loads
+    private final Map<UUID, ProfilePhoto> photos = new HashMap<>();
 
     @Override
     public User save(User user) {
@@ -23,6 +26,21 @@ public class InMemoryUserRepository implements UserRepository {
     @Override
     public Optional<User> findById(UUID id) {
         return Optional.ofNullable(users.get(id)).map(InMemoryUserRepository::copy);
+    }
+
+    @Override
+    public Optional<ProfilePhoto> findPhoto(UUID userId) {
+        return Optional.ofNullable(photos.get(userId));
+    }
+
+    @Override
+    public void savePhoto(UUID userId, ProfilePhoto photo) {
+        photos.put(userId, photo);
+    }
+
+    @Override
+    public void deletePhoto(UUID userId) {
+        photos.remove(userId);
     }
 
     @Override
@@ -72,6 +90,7 @@ public class InMemoryUserRepository implements UserRepository {
     // stored as copies so a test fails if the service forgets to call save()
     private static User copy(User u) {
         return User.restore(u.getId(), u.getUsername(), u.getFullName(), u.getEmail(), u.getPasswordHash(),
-                u.getGoogleSubject(), u.getStatus(), u.getRole(), u.getCreatedAt(), u.getUpdatedAt());
+                u.getGoogleSubject(), u.getStatus(), u.getRole(), u.getNickname(), u.getPhotoContentType(),
+                u.getCreatedAt(), u.getUpdatedAt());
     }
 }

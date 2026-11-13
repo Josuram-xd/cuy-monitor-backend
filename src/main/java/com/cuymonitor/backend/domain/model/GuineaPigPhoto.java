@@ -9,23 +9,14 @@ import java.util.Set;
  */
 public final class GuineaPigPhoto {
 
-    public static final int MAX_BYTES = 307_200;
-    /** Only formats a browser cannot be tricked into running: no SVG, the bytes are served back to it. */
-    public static final Set<String> ALLOWED_CONTENT_TYPES = Set.of("image/jpeg", "image/png", "image/webp");
+    public static final int MAX_BYTES = ImageRules.MAX_BYTES;
+    public static final Set<String> ALLOWED_CONTENT_TYPES = ImageRules.ALLOWED_CONTENT_TYPES;
 
     private final byte[] content;
     private final String contentType;
 
     public GuineaPigPhoto(byte[] content, String contentType) {
-        if (content == null || content.length == 0) {
-            throw new IllegalArgumentException("photo is required");
-        }
-        if (content.length > MAX_BYTES) {
-            throw new IllegalArgumentException("photo must be at most " + MAX_BYTES + " bytes");
-        }
-        if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
-            throw new IllegalArgumentException("photo must be one of " + ALLOWED_CONTENT_TYPES);
-        }
+        ImageRules.check(content, contentType, "photo");
         this.content = content.clone();
         this.contentType = contentType;
     }

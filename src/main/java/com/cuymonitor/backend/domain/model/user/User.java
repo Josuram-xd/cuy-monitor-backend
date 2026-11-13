@@ -9,6 +9,8 @@ import java.util.UUID;
 
 public class User {
 
+    public static final int MAX_NICKNAME_LENGTH = 30;
+
     private final UUID id;
     private final String username;
     private String fullName;
@@ -18,6 +20,9 @@ public class User {
     private String googleSubject;
     private UserStatus status;
     private UserRole role;
+    private String nickname;
+    // only the type: the bytes are fetched on their own, so a list of accounts does not drag them along
+    private String photoContentType;
     private final Instant createdAt;
     private Instant updatedAt;
 
@@ -179,6 +184,61 @@ public class User {
     public void changeRoleTo(UserRole newRole, Instant now) {
         role = Objects.requireNonNull(newRole, "newRole");
         updatedAt = Objects.requireNonNull(now, "now");
+    }
+
+    /**
+     * Restoring an account with everything the database holds. The shorter overloads leave the nickname and
+     * the photo empty, which is what an account that never set them looks like anyway.
+     */
+    public static User restore(UUID id, String username, String fullName, String email, String passwordHash,
+                               String googleSubject, UserStatus status, UserRole role, String nickname,
+                               String photoContentType, Instant createdAt, Instant updatedAt) {
+        User user = new User(id, username, fullName, email, passwordHash, googleSubject, status, role, createdAt,
+                updatedAt);
+        user.nickname = nickname;
+        user.photoContentType = photoContentType;
+        return user;
+    }
+
+    /** The short name the breeder picked, or their full name when they have not picked one. */
+    public String displayName() {
+        return nickname == null ? fullName : nickname;
+    }
+
+    /**
+     * Sets the short name, or clears it with null or blank. It is not an identifier: not unique, never used
+     * to log in, so there is nothing to check beyond its length.
+     */
+    public void changeNickname(String newNickname, Instant now) {
+        ensureNotDisabled();
+        String trimmed = newNickname == null ? null : newNickname.trim();
+        if (trimmed != null && trimmed.isEmpty()) {
+            trimmed = null;
+        }
+        if (trimmed != null && trimmed.length() > MAX_NICKNAME_LENGTH) {
+            throw new IllegalArgumentException("nickname must be at most " + MAX_NICKNAME_LENGTH + " characters");
+        }
+        nickname = trimmed;
+        updatedAt = Objects.requireNonNull(now, "now");
+    }
+
+    /** The photo itself is written by the repository; the account only remembers that it has one. */
+    public void attachPhoto(String newContentType, Instant now) {
+        ensureNotDisabled();
+        photoContentType = newContentType;
+        updatedAt = Objects.requireNonNull(now, "now");
+    }
+
+    public boolean hasPhoto() {
+        return photoContentType != null;
+    }
+
+    public String getNickname() {
+        return nickname;
+    }
+
+    public String getPhotoContentType() {
+        return photoContentType;
     }
 
     public boolean isAdmin() {
