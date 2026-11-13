@@ -2,17 +2,23 @@ package com.cuymonitor.backend.adapter.in.web;
 
 import com.cuymonitor.backend.adapter.in.web.dto.ChangePasswordRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.DeactivateAccountRequest;
+import com.cuymonitor.backend.adapter.in.web.dto.ProfilePhotoRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.UpdateProfileRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.UserResponse;
 import com.cuymonitor.backend.domain.port.in.ChangePasswordCommand;
 import com.cuymonitor.backend.domain.port.in.ChangePasswordUseCase;
 import com.cuymonitor.backend.domain.port.in.DeactivateAccountCommand;
 import com.cuymonitor.backend.domain.port.in.DeactivateAccountUseCase;
+import com.cuymonitor.backend.domain.model.user.ProfilePhoto;
 import com.cuymonitor.backend.domain.port.in.GetCurrentUserUseCase;
+import com.cuymonitor.backend.domain.port.in.ProfilePhotoUseCase;
 import com.cuymonitor.backend.domain.port.in.UpdateProfileCommand;
 import com.cuymonitor.backend.domain.port.in.UpdateProfileUseCase;
 import jakarta.validation.Valid;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -34,10 +40,14 @@ public class UserAccountController {
     private final ChangePasswordUseCase changePasswordUseCase;
     private final DeactivateAccountUseCase deactivateAccountUseCase;
 
+    private final ProfilePhotoUseCase profilePhotoUseCase;
+
     public UserAccountController(GetCurrentUserUseCase getCurrentUserUseCase,
                                  UpdateProfileUseCase updateProfileUseCase,
                                  ChangePasswordUseCase changePasswordUseCase,
-                                 DeactivateAccountUseCase deactivateAccountUseCase) {
+                                 DeactivateAccountUseCase deactivateAccountUseCase,
+                                 ProfilePhotoUseCase profilePhotoUseCase) {
+        this.profilePhotoUseCase = profilePhotoUseCase;
         this.getCurrentUserUseCase = getCurrentUserUseCase;
         this.updateProfileUseCase = updateProfileUseCase;
         this.changePasswordUseCase = changePasswordUseCase;
@@ -53,7 +63,32 @@ public class UserAccountController {
     public UserResponse updateProfile(@AuthenticationPrincipal Jwt jwt,
                                       @Valid @RequestBody UpdateProfileRequest request) {
         return UserResponse.from(updateProfileUseCase.updateProfile(
-                new UpdateProfileCommand(userId(jwt), request.fullName())));
+                new UpdateProfileCommand(userId(jwt), request.fullName(), request.nickname())));
+    }
+
+    /** The breeder's own picture. Private to them: there is no endpoint for anybody else's. */
+    @GetMapping("/photo")
+    public ResponseEntity<byte[]> photo(@AuthenticationPrincipal Jwt jwt) {
+        ProfilePhoto photo = profilePhotoUseCase.getPhoto(userId(jwt));
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(photo.contentType()))
+                .cacheControl(CacheControl.noCache().cachePrivate())
+                // the bytes come from the breeder: never let the browser guess another type
+                .header("X-Content-Type-Options", "nosniff")
+                .header("Content-Disposition", "inline")
+                .body(photo.content());
+    }
+
+    @PutMapping("/photo")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void setPhoto(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody ProfilePhotoRequest request) {
+        profilePhotoUseCase.setPhoto(userId(jwt), request.toPhoto());
+    }
+
+    @DeleteMapping("/photo")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removePhoto(@AuthenticationPrincipal Jwt jwt) {
+        profilePhotoUseCase.removePhoto(userId(jwt));
     }
 
     @PutMapping("/password")

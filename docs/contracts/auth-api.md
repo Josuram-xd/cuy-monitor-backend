@@ -156,18 +156,44 @@ All these routes need `Authorization: Bearer <accessToken>`. The account is alwa
 `200 OK`
 
 ```json
-{ "username": "juan", "fullName": "Juan Perez", "hasPassword": true }
+{
+  "username": "juan",
+  "fullName": "Juan Perez",
+  "nickname": "Juanito",
+  "displayName": "Juanito",
+  "hasPassword": true,
+  "hasPhoto": true,
+  "role": "BREEDER"
+}
 ```
 
 `hasPassword` is `false` for an account made with Google that never set one, so the screen knows not to ask for a password it does not have. On purpose it returns only what the screen shows: no id, email, status, timestamps or password hash.
 
+`nickname` (V17) is `null` until the breeder picks one. `displayName` is the nickname, or the full name when there is none — it is in the answer so no screen has to repeat that rule. `hasPhoto` says whether to ask for `GET /api/v1/account/photo`; the picture is never inside this body. `role` is in `admin-api.md`.
+
 ### `PUT /api/v1/account/profile`
 
 ```json
-{ "fullName": "Juan Carlos Perez" }
+{ "fullName": "Juan Carlos Perez", "nickname": "Juanito" }
 ```
 
-`200 OK`: the updated account (same body as `GET`). `fullName` is required, max 150. Username and email cannot be changed.
+`200 OK`: the updated account (same body as `GET`). `fullName` is required, max 150. `nickname` is optional, max 30, and `null` or blank clears it. Username and email cannot be changed.
+
+### `GET /api/v1/account/photo`
+
+The breeder's own picture, as bytes with its own `Content-Type`, `X-Content-Type-Options: nosniff` and a private no-cache (so a new photo shows at once). `404` when the account has no photo — ask only when `hasPhoto` is true. There is no endpoint for anybody else's picture.
+
+### `PUT /api/v1/account/photo`
+
+```json
+{ "photo": "<base64>", "photoContentType": "image/webp" }
+```
+
+`204 No Content`. Replaces whatever was there. Same limits as a cuy's photo: at most 300 KB of bytes, and only `image/jpeg`, `image/png` or `image/webp` — the bytes are served back to a browser, so nothing that can carry a script. `400` otherwise.
+
+### `DELETE /api/v1/account/photo`
+
+`204 No Content`. Removing a photo nobody set is not an error.
 
 ### `PUT /api/v1/account/password`
 
