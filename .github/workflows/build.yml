@@ -48,6 +48,7 @@ jobs:
       # test-only value; the real secret lives in infra/.env on the EC2
       - name: Build and test
         env:
+          APP_API_KEY: ci-only-api-key
           APP_JWT_SECRET: ci-only-secret-with-at-least-32-bytes!!
         run: ./mvnw -B verify
 

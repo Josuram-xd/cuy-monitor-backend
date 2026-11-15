@@ -20,6 +20,7 @@ import com.cuymonitor.backend.domain.port.out.OtpChallengeRepository;
 import com.cuymonitor.backend.domain.port.out.OtpSender;
 import com.cuymonitor.backend.domain.port.out.PasswordHasher;
 import com.cuymonitor.backend.domain.port.out.UserRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
@@ -74,7 +75,14 @@ public class AuthenticationService implements RegisterUserUseCase, LoginUseCase,
         if (userRepository.existsByUsername(user.getUsername()) || userRepository.existsByEmail(user.getEmail())) {
             throw new UserAlreadyExistsException();
         }
-        return issueChallenge(userRepository.save(user), now);
+        User saved;
+        try {
+            saved = userRepository.save(user);
+        } catch (DataIntegrityViolationException e) {
+            // lost a race against a concurrent registration (unique username/email)
+            throw new UserAlreadyExistsException();
+        }
+        return issueChallenge(saved, now);
     }
 
     @Override

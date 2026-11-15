@@ -5,9 +5,13 @@ import com.cuymonitor.backend.adapter.in.ingestion.dto.IngestionEvent;
 import com.cuymonitor.backend.adapter.in.ingestion.factory.AdapterFactorySelector;
 import com.cuymonitor.backend.domain.model.HealthEvent;
 import com.cuymonitor.backend.domain.port.in.ProcessEventUseCase;
-import jakarta.validation.Valid;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,10 +36,19 @@ public class IngestionController {
     private final byte[] apiKey;
     private final AdapterFactorySelector adapterFactorySelector;
     private final ProcessEventUseCase processEventUseCase;
+    private final Validator validator;
+    private final JsonMapper jsonMapper;
 
     public IngestionController(@Value("${app.api-key}") String apiKey,
                                AdapterFactorySelector adapterFactorySelector,
-                               ProcessEventUseCase processEventUseCase) {
+                               ProcessEventUseCase processEventUseCase,
+                               Validator validator,
+                               JsonMapper jsonMapper) {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalArgumentException("app.api-key is required (set APP_API_KEY)");
+        }
+        this.validator = validator;
+        this.jsonMapper = jsonMapper;
         this.apiKey = apiKey.getBytes(StandardCharsets.UTF_8);
         this.adapterFactorySelector = adapterFactorySelector;
         this.processEventUseCase = processEventUseCase;
@@ -44,11 +57,33 @@ public class IngestionController {
     @PostMapping("/events")
     public ResponseEntity<Map<String, Object>> receive(
             @RequestHeader(value = "X-API-Key", required = false) String providedKey,
-            @Valid @RequestBody IngestionEvent event) {
+            @RequestBody String rawBody) {
 
         if (providedKey == null
                 || !MessageDigest.isEqual(apiKey, providedKey.getBytes(StandardCharsets.UTF_8))) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiError.body(ApiError.UNAUTHORIZED, "invalid api key"));
+        }
+
+        // parsed by hand: a bad body must not turn into 400 before the key is checked
+        IngestionEvent event;
+        try {
+            event = jsonMapper.readValue(rawBody, IngestionEvent.class);
+        } catch (JacksonException e) {
+            event = null;
+        }
+        if (event == null) {
+            return ResponseEntity.badRequest().body(ApiError.body(ApiError.BAD_REQUEST, "malformed request body"));
+        }
+
+        // validated by hand so the key is checked first: unauthenticated callers never get field feedback
+        Map<String, String> fields = new LinkedHashMap<>();
+        for (ConstraintViolation<IngestionEvent> v : validator.validate(event)) {
+            fields.putIfAbsent(v.getPropertyPath().toString(), v.getMessage());
+        }
+        if (!fields.isEmpty()) {
+            Map<String, Object> body = ApiError.body(ApiError.BAD_REQUEST, "validation failed");
+            body.put("fields", fields);
+            return ResponseEntity.badRequest().body(body);
         }
 
         log.info("Received event id={} type={} cage={} source={}",

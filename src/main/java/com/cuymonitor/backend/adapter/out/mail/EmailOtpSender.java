@@ -7,6 +7,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -16,9 +17,11 @@ public class EmailOtpSender implements OtpSender {
 
     private final JavaMailSender mailSender;
     private final String from;
+    private final Clock clock;
 
-    public EmailOtpSender(JavaMailSender mailSender, @Value("${app.mail.from}") String from) {
+    public EmailOtpSender(JavaMailSender mailSender, @Value("${app.mail.from}") String from, Clock clock) {
         this.mailSender = mailSender;
+        this.clock = clock;
         this.from = from;
     }
 
@@ -38,8 +41,8 @@ public class EmailOtpSender implements OtpSender {
         mailSender.send(message);
     }
 
-    private static long minutesLeft(Instant expiresAt) {
-        long seconds = Duration.between(Instant.now(), expiresAt).toSeconds();
+    private long minutesLeft(Instant expiresAt) {
+        long seconds = Duration.between(clock.instant(), expiresAt).toSeconds();
         return Math.max(1, (seconds + 59) / 60);
     }
 }

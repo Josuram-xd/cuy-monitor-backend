@@ -256,6 +256,13 @@ class UserAccountControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void nonUuidSubjectReturns401() throws Exception {
+        mvc.perform(get("/api/v1/account/profile").with(jwt().jwt(jwt -> jwt.subject("not-a-uuid"))))
+                .andExpect(status().isUnauthorized());
+        verifyNoInteractions(getCurrentUserUseCase);
+    }
+
     private static RequestPostProcessor token() {
         return jwt().jwt(jwt -> jwt.subject(USER_ID.toString()));
     }
