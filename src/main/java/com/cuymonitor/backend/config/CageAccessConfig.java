@@ -42,6 +42,7 @@ public class CageAccessConfig {
                 guineaPigService,   // register
                 guineaPigService,   // delete
                 guineaPigService,   // photo
+                guineaPigService,   // replace or remove the photo
                 historyService,     // behavior history
                 weightService,      // weight readings
                 alertService,       // list alerts

@@ -7,6 +7,7 @@ import com.cuymonitor.backend.domain.exception.UnknownCatalogOptionException;
 import com.cuymonitor.backend.domain.model.CatalogKind;
 import com.cuymonitor.backend.domain.model.GuineaPig;
 import com.cuymonitor.backend.domain.model.GuineaPigPhoto;
+import com.cuymonitor.backend.domain.port.in.ChangeGuineaPigPhotoUseCase;
 import com.cuymonitor.backend.domain.port.in.DeleteGuineaPigUseCase;
 import com.cuymonitor.backend.domain.port.in.GetGuineaPigPhotoUseCase;
 import com.cuymonitor.backend.domain.port.in.ListGuineaPigsUseCase;
@@ -21,7 +22,7 @@ import java.time.Clock;
 import java.util.List;
 
 public class GuineaPigService implements ListGuineaPigsUseCase, RegisterGuineaPigUseCase, DeleteGuineaPigUseCase,
-        GetGuineaPigPhotoUseCase {
+        GetGuineaPigPhotoUseCase, ChangeGuineaPigPhotoUseCase {
 
     private final CageRepository cages;
     private final GuineaPigRepository guineaPigs;
@@ -72,6 +73,20 @@ public class GuineaPigService implements ListGuineaPigsUseCase, RegisterGuineaPi
     public GuineaPigPhoto getPhoto(String cageCode, long guineaPigId) {
         requireActiveGuineaPig(cageCode, guineaPigId);
         return guineaPigs.findPhoto(guineaPigId).orElseThrow(GuineaPigNotFoundException::new);
+    }
+
+    @Override
+    @Transactional
+    public void replacePhoto(String cageCode, long guineaPigId, GuineaPigPhoto photo) {
+        requireActiveGuineaPig(cageCode, guineaPigId);
+        guineaPigs.replacePhoto(guineaPigId, photo);
+    }
+
+    @Override
+    @Transactional
+    public void removePhoto(String cageCode, long guineaPigId) {
+        requireActiveGuineaPig(cageCode, guineaPigId);
+        guineaPigs.removePhoto(guineaPigId);
     }
 
     private void requireCage(String cageCode) {

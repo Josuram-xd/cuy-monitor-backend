@@ -10,7 +10,7 @@ public interface GuineaPigRepository {
     /** Creates a guinea pig with its photo, which is written once and never changed afterwards. */
     GuineaPig register(GuineaPig guineaPig, GuineaPigPhoto photo);
 
-    /** Saves a change of state of an existing guinea pig. It never touches the photo. */
+    /** Saves a change of state of an existing guinea pig. It never touches the photo, see replacePhoto. */
     GuineaPig save(GuineaPig guineaPig);
 
     Optional<GuineaPig> findById(long id);
@@ -19,4 +19,10 @@ public interface GuineaPigRepository {
 
     /** The bytes, read only here: the lists never carry them. Empty if the guinea pig has no photo. */
     Optional<GuineaPigPhoto> findPhoto(long guineaPigId);
+
+    /** Overwrites the photo and its content type of an existing guinea pig. */
+    void replacePhoto(long guineaPigId, GuineaPigPhoto photo);
+
+    /** Clears the photo. Nothing happens if there was none. */
+    void removePhoto(long guineaPigId);
 }

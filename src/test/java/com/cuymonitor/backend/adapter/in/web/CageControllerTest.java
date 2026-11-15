@@ -45,6 +45,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -111,7 +112,8 @@ class CageControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.IMAGE_PNG))
                 .andExpect(content().bytes(PHOTO.content()))
-                .andExpect(header().string("X-Content-Type-Options", "nosniff"));
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(header().string("Cache-Control", "no-cache, private"));
     }
 
     @Test
@@ -122,6 +124,84 @@ class CageControllerTest {
         mvc.perform(get("/api/v1/cages/cage-1/guinea-pigs/99/photo").with(token()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("not_found"));
+    }
+
+    @Test
+    void replacesThePhotoOfAGuineaPigAndAnswers204() throws Exception {
+        mvc.perform(put("/api/v1/cages/cage-1/guinea-pigs/7/photo").with(token())
+                        .contentType(MediaType.APPLICATION_JSON).content(newPhotoBody(PHOTO_BASE64, "image/webp")))
+                .andExpect(status().isNoContent());
+
+        verify(cageOperations).replaceGuineaPigPhoto(ACCOUNT, "cage-1", 7L,
+                new GuineaPigPhoto(PHOTO.content(), "image/webp"));
+    }
+
+    @Test
+    void removesThePhotoOfAGuineaPigAndAnswers204() throws Exception {
+        mvc.perform(delete("/api/v1/cages/cage-1/guinea-pigs/7/photo").with(token()))
+                .andExpect(status().isNoContent());
+
+        verify(cageOperations).removeGuineaPigPhoto(ACCOUNT, "cage-1", 7L);
+    }
+
+    @Test
+    void changingThePhotoNeedsASession() throws Exception {
+        mvc.perform(put("/api/v1/cages/cage-1/guinea-pigs/7/photo").contentType(MediaType.APPLICATION_JSON)
+                .content(newPhotoBody(PHOTO_BASE64, "image/png"))).andExpect(status().isUnauthorized());
+        mvc.perform(delete("/api/v1/cages/cage-1/guinea-pigs/7/photo")).andExpect(status().isUnauthorized());
+        verifyNoInteractions(cageOperations);
+    }
+
+    @Test
+    void changingThePhotoOfAnotherAccountsCageIs403AndOfAnUnknownGuineaPigIs404() throws Exception {
+        willThrow(new CageAccessDeniedException()).given(cageOperations)
+                .replaceGuineaPigPhoto(eq(ACCOUNT), eq("cage-ajena"), eq(1L), any());
+        willThrow(new CageAccessDeniedException()).given(cageOperations)
+                .removeGuineaPigPhoto(ACCOUNT, "cage-ajena", 1L);
+        willThrow(new GuineaPigNotFoundException()).given(cageOperations)
+                .removeGuineaPigPhoto(ACCOUNT, "cage-1", 99L);
+
+        mvc.perform(put("/api/v1/cages/cage-ajena/guinea-pigs/1/photo").with(token())
+                        .contentType(MediaType.APPLICATION_JSON).content(newPhotoBody(PHOTO_BASE64, "image/png")))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/v1/cages/cage-ajena/guinea-pigs/1/photo").with(token()))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/v1/cages/cage-1/guinea-pigs/99/photo").with(token()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void rejectsANewPhotoThatIsNotAnImageOrIsTooBigWith400() throws Exception {
+        String url = "/api/v1/cages/cage-1/guinea-pigs/7/photo";
+        mvc.perform(put(url).with(token()).contentType(MediaType.APPLICATION_JSON)
+                        .content(newPhotoBody(PHOTO_BASE64, "image/svg+xml")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.photoContentType").exists());
+        mvc.perform(put(url).with(token()).contentType(MediaType.APPLICATION_JSON)
+                        .content(newPhotoBody("A".repeat(420_004), "image/png")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.photo").exists());
+        // base64 of the right shape, 3 bytes over the limit
+        mvc.perform(put(url).with(token()).contentType(MediaType.APPLICATION_JSON)
+                        .content(newPhotoBody("A".repeat(409_604), "image/png")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("photo must be at most 307200 bytes"));
+        mvc.perform(put(url).with(token()).contentType(MediaType.APPLICATION_JSON)
+                        .content(newPhotoBody("no base64 @@", "image/png")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("photo is not valid base64"));
+        mvc.perform(put(url).with(token()).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(cageOperations);
+    }
+
+    @Test
+    void acceptsAPhotoOfExactlyTheLimit() throws Exception {
+        String atLimit = Base64.getEncoder().encodeToString(new byte[307_200]);
+
+        mvc.perform(put("/api/v1/cages/cage-1/guinea-pigs/7/photo").with(token())
+                        .contentType(MediaType.APPLICATION_JSON).content(newPhotoBody(atLimit, "image/jpeg")))
+                .andExpect(status().isNoContent());
     }
 
     @Test
@@ -348,6 +428,10 @@ class CageControllerTest {
     /** A register body with the photo already in it, plus whatever fields the test is about. */
     private static String body(String fields) {
         return "{\"photo\":\"" + PHOTO_BASE64 + "\",\"photoContentType\":\"image/png\"," + fields + "}";
+    }
+
+    private static String newPhotoBody(String photo, String contentType) {
+        return "{\"photo\":\"" + photo + "\",\"photoContentType\":\"" + contentType + "\"}";
     }
 
     private static String photoBody(String photo, String contentType) {

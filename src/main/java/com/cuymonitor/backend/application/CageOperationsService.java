@@ -85,6 +85,16 @@ public class CageOperationsService implements CageOperations {
     }
 
     @Override
+    public void replaceGuineaPigPhoto(UUID requesterId, String cageCode, long guineaPigId, GuineaPigPhoto photo) {
+        useCases.changeGuineaPigPhoto().replacePhoto(cageCode, guineaPigId, photo);
+    }
+
+    @Override
+    public void removeGuineaPigPhoto(UUID requesterId, String cageCode, long guineaPigId) {
+        useCases.changeGuineaPigPhoto().removePhoto(cageCode, guineaPigId);
+    }
+
+    @Override
     public void deleteGuineaPig(UUID requesterId, String cageCode, long guineaPigId) {
         useCases.deleteGuineaPig().delete(cageCode, guineaPigId);
     }

@@ -47,6 +47,11 @@ public interface CageOperations {
 
     GuineaPigPhoto getGuineaPigPhoto(UUID requesterId, String cageCode, long guineaPigId);
 
+    void replaceGuineaPigPhoto(UUID requesterId, String cageCode, long guineaPigId, GuineaPigPhoto photo);
+
+    /** Idempotent: removing a photo nobody set is not an error. */
+    void removeGuineaPigPhoto(UUID requesterId, String cageCode, long guineaPigId);
+
     void deleteGuineaPig(UUID requesterId, String cageCode, long guineaPigId);
 
     /** The address has no cage: the guinea pig says which cage it is in. */

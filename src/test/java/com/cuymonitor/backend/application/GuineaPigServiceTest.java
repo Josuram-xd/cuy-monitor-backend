@@ -10,6 +10,7 @@ import com.cuymonitor.backend.domain.exception.ColorAlreadyUsedException;
 import com.cuymonitor.backend.domain.exception.UnknownCatalogOptionException;
 import com.cuymonitor.backend.domain.model.CatalogKind;
 import com.cuymonitor.backend.domain.model.GuineaPig;
+import com.cuymonitor.backend.domain.model.GuineaPigPhoto;
 import com.cuymonitor.backend.domain.model.GuineaPigProfile;
 import com.cuymonitor.backend.domain.model.HealthStatus;
 import com.cuymonitor.backend.domain.port.in.RegisterGuineaPigCommand;
@@ -61,6 +62,47 @@ class GuineaPigServiceTest {
         service.delete("cage-1", created.getId());
 
         assertThatThrownBy(() -> service.getPhoto("cage-1", created.getId()))
+                .isInstanceOf(GuineaPigNotFoundException.class);
+    }
+
+    @Test
+    void replacesThePhotoOfAnActiveGuineaPig() {
+        GuineaPig created = service.register(new RegisterGuineaPigCommand("cage-1", "RED", Photos.png()));
+        GuineaPigPhoto webp = new GuineaPigPhoto(new byte[] {9, 8}, "image/webp");
+
+        service.replacePhoto("cage-1", created.getId(), webp);
+
+        assertThat(service.getPhoto("cage-1", created.getId())).isEqualTo(webp);
+        assertThat(service.list("cage-1")).singleElement()
+                .satisfies(g -> assertThat(g.getPhotoContentType()).isEqualTo("image/webp"));
+    }
+
+    @Test
+    void removesThePhotoAndRemovingItAgainIsNotAnError() {
+        GuineaPig created = service.register(new RegisterGuineaPigCommand("cage-1", "RED", Photos.png()));
+
+        service.removePhoto("cage-1", created.getId());
+        service.removePhoto("cage-1", created.getId());
+
+        assertThatThrownBy(() -> service.getPhoto("cage-1", created.getId()))
+                .isInstanceOf(GuineaPigNotFoundException.class);
+        assertThat(service.list("cage-1")).singleElement().satisfies(g -> assertThat(g.hasPhoto()).isFalse());
+    }
+
+    @Test
+    void changingThePhotoOfAnotherCageOrAnInactiveOrUnknownGuineaPigIsNotFound() {
+        GuineaPig created = service.register(new RegisterGuineaPigCommand("cage-1", "RED", Photos.png()));
+
+        assertThatThrownBy(() -> service.replacePhoto("cage-2", created.getId(), Photos.png()))
+                .isInstanceOf(CageNotFoundException.class);
+        assertThatThrownBy(() -> service.removePhoto("cage-1", 999))
+                .isInstanceOf(GuineaPigNotFoundException.class);
+
+        service.delete("cage-1", created.getId());
+
+        assertThatThrownBy(() -> service.replacePhoto("cage-1", created.getId(), Photos.png()))
+                .isInstanceOf(GuineaPigNotFoundException.class);
+        assertThatThrownBy(() -> service.removePhoto("cage-1", created.getId()))
                 .isInstanceOf(GuineaPigNotFoundException.class);
     }
 

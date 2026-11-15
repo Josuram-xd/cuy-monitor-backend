@@ -14,6 +14,7 @@ import com.cuymonitor.backend.domain.port.in.GetCageHealthUseCase;
 import com.cuymonitor.backend.domain.port.in.GetCageUseCase;
 import com.cuymonitor.backend.domain.port.in.GetCageWeightUseCase;
 import com.cuymonitor.backend.domain.port.in.GetGuineaPigHistoryUseCase;
+import com.cuymonitor.backend.domain.port.in.ChangeGuineaPigPhotoUseCase;
 import com.cuymonitor.backend.domain.port.in.GetGuineaPigPhotoUseCase;
 import com.cuymonitor.backend.domain.port.in.ListAlertsUseCase;
 import com.cuymonitor.backend.domain.port.in.ListCagesUseCase;
@@ -56,7 +57,8 @@ class CageOperationsServiceAlertHistoryTest {
                 mock(CreateCageUseCase.class), mock(UpdateCageUseCase.class), mock(DeleteCageUseCase.class),
                 mock(GetCageHealthUseCase.class), mock(ListGuineaPigsUseCase.class),
                 mock(RegisterGuineaPigUseCase.class), mock(DeleteGuineaPigUseCase.class),
-                mock(GetGuineaPigPhotoUseCase.class), mock(GetGuineaPigHistoryUseCase.class),
+                mock(GetGuineaPigPhotoUseCase.class), mock(ChangeGuineaPigPhotoUseCase.class),
+                mock(GetGuineaPigHistoryUseCase.class),
                 mock(GetCageWeightUseCase.class), mock(ListAlertsUseCase.class), mock(ReviewAlertUseCase.class),
                 history));
     }
