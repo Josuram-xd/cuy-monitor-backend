@@ -40,7 +40,7 @@ management:
       enabled: false
 
 app:
-  api-key: ${APP_API_KEY:dev-key}
+  api-key: ${APP_API_KEY}
   # the AI service, for the dashboard's "Simulación" button (inside Compose: http://ai-service:8000)
   ai-service:
     url: ${AI_SERVICE_URL:http://localhost:8000}
