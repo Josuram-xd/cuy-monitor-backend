@@ -78,6 +78,23 @@ class AuthenticationServiceTest {
     }
 
     @Test
+    void registerMapsUniqueConstraintRaceToUserAlreadyExists() {
+        InMemoryUserRepository racing = new InMemoryUserRepository() {
+            @Override
+            public User save(User user) {
+                throw new org.springframework.dao.DataIntegrityViolationException("duplicate key");
+            }
+        };
+        SessionService racingSessions = new SessionService(new FakeTokenIssuer(), new InMemoryRefreshTokenRepository(),
+                new InMemoryRevokedTokenRepository(), racing, clock, Duration.ofDays(7), Duration.ofMinutes(15));
+        AuthenticationService racingService = new AuthenticationService(racing, challenges, new FakePasswordHasher(),
+                sender, racingSessions, clock, OTP_TTL, MAX_ATTEMPTS, MAX_REQUESTS, REQUEST_WINDOW);
+
+        assertThatThrownBy(() -> racingService.register(new RegisterUserCommand("juan", "Juan", "juan@mail.com", "Secret-pass-1")))
+                .isInstanceOf(UserAlreadyExistsException.class);
+    }
+
+    @Test
     void registerRejectsRepeatedEmail() {
         register("juan", "juan@mail.com");
 
