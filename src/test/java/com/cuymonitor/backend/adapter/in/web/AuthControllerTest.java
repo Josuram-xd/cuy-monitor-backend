@@ -50,6 +50,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -68,6 +69,11 @@ class AuthControllerTest {
         @Bean
         Clock clock() {
             return Clock.fixed(NOW, ZoneOffset.UTC);
+        }
+
+        @Bean
+        FailedAttemptLimiter limiter(Clock clock) {
+            return new FailedAttemptLimiter(5, 20, java.time.Duration.ofMinutes(15), clock);
         }
     }
 
@@ -330,6 +336,49 @@ class AuthControllerTest {
                         """.formatted(CHALLENGE_ID)))
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(verifyOtpUseCase);
+    }
+
+    @Test
+    void loginIsBlockedWithRetryAfterAfterTooManyFailuresForTheSameUsername() throws Exception {
+        given(loginUseCase.login(any())).willThrow(new InvalidCredentialsException());
+        String body = """
+                {"username":"Lockout-User","password":"wrong"}
+                """;
+
+        for (int i = 0; i < 5; i++) {
+            mvc.perform(post("/api/v1/auth/login").with(from("10.0.0.1")).contentType(MediaType.APPLICATION_JSON)
+                    .content(body)).andExpect(status().isUnauthorized());
+        }
+        // another IP, same username (any casing): still blocked, and the real login is not even tried
+        mvc.perform(post("/api/v1/auth/login").with(from("10.0.0.2")).contentType(MediaType.APPLICATION_JSON)
+                        .content(body.replace("Lockout-User", "lockout-user")))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string("Retry-After", "900"))
+                .andExpect(jsonPath("$.error").value("too_many_requests"));
+        verify(loginUseCase, org.mockito.Mockito.times(5)).login(any());
+    }
+
+    @Test
+    void verifyOtpIsBlockedAfterTooManyFailuresForTheSameChallenge() throws Exception {
+        given(verifyOtpUseCase.verify(any())).willThrow(new InvalidOtpException());
+        UUID challenge = UUID.fromString("7d1c1f0e-0000-4000-8000-0000000000aa");
+        String body = "{\"challengeId\":\"%s\",\"code\":\"123456\"}".formatted(challenge);
+
+        for (int i = 0; i < 5; i++) {
+            mvc.perform(post("/api/v1/auth/otp/verify").with(from("10.0.0.3")).contentType(MediaType.APPLICATION_JSON)
+                    .content(body)).andExpect(status().isUnauthorized());
+        }
+        mvc.perform(post("/api/v1/auth/otp/verify").with(from("10.0.0.4")).contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().exists("Retry-After"));
+    }
+
+    private static org.springframework.test.web.servlet.request.RequestPostProcessor from(String ip) {
+        return request -> {
+            request.setRemoteAddr(ip);
+            return request;
+        };
     }
 
     private static ArgumentMatcher<RegisterUserCommand> matchesRegister(String username, String email) {

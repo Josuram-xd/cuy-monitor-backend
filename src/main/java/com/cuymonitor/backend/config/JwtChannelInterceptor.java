@@ -16,12 +16,14 @@ import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 
 import java.util.Map;
+import java.util.UUID;
+import java.util.function.Predicate;
 
 /**
  * Validates the JWT on the STOMP CONNECT frame. Browsers bring it in the access cookie (copied to the session
  * attributes by CookieHandshakeInterceptor); other clients can send an Authorization header on the frame.
  * On SUBSCRIBE it needs an authenticated session and hands the destination to {@link CageTopicGuard}, which knows
- * who may follow each cage. Throwing here makes Spring answer with an ERROR frame
+ * who may follow each cage. CONNECT also requires the account to still exist and not be disabled. Throwing here makes Spring answer with an ERROR frame
  * and close the connection.
  */
 public class JwtChannelInterceptor implements ChannelInterceptor {
@@ -31,11 +33,14 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
 
     private final JwtDecoder decoder;
     private final CageTopicGuard cageTopicGuard;
+    private final Predicate<UUID> accountCanLogIn;
     private final JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
 
-    public JwtChannelInterceptor(JwtDecoder decoder, CageTopicGuard cageTopicGuard) {
+    public JwtChannelInterceptor(JwtDecoder decoder, CageTopicGuard cageTopicGuard,
+                                 Predicate<UUID> accountCanLogIn) {
         this.decoder = decoder;
         this.cageTopicGuard = cageTopicGuard;
+        this.accountCanLogIn = accountCanLogIn;
     }
 
     @Override
@@ -76,6 +81,18 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
         } catch (JwtException e) {
             throw new BadCredentialsException("invalid or expired token", e);
         }
+        // a valid token is not enough: the account may have been disabled or deleted since it was issued
+        if (!isActiveAccount(jwt.getSubject())) {
+            throw new BadCredentialsException("account is not active");
+        }
         return converter.convert(jwt);
+    }
+
+    private boolean isActiveAccount(String subject) {
+        try {
+            return accountCanLogIn.test(UUID.fromString(subject));
+        } catch (IllegalArgumentException | NullPointerException e) {
+            return false;
+        }
     }
 }

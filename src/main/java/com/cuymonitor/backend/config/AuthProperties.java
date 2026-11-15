@@ -6,7 +6,14 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 @ConfigurationProperties(prefix = "app.auth")
-public record AuthProperties(Jwt jwt, Refresh refresh, Cookie cookie, Otp otp, Google google) {
+public record AuthProperties(Jwt jwt, Refresh refresh, Cookie cookie, Otp otp, Google google,
+                             RateLimit rateLimit) {
+
+    public AuthProperties {
+        if (rateLimit == null) {
+            rateLimit = new RateLimit(5, 20, Duration.ofMinutes(15));
+        }
+    }
 
     public record Jwt(String secret, String issuer, Duration ttl) {
 
@@ -53,6 +60,17 @@ public record AuthProperties(Jwt jwt, Refresh refresh, Cookie cookie, Otp otp, G
                 throw new IllegalArgumentException("app.auth.otp.max-requests must be positive");
             }
             requirePositive(requestWindow, "app.auth.otp.request-window");
+        }
+    }
+
+    /** Failed logins / code verifications allowed per window, per account (or challenge) and per client IP. */
+    public record RateLimit(int maxFailuresPerKey, int maxFailuresPerIp, Duration window) {
+
+        public RateLimit {
+            if (maxFailuresPerKey <= 0 || maxFailuresPerIp <= 0) {
+                throw new IllegalArgumentException("app.auth.rate-limit max-failures must be positive");
+            }
+            requirePositive(window, "app.auth.rate-limit.window");
         }
     }
 

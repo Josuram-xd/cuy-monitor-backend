@@ -136,11 +136,13 @@ Every error follows the API convention `{ "error": "<code>", "message": "..." }`
 | `401` | `unauthorized` | `invalid or expired code` | Wrong, expired, already used or revoked code, or 5 failed attempts (same message on purpose) |
 | `401` | `unauthorized` | `missing, invalid or expired token` | Protected route without a valid `Authorization: Bearer` header |
 | `429` | `too_many_requests` | `too many codes requested, try again later` | More than 5 codes requested for the same account in 15 minutes (login / resend) |
+| `429` | `too_many_requests` | `too many attempts, try again later` | Too many failed logins (per username or per IP) or failed code verifications (per challenge or per IP) in 15 minutes. Carries a `Retry-After` header (seconds) |
 | `409` | `conflict` | `username or email already in use` | Username or email already taken |
 
 ## Rules
 
 - Code: 6 digits, valid for **5 minutes**, single use, at most **5 attempts**. Asking for a new one (login) invalidates the previous ones. At most **5 codes per account every 15 minutes**; after that, login answers `429` until the window passes.
+- Failed attempts are limited: at most **5 failed logins per username** and **20 per IP** every 15 minutes, and at most **5 failed code verifications per challenge** and **20 per IP** in the same window. Past the limit, `/login` or `/otp/verify` answers `429` with `Retry-After` and the same generic message whatever the cause, without looking at the credentials. A successful login clears the username counter. The limits are configurable (`app.auth.rate-limit`) and live in the memory of one instance: with several instances they would need a shared store.
 - Access token: JWT signed with HS256, valid for **15 minutes**. Claims: `sub` (user id, UUID), `iss` (`cuy-monitor-backend`), `iat`, `exp`, `jti` (unique id of the token), `sid` (id of the session: every access token born from one login shares it). A token without a valid `jti` or `sid`, or whose `jti` or `sid` was revoked, is rejected.
 - Refresh token: random 256-bit value, valid for **7 days**, rotated on every use (see `/refresh`). Stored hashed.
 - Logout revokes the tokens on the server (see `/logout`); deleting a cookie in the browser is not enough and is not what the dashboard does.
@@ -240,7 +242,7 @@ The browser sends the `access_token` cookie on the handshake by itself (same ori
 const client = new Client({ brokerURL: `wss://${location.host}/ws` });
 ```
 
-- The server copies the cookie to the session on the handshake and validates it on the STOMP `CONNECT` frame, like any other request (signature, issuer, expiration and revocation).
-- No cookie, or an invalid, expired, revoked or foreign token: the server answers with a STOMP `ERROR` frame and closes the connection. Do not rely on the text of the `message` header. Clients that are not browsers can still send `Authorization: Bearer <accessToken>` on the `CONNECT` frame.
+- The server copies the cookie to the session on the handshake and validates it on the STOMP `CONNECT` frame, like any other request (signature, issuer, expiration and revocation) and also checks that the account still exists and is not `DISABLED`.
+- No cookie, or an invalid, expired, revoked or foreign token, or a disabled or deleted account: the server answers with a STOMP `ERROR` frame and closes the connection. Do not rely on the text of the `message` header. Clients that are not browsers can still send `Authorization: Bearer <accessToken>` on the `CONNECT` frame.
 - A `SUBSCRIBE` from a session that did not authenticate on `CONNECT` is rejected the same way.
 - The token is only checked on `CONNECT`. An open connection is not closed when the token expires or is revoked; the dashboard reconnects after a `/refresh` and after logging in again.
