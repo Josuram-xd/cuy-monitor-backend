@@ -182,6 +182,42 @@ class SecurityConfigTest {
         verify(processEventUseCase, never()).process(any(HealthEvent.class));
     }
 
+    @Test
+    void ingestionWithWrongApiKeyAndInvalidBodyReturns401NotValidationError() throws Exception {
+        mvc.perform(post("/api/v1/ingestion/events").header("X-API-Key", "wrong")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"schemaVersion\":1}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void ingestionWithWrongApiKeyAndUnparseableBodyReturns401() throws Exception {
+        mvc.perform(post("/api/v1/ingestion/events").header("X-API-Key", "wrong")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"type\":\"NOPE\",\"timestamp\":\"x\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void ingestionWithApiKeyAndUnparseableBodyReturns400() throws Exception {
+        mvc.perform(post("/api/v1/ingestion/events").header("X-API-Key", "test-key")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"type\":\"NOPE\",\"timestamp\":\"x\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("malformed request body"));
+    }
+
+    @Test
+    void ingestionWithApiKeyAndInvalidBodyReturns400() throws Exception {
+        mvc.perform(post("/api/v1/ingestion/events").header("X-API-Key", "test-key")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"schemaVersion\":1}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.eventId").exists());
+    }
+
+    @Test
+    void blankApiKeyFailsAtConstruction() {
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> new IngestionController(" ", null, null, null, null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
     private String token(String issuer) {
         return token(issuer, UUID.randomUUID());
     }
