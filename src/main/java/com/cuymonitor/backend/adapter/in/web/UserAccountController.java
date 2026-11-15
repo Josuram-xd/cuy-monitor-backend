@@ -5,6 +5,7 @@ import com.cuymonitor.backend.adapter.in.web.dto.DeactivateAccountRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.ProfilePhotoRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.UpdateProfileRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.UserResponse;
+import com.cuymonitor.backend.domain.exception.InvalidCredentialsException;
 import com.cuymonitor.backend.domain.port.in.ChangePasswordCommand;
 import com.cuymonitor.backend.domain.port.in.ChangePasswordUseCase;
 import com.cuymonitor.backend.domain.port.in.DeactivateAccountCommand;
@@ -106,6 +107,10 @@ public class UserAccountController {
 
     // the id always comes from the token, never from the URL, so nobody can touch another account
     private static UUID userId(Jwt jwt) {
-        return UUID.fromString(jwt.getSubject());
+        try {
+            return UUID.fromString(jwt.getSubject());
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new InvalidCredentialsException();
+        }
     }
 }
