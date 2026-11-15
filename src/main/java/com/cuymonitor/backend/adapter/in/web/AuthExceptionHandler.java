@@ -6,9 +6,11 @@ import com.cuymonitor.backend.domain.exception.InvalidCredentialsException;
 import com.cuymonitor.backend.domain.exception.InvalidGoogleTokenException;
 import com.cuymonitor.backend.domain.exception.InvalidOtpException;
 import com.cuymonitor.backend.domain.exception.InvalidRefreshTokenException;
+import com.cuymonitor.backend.domain.exception.TooManyAttemptsException;
 import com.cuymonitor.backend.domain.exception.TooManyOtpRequestsException;
 import com.cuymonitor.backend.domain.exception.UserAlreadyExistsException;
 import com.cuymonitor.backend.domain.exception.WeakPasswordException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -68,6 +70,14 @@ public class AuthExceptionHandler {
     @ExceptionHandler(TooManyOtpRequestsException.class)
     public ResponseEntity<Map<String, Object>> handleTooManyRequests(TooManyOtpRequestsException ex) {
         return error(HttpStatus.TOO_MANY_REQUESTS, ApiError.TOO_MANY_REQUESTS, ex.getMessage());
+    }
+
+    @ExceptionHandler(TooManyAttemptsException.class)
+    public ResponseEntity<Map<String, Object>> handleTooManyAttempts(TooManyAttemptsException ex) {
+        long seconds = Math.max(1, (ex.getRetryAfter().toMillis() + 999) / 1000);
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(seconds))
+                .body(ApiError.body(ApiError.TOO_MANY_REQUESTS, ex.getMessage()));
     }
 
     private static ResponseEntity<Map<String, Object>> error(HttpStatus status, String code, String message) {

@@ -14,33 +14,33 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class FailedAttemptLimiterTest {
 
     private final MutableClock clock = new MutableClock(Instant.parse("2026-10-01T10:00:00Z"));
-    private final FailedAttemptLimiter limiter = new FailedAttemptLimiter(Duration.ofMinutes(15), clock);
+    private final FailedAttemptLimiter limiter = new FailedAttemptLimiter(3, 5, Duration.ofMinutes(15), clock);
 
     @Test
     void blocksTheKeyOnceItReachesTheLimitAndSaysHowLongToWait() {
-        limiter.recordFailure("a");
-        limiter.recordFailure("a");
-        assertThatCode(() -> limiter.check("a", 3)).doesNotThrowAnyException();
+        limiter.recordFailure("a", "1.1.1.1");
+        limiter.recordFailure("a", "1.1.1.1");
+        assertThatCode(() -> limiter.check("a", "9.9.9.9")).doesNotThrowAnyException();
 
-        limiter.recordFailure("a");
+        limiter.recordFailure("a", "1.1.1.1");
         clock.advance(Duration.ofMinutes(5));
 
-        assertThatThrownBy(() -> limiter.check("a", 3))
+        assertThatThrownBy(() -> limiter.check("a", "9.9.9.9"))
                 .isInstanceOfSatisfying(TooManyAttemptsException.class,
                         e -> assertThat(e.getRetryAfter()).isEqualTo(Duration.ofMinutes(10)));
-        assertThatCode(() -> limiter.check("b", 3)).doesNotThrowAnyException();
+        assertThatCode(() -> limiter.check("b", "9.9.9.9")).doesNotThrowAnyException();
     }
 
     @Test
     void theBlockEndsWithTheWindowAndResetClearsIt() {
         for (int i = 0; i < 3; i++) {
-            limiter.recordFailure("a");
-            limiter.recordFailure("b");
+            limiter.recordFailure("a", "1.1.1.1");
+            limiter.recordFailure("b", "2.2.2.2");
         }
         limiter.reset("b");
         clock.advance(Duration.ofMinutes(15));
 
-        assertThatCode(() -> limiter.check("a", 3)).doesNotThrowAnyException();
-        assertThatCode(() -> limiter.check("b", 3)).doesNotThrowAnyException();
+        assertThatCode(() -> limiter.check("a", "9.9.9.9")).doesNotThrowAnyException();
+        assertThatCode(() -> limiter.check("b", "9.9.9.9")).doesNotThrowAnyException();
     }
 }
