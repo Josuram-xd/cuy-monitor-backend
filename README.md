@@ -416,7 +416,10 @@ docker compose -f ../cuy-monitor-db/docker-compose.yml up -d   # Postgres 18 on 
 
 ### 3. Run the backend
 
+`APP_API_KEY` (the `X-API-Key` for ingestion) and `APP_JWT_SECRET` (at least 32 bytes) are required; the backend refuses to start without them. There are no defaults.
+
 ```bash
+export APP_API_KEY=<your-key> APP_JWT_SECRET=<32+ byte secret>   # PowerShell: $env:APP_API_KEY = "..."
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev     # Windows: mvnw.cmd ...
 ```
 
@@ -453,8 +456,8 @@ The application reads its configuration from environment variables (with local d
 |---|---|---|
 | `DB_HOST` / `DB_PORT` / `DB_NAME` | PostgreSQL location (RDS endpoint in prod) | `localhost` / `5432` / `cuymonitor` |
 | `DB_USER` / `DB_PASSWORD` | Database credentials | `cuymonitor` / `cuymonitor` |
-| `APP_API_KEY` | Key required in the `X-API-Key` header for the ingestion endpoint | `dev-key` |
-| `APP_JWT_SECRET` | HS256 secret, ≥ 32 bytes | dev-only value |
+| `APP_API_KEY` | Key required in the `X-API-Key` header for the ingestion endpoint (required, no default) | none |
+| `APP_JWT_SECRET` | HS256 secret, ≥ 32 bytes (required, no default) | none |
 | `GOOGLE_CLIENT_ID` | Public client id of the Google OAuth web client for "Continuar con Google" (not a secret) | empty = off |
 | `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` / `MAIL_FROM` | SMTP for the OTP emails (SES or Gmail) | not needed with profile `dev` |
 | `SPRING_PROFILES_ACTIVE` | `dev` locally, `prod` on the EC2 | — |

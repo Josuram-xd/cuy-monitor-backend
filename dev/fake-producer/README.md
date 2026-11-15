@@ -4,11 +4,11 @@ This development-only script continuously sends one randomized `BEHAVIOR`,
 `AUDIO`, and `WEIGHT` event to `POST /api/v1/ingestion/events`. It uses the
 shared event contract and requires the backend's `X-API-Key`.
 
-For a local backend using its development defaults, run from the repository
-root:
+The backend has no default API key. Start it with `APP_API_KEY` set to a value
+of your choice, then run from the repository root with the same value:
 
 ```powershell
-$env:API_KEY = "dev-key"
+$env:API_KEY = "<same value as the backend's APP_API_KEY>"
 python dev/fake-producer/fake_producer.py
 ```
 
