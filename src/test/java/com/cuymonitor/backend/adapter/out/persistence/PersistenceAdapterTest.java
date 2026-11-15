@@ -81,6 +81,19 @@ class PersistenceAdapterTest {
     }
 
     @Test
+    void guineaPigAdapterWritesAndClearsThePhotoWithAnUpdateQuery() {
+        GuineaPigJpaRepository guineaPigs = mock(GuineaPigJpaRepository.class);
+        GuineaPigPersistenceAdapter adapter = new GuineaPigPersistenceAdapter(mock(CageJpaRepository.class),
+                guineaPigs, new GuineaPigPersistenceMapper());
+
+        adapter.replacePhoto(5L, Photos.png());
+        adapter.removePhoto(5L);
+
+        verify(guineaPigs).updatePhoto(5L, Photos.png().content(), "image/png");
+        verify(guineaPigs).updatePhoto(5L, null, null);
+    }
+
+    @Test
     void guineaPigAdapterResolvesCageAndPersistsTheMappedEntity() {
         CageJpaRepository cages = mock(CageJpaRepository.class);
         GuineaPigJpaRepository guineaPigs = mock(GuineaPigJpaRepository.class);
