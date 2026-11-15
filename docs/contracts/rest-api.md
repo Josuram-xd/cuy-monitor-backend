@@ -180,11 +180,11 @@ session like every other endpoint of section 3, so the picture is not public.
 
 Replaces the photo of an existing guinea pig; whatever was there is gone. Same fields and limits as the photo of 3.3: `photo` is base64 with no `data:` prefix, at most 300 KB once decoded, and `photoContentType` is one of `image/jpeg`, `image/png`, `image/webp`.
 
-`204 No Content`. `400` invalid body (not base64, over 300 KB, another type). `404` if the cage is not the caller's or does not exist, or the id is not an **active** guinea pig of that cage. `401` without a session.
+`204 No Content`. `400` invalid body (not base64, over 300 KB, another type). `403` if the cage is another account's, `404` if the cage does not exist or the id is not an **active** guinea pig of that cage. `401` without a session.
 
 ### 3.3e `DELETE /api/v1/cages/{cageId}/guinea-pigs/{id}/photo`
 
-No body. `204 No Content`. After it `photoUrl` of the guinea pig is `null` and `GET .../photo` answers `404`. Removing a photo nobody set is not an error. `404` if the cage is not the caller's or does not exist, or the id is not an **active** guinea pig of that cage. `401` without a session.
+No body. `204 No Content`. After it `photoUrl` of the guinea pig is `null` and `GET .../photo` answers `404`. Removing a photo nobody set is not an error. `403` if the cage is another account's, `404` if the cage does not exist or the id is not an **active** guinea pig of that cage. `401` without a session.
 
 ### 3.3b `DELETE /api/v1/cages/{cageId}/guinea-pigs/{id}`
 
