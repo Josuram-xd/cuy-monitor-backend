@@ -79,13 +79,15 @@ class CageAccessProxyTest {
         proxy.listGuineaPigs(ANA, "cage-ana");
         proxy.registerGuineaPig(ANA, "cage-ana", "RED", Photos.png(), GuineaPigProfile.EMPTY);
         proxy.getGuineaPigPhoto(ANA, "cage-ana", 7L);
+        proxy.replaceGuineaPigPhoto(ANA, "cage-ana", 7L, Photos.png());
+        proxy.removeGuineaPigPhoto(ANA, "cage-ana", 7L);
         proxy.deleteGuineaPig(ANA, "cage-ana", 7L);
         proxy.listAlerts(ANA, "cage-ana", AlertStatus.OPEN);
         proxy.deleteCage(ANA, "cage-ana");
 
         assertThat(realSubject.calls).containsExactly("getCage cage-ana", "updateCage cage-ana", "getHealth cage-ana",
                 "listGuineaPigs cage-ana", "registerGuineaPig cage-ana", "getGuineaPigPhoto cage-ana 7",
-                "deleteGuineaPig cage-ana 7",
+                "replaceGuineaPigPhoto cage-ana 7", "removeGuineaPigPhoto cage-ana 7", "deleteGuineaPig cage-ana 7",
                 "listAlerts cage-ana", "deleteCage cage-ana");
     }
 
@@ -99,6 +101,8 @@ class CageAccessProxyTest {
                 () -> proxy.listGuineaPigs(ANA, "cage-luis"),
                 () -> proxy.registerGuineaPig(ANA, "cage-luis", "RED", Photos.png(), GuineaPigProfile.EMPTY),
                 () -> proxy.getGuineaPigPhoto(ANA, "cage-luis", 1L),
+                () -> proxy.replaceGuineaPigPhoto(ANA, "cage-luis", 1L, Photos.png()),
+                () -> proxy.removeGuineaPigPhoto(ANA, "cage-luis", 1L),
                 () -> proxy.deleteGuineaPig(ANA, "cage-luis", 1L),
                 () -> proxy.listAlerts(ANA, "cage-luis", null));
 
