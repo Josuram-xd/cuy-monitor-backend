@@ -71,6 +71,16 @@ public class GuineaPigPersistenceAdapter implements GuineaPigRepository {
                 .map(GuineaPigPersistenceAdapter::toPhoto);
     }
 
+    @Override
+    public void replacePhoto(long guineaPigId, GuineaPigPhoto photo) {
+        guineaPigJpaRepository.updatePhoto(guineaPigId, photo.content(), photo.contentType());
+    }
+
+    @Override
+    public void removePhoto(long guineaPigId) {
+        guineaPigJpaRepository.updatePhoto(guineaPigId, null, null);
+    }
+
     private static GuineaPigPhoto toPhoto(GuineaPigJpaEntity entity) {
         return new GuineaPigPhoto(entity.getPhoto(), entity.getPhotoContentType());
     }

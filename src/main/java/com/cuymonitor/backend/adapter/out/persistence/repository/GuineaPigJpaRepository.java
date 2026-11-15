@@ -3,6 +3,7 @@ package com.cuymonitor.backend.adapter.out.persistence.repository;
 import com.cuymonitor.backend.adapter.out.persistence.GuineaPigRow;
 import com.cuymonitor.backend.adapter.out.persistence.entity.GuineaPigJpaEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -36,4 +37,9 @@ public interface GuineaPigJpaRepository extends JpaRepository<GuineaPigJpaEntity
             from GuineaPigJpaEntity g join g.cage c
             where g.id = :id""")
     Optional<GuineaPigRow> findRowById(@Param("id") long id);
+
+    // a bulk update: the photo columns are not updatable through the entity, so a status save cannot wipe them
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update GuineaPigJpaEntity g set g.photo = :photo, g.photoContentType = :contentType where g.id = :id")
+    int updatePhoto(@Param("id") long id, @Param("photo") byte[] photo, @Param("contentType") String contentType);
 }

@@ -60,6 +60,29 @@ public class InMemoryGuineaPigRepository implements GuineaPigRepository {
         return Optional.ofNullable(photos.get(guineaPigId));
     }
 
+    @Override
+    public void replacePhoto(long guineaPigId, GuineaPigPhoto photo) {
+        GuineaPig current = guineaPigs.get(guineaPigId);
+        if (current != null) {
+            photos.put(guineaPigId, photo);
+            guineaPigs.put(guineaPigId, withPhotoType(current, photo.contentType()));
+        }
+    }
+
+    @Override
+    public void removePhoto(long guineaPigId) {
+        GuineaPig current = guineaPigs.get(guineaPigId);
+        if (current != null) {
+            photos.remove(guineaPigId);
+            guineaPigs.put(guineaPigId, withPhotoType(current, null));
+        }
+    }
+
+    private static GuineaPig withPhotoType(GuineaPig g, String contentType) {
+        return GuineaPig.restore(g.getId(), g.getCageCode(), contentType, g.getMarkColor(), g.getStatus(),
+                g.getStatusSince(), g.isActive(), g.getCreatedAt(), g.getProfile());
+    }
+
     private static GuineaPig copy(GuineaPig g, long id) {
         return GuineaPig.restore(id, g.getCageCode(), g.getPhotoContentType(), g.getMarkColor(), g.getStatus(),
                 g.getStatusSince(), g.isActive(), g.getCreatedAt(), g.getProfile());

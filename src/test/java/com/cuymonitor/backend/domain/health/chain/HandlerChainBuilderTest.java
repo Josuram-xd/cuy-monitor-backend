@@ -147,6 +147,14 @@ class HandlerChainBuilderTest {
         }
 
         @Override
+        public void replacePhoto(long guineaPigId, GuineaPigPhoto photo) {
+        }
+
+        @Override
+        public void removePhoto(long guineaPigId) {
+        }
+
+        @Override
         public Optional<GuineaPig> findById(long id) {
             return Optional.empty();
         }
