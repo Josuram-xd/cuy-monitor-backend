@@ -114,6 +114,18 @@ public class CageAccessProxy implements CageOperations {
     }
 
     @Override
+    public void replaceGuineaPigPhoto(UUID requesterId, String cageCode, long guineaPigId, GuineaPigPhoto photo) {
+        checkOwner(requesterId, cageCode);
+        realSubject.replaceGuineaPigPhoto(requesterId, cageCode, guineaPigId, photo);
+    }
+
+    @Override
+    public void removeGuineaPigPhoto(UUID requesterId, String cageCode, long guineaPigId) {
+        checkOwner(requesterId, cageCode);
+        realSubject.removeGuineaPigPhoto(requesterId, cageCode, guineaPigId);
+    }
+
+    @Override
     public void deleteGuineaPig(UUID requesterId, String cageCode, long guineaPigId) {
         checkOwner(requesterId, cageCode);
         realSubject.deleteGuineaPig(requesterId, cageCode, guineaPigId);

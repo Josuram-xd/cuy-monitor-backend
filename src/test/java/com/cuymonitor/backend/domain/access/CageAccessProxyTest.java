@@ -271,6 +271,16 @@ class CageAccessProxyTest {
         }
 
         @Override
+        public void replaceGuineaPigPhoto(UUID requesterId, String cageCode, long guineaPigId, GuineaPigPhoto photo) {
+            calls.add("replaceGuineaPigPhoto " + cageCode + " " + guineaPigId);
+        }
+
+        @Override
+        public void removeGuineaPigPhoto(UUID requesterId, String cageCode, long guineaPigId) {
+            calls.add("removeGuineaPigPhoto " + cageCode + " " + guineaPigId);
+        }
+
+        @Override
         public void deleteGuineaPig(UUID requesterId, String cageCode, long guineaPigId) {
             calls.add("deleteGuineaPig " + cageCode + " " + guineaPigId);
         }
