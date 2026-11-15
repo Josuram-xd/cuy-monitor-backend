@@ -65,6 +65,8 @@ Summary:
 | `GET /api/v1/cages/{cageId}/health` | Cage status summary | `200` |
 | `GET /api/v1/cages/{cageId}/guinea-pigs` | Guinea pigs with current status | `200` |
 | `GET /api/v1/cages/{cageId}/guinea-pigs/{id}/photo` | The photo of a guinea pig | `200` |
+| `PUT /api/v1/cages/{cageId}/guinea-pigs/{id}/photo` | Replace the photo of a guinea pig | `204` |
+| `DELETE /api/v1/cages/{cageId}/guinea-pigs/{id}/photo` | Remove the photo of a guinea pig | `204` |
 | `POST /api/v1/cages/{cageId}/guinea-pigs` | Register a guinea pig | `201` |
 | `DELETE /api/v1/cages/{cageId}/guinea-pigs/{id}` | Delete a guinea pig (soft delete) | `204` |
 | `GET /api/v1/guinea-pigs/{id}/history?from=&to=` | State changes and behavior windows | `200` |
@@ -164,11 +166,25 @@ The codes are read upper case: `red` and `RED` are the same option.
 ### 3.3c `GET /api/v1/cages/{cageId}/guinea-pigs/{id}/photo`
 
 The bytes of the photo, with the `Content-Type` they were registered with. Not JSON: the dashboard puts the path
-straight into an `img` tag. `Cache-Control: private, max-age=86400` (a photo never changes; a new cuy is a new id)
+straight into an `img` tag. `Cache-Control: private, no-cache` (the breeder can replace the photo, see 3.3d, so the browser asks again each time)
 and `X-Content-Type-Options: nosniff`.
 
 `404` if the cage does not exist, the id is not an **active** guinea pig of that cage, or it has no photo. Needs a
 session like every other endpoint of section 3, so the picture is not public.
+
+### 3.3d `PUT /api/v1/cages/{cageId}/guinea-pigs/{id}/photo`
+
+```json
+{ "photo": "<base64>", "photoContentType": "image/webp" }
+```
+
+Replaces the photo of an existing guinea pig; whatever was there is gone. Same fields and limits as the photo of 3.3: `photo` is base64 with no `data:` prefix, at most 300 KB once decoded, and `photoContentType` is one of `image/jpeg`, `image/png`, `image/webp`.
+
+`204 No Content`. `400` invalid body (not base64, over 300 KB, another type). `404` if the cage is not the caller's or does not exist, or the id is not an **active** guinea pig of that cage. `401` without a session.
+
+### 3.3e `DELETE /api/v1/cages/{cageId}/guinea-pigs/{id}/photo`
+
+No body. `204 No Content`. After it `photoUrl` of the guinea pig is `null` and `GET .../photo` answers `404`. Removing a photo nobody set is not an error. `404` if the cage is not the caller's or does not exist, or the id is not an **active** guinea pig of that cage. `401` without a session.
 
 ### 3.3b `DELETE /api/v1/cages/{cageId}/guinea-pigs/{id}`
 
