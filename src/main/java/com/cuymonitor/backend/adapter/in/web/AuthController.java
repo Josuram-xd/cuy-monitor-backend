@@ -5,6 +5,8 @@ import com.cuymonitor.backend.adapter.in.web.dto.GoogleLoginRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.LoginRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.RegisterRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.VerifyOtpRequest;
+import com.cuymonitor.backend.domain.exception.InvalidCredentialsException;
+import com.cuymonitor.backend.domain.exception.InvalidOtpException;
 import com.cuymonitor.backend.domain.model.auth.TokenClaims;
 import com.cuymonitor.backend.domain.model.auth.AuthSession;
 import com.cuymonitor.backend.domain.port.in.GoogleSignInUseCase;
@@ -17,6 +19,7 @@ import com.cuymonitor.backend.domain.port.in.RegisterUserCommand;
 import com.cuymonitor.backend.domain.port.in.RegisterUserUseCase;
 import com.cuymonitor.backend.domain.port.in.VerifyOtpCommand;
 import com.cuymonitor.backend.domain.port.in.VerifyOtpUseCase;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Locale;
 import java.util.UUID;
 
 @RestController
@@ -44,11 +48,12 @@ public class AuthController {
     private final GoogleSignInUseCase googleSignInUseCase;
     private final AuthCookies cookies;
     private final JwtDecoder jwtDecoder;
+    private final FailedAttemptLimiter limiter;
 
     public AuthController(RegisterUserUseCase registerUserUseCase, LoginUseCase loginUseCase,
                           VerifyOtpUseCase verifyOtpUseCase, RefreshSessionUseCase refreshSessionUseCase,
                           LogoutUseCase logoutUseCase, GoogleSignInUseCase googleSignInUseCase,
-                          AuthCookies cookies, JwtDecoder jwtDecoder) {
+                          AuthCookies cookies, JwtDecoder jwtDecoder, FailedAttemptLimiter limiter) {
         this.registerUserUseCase = registerUserUseCase;
         this.loginUseCase = loginUseCase;
         this.verifyOtpUseCase = verifyOtpUseCase;
@@ -57,6 +62,7 @@ public class AuthController {
         this.googleSignInUseCase = googleSignInUseCase;
         this.cookies = cookies;
         this.jwtDecoder = jwtDecoder;
+        this.limiter = limiter;
     }
 
     @PostMapping("/register")
@@ -67,14 +73,32 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ChallengeResponse login(@Valid @RequestBody LoginRequest request) {
-        return ChallengeResponse.from(loginUseCase.login(new LoginCommand(request.username(), request.password())));
+    public ChallengeResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
+        String userKey = "login:user:" + request.username().trim().toLowerCase(Locale.ROOT);
+        limiter.check(userKey, http.getRemoteAddr());
+        try {
+            ChallengeResponse challenge = ChallengeResponse.from(
+                    loginUseCase.login(new LoginCommand(request.username(), request.password())));
+            limiter.reset(userKey);
+            return challenge;
+        } catch (InvalidCredentialsException e) {
+            limiter.recordFailure(userKey, http.getRemoteAddr());
+            throw e;
+        }
     }
 
     /** The tokens travel only in cookies; the body is empty. */
     @PostMapping("/otp/verify")
-    public ResponseEntity<Void> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
-        AuthSession session = verifyOtpUseCase.verify(new VerifyOtpCommand(request.challengeId(), request.code()));
+    public ResponseEntity<Void> verifyOtp(@Valid @RequestBody VerifyOtpRequest request, HttpServletRequest http) {
+        String challengeKey = "otp:challenge:" + request.challengeId();
+        limiter.check(challengeKey, http.getRemoteAddr());
+        AuthSession session;
+        try {
+            session = verifyOtpUseCase.verify(new VerifyOtpCommand(request.challengeId(), request.code()));
+        } catch (InvalidOtpException e) {
+            limiter.recordFailure(challengeKey, http.getRemoteAddr());
+            throw e;
+        }
         return ResponseEntity.noContent().headers(cookies.issue(session)).build();
     }
 

@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.config;
 
+import com.cuymonitor.backend.adapter.in.web.FailedAttemptLimiter;
 import com.cuymonitor.backend.adapter.out.security.JwtTokenIssuer;
 import com.cuymonitor.backend.adapter.out.security.GoogleIdTokenVerifierAdapter;
 import com.cuymonitor.backend.application.AuthenticationService;
@@ -69,6 +70,12 @@ public class AuthConfig {
         return new AuthenticationService(userRepository, otpChallengeRepository, passwordHasher, otpSender,
                 sessionService, clock, properties.otp().ttl(), properties.otp().maxAttempts(),
                 properties.otp().maxRequests(), properties.otp().requestWindow());
+    }
+
+    @Bean
+    public FailedAttemptLimiter failedAttemptLimiter(AuthProperties properties, Clock clock) {
+        AuthProperties.RateLimit limits = properties.rateLimit();
+        return new FailedAttemptLimiter(limits.maxFailuresPerKey(), limits.maxFailuresPerIp(), limits.window(), clock);
     }
 
     @Bean
