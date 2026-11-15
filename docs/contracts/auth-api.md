@@ -242,7 +242,7 @@ The browser sends the `access_token` cookie on the handshake by itself (same ori
 const client = new Client({ brokerURL: `wss://${location.host}/ws` });
 ```
 
-- The server copies the cookie to the session on the handshake and validates it on the STOMP `CONNECT` frame, like any other request (signature, issuer, expiration and revocation).
-- No cookie, or an invalid, expired, revoked or foreign token: the server answers with a STOMP `ERROR` frame and closes the connection. Do not rely on the text of the `message` header. Clients that are not browsers can still send `Authorization: Bearer <accessToken>` on the `CONNECT` frame.
+- The server copies the cookie to the session on the handshake and validates it on the STOMP `CONNECT` frame, like any other request (signature, issuer, expiration and revocation) and also checks that the account still exists and is not `DISABLED`.
+- No cookie, or an invalid, expired, revoked or foreign token, or a disabled or deleted account: the server answers with a STOMP `ERROR` frame and closes the connection. Do not rely on the text of the `message` header. Clients that are not browsers can still send `Authorization: Bearer <accessToken>` on the `CONNECT` frame.
 - A `SUBSCRIBE` from a session that did not authenticate on `CONNECT` is rejected the same way.
 - The token is only checked on `CONNECT`. An open connection is not closed when the token expires or is revoked; the dashboard reconnects after a `/refresh` and after logging in again.
