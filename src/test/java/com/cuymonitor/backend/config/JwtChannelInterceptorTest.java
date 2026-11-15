@@ -45,7 +45,7 @@ class JwtChannelInterceptorTest {
 
     private static final UUID OWNER = UUID.fromString("00000000-0000-4000-8000-00000000000a");
 
-    private final JwtChannelInterceptor interceptor = new JwtChannelInterceptor(decoder(), new CageTopicGuard(cageProxy()));
+    private final JwtChannelInterceptor interceptor = new JwtChannelInterceptor(decoder(), new CageTopicGuard(cageProxy()), id -> true);
 
     @Test
     void subscribingToAnotherAccountsCageIsRejected() {
@@ -99,6 +99,23 @@ class JwtChannelInterceptorTest {
 
         assertThat(MessageHeaderAccessor.getAccessor(result, StompHeaderAccessor.class).getUser().getName())
                 .isEqualTo(userId);
+    }
+
+    @Test
+    void connectWithValidTokenOfADisabledOrMissingAccountIsRejected() {
+        JwtChannelInterceptor noActiveAccounts =
+                new JwtChannelInterceptor(decoder(), new CageTopicGuard(cageProxy()), id -> false);
+        Message<byte[]> connect = frame(StompCommand.CONNECT,
+                "Bearer " + token(KEY, ISSUER, UUID.randomUUID().toString(), 600), null);
+
+        assertThatThrownBy(() -> noActiveAccounts.preSend(connect, null)).isInstanceOf(BadCredentialsException.class);
+    }
+
+    @Test
+    void connectWithASubjectThatIsNotAUserIdIsRejected() {
+        Message<byte[]> connect = frame(StompCommand.CONNECT, "Bearer " + token(KEY, ISSUER, "not-a-uuid", 600), null);
+
+        assertThatThrownBy(() -> interceptor.preSend(connect, null)).isInstanceOf(BadCredentialsException.class);
     }
 
     @Test
