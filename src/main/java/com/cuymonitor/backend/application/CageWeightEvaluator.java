@@ -20,16 +20,24 @@ import java.util.Objects;
  */
 public class CageWeightEvaluator {
 
-    // the breeder reads it in the dashboard, so it is in Spanish like the rest of the interface
-    private static final String DROP_MESSAGE = "El peso de la jaula bajó un %d %% frente a los días anteriores";
+    // the breeder reads it in the dashboard, so it is in Spanish like the rest of the interface; an admin can
+    // change it, and {porcentaje} is how much lighter the cage got
+    public static final String DEFAULT_DROP_MESSAGE = "El peso de la jaula bajó un {porcentaje} % frente a los días anteriores";
 
     private final WeightReadingRepository weights;
     private final AlertRepository alerts;
     private final AlertPublisher alertPublisher;
     private final WeightTrendPolicy policy;
+    private final String dropMessage;
 
     public CageWeightEvaluator(WeightReadingRepository weights, AlertRepository alerts, AlertPublisher alertPublisher,
                                WeightTrendPolicy policy) {
+        this(weights, alerts, alertPublisher, policy, DEFAULT_DROP_MESSAGE);
+    }
+
+    public CageWeightEvaluator(WeightReadingRepository weights, AlertRepository alerts, AlertPublisher alertPublisher,
+                               WeightTrendPolicy policy, String dropMessage) {
+        this.dropMessage = Objects.requireNonNull(dropMessage, "dropMessage");
         this.weights = Objects.requireNonNull(weights, "weights");
         this.alerts = Objects.requireNonNull(alerts, "alerts");
         this.alertPublisher = Objects.requireNonNull(alertPublisher, "alertPublisher");
@@ -42,7 +50,7 @@ public class CageWeightEvaluator {
                     .anyMatch(alert -> alert.belongsTo(cageCode) && alert.getType() == EventType.WEIGHT);
             if (!alreadyOpen) {
                 alertPublisher.publish(Alert.forCage(cageCode, EventType.WEIGHT, HealthStatus.ALERT,
-                        DROP_MESSAGE.formatted(Math.round(drop * 100)), now));
+                        dropMessage.replace("{porcentaje}", String.valueOf(Math.round(drop * 100))), now));
             }
         });
     }

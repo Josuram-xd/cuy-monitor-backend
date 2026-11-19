@@ -1,5 +1,10 @@
 package com.cuymonitor.backend.config;
 
+import java.util.Map;
+import java.util.EnumMap;
+import java.math.BigDecimal;
+import com.cuymonitor.backend.domain.model.settings.Settings;
+import com.cuymonitor.backend.domain.model.settings.SettingKey;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import com.cuymonitor.backend.domain.health.weight.WeightTrendPolicy;
@@ -42,5 +47,51 @@ public record HealthProperties(Duration maxEventAge, double minDetectionConfiden
 
     public WeightTrendPolicy weightTrendPolicy() {
         return new WeightTrendPolicy(weightDropRatio, weightRecentWindow, weightBaselineWindow, weightMinReadings);
+    }
+
+    /** The rules an admin set ("Reglas y mensajes"), in the shape the health engine is built from. */
+    public static HealthProperties from(Settings s) {
+        return new HealthProperties(s.minutes(SettingKey.HEALTH_MAX_EVENT_AGE_MINUTES),
+                s.decimal(SettingKey.HEALTH_MIN_DETECTION_CONFIDENCE),
+                s.integer(SettingKey.HEALTH_CONSECUTIVE_ANOMALY_WINDOWS),
+                s.decimal(SettingKey.HEALTH_DISTRESS_PROBABILITY),
+                s.minutes(SettingKey.HEALTH_OBSERVED_TO_ALERT_MINUTES),
+                s.minutes(SettingKey.HEALTH_ALERT_TO_CRITICAL_MINUTES),
+                s.integer(SettingKey.HEALTH_RECOVERY_WINDOWS),
+                s.decimal(SettingKey.HEALTH_CLASSIFIER_THRESHOLD),
+                s.decimal(SettingKey.HEALTH_STILL_FACTOR),
+                s.decimal(SettingKey.HEALTH_GROUP_DISTANCE_FACTOR),
+                s.integer(SettingKey.HEALTH_BASELINE_MIN_SAMPLES),
+                s.integer(SettingKey.HEALTH_BASELINE_WARMUP_SAMPLES),
+                s.integer(SettingKey.HEALTH_WEIGHT_DROP_PERCENT) / 100.0,
+                Duration.ofHours(s.integer(SettingKey.HEALTH_WEIGHT_RECENT_HOURS)),
+                Duration.ofDays(s.integer(SettingKey.HEALTH_WEIGHT_BASELINE_DAYS)),
+                s.integer(SettingKey.HEALTH_WEIGHT_MIN_READINGS));
+    }
+
+    /** These properties as the defaults of the settings: what "volver a los valores de fábrica" goes back to. */
+    public Map<SettingKey, String> asDefaults() {
+        Map<SettingKey, String> d = new EnumMap<>(SettingKey.class);
+        d.put(SettingKey.HEALTH_MAX_EVENT_AGE_MINUTES, String.valueOf(maxEventAge.toMinutes()));
+        d.put(SettingKey.HEALTH_MIN_DETECTION_CONFIDENCE, plain(minDetectionConfidence));
+        d.put(SettingKey.HEALTH_CONSECUTIVE_ANOMALY_WINDOWS, String.valueOf(consecutiveAnomalyWindows));
+        d.put(SettingKey.HEALTH_DISTRESS_PROBABILITY, plain(distressProbability));
+        d.put(SettingKey.HEALTH_OBSERVED_TO_ALERT_MINUTES, String.valueOf(observedToAlert.toMinutes()));
+        d.put(SettingKey.HEALTH_ALERT_TO_CRITICAL_MINUTES, String.valueOf(alertToCritical.toMinutes()));
+        d.put(SettingKey.HEALTH_RECOVERY_WINDOWS, String.valueOf(recoveryWindows));
+        d.put(SettingKey.HEALTH_CLASSIFIER_THRESHOLD, plain(classifierThreshold));
+        d.put(SettingKey.HEALTH_STILL_FACTOR, plain(stillFactor));
+        d.put(SettingKey.HEALTH_GROUP_DISTANCE_FACTOR, plain(groupDistanceFactor));
+        d.put(SettingKey.HEALTH_BASELINE_MIN_SAMPLES, String.valueOf(baselineMinSamples));
+        d.put(SettingKey.HEALTH_BASELINE_WARMUP_SAMPLES, String.valueOf(baselineWarmupSamples));
+        d.put(SettingKey.HEALTH_WEIGHT_DROP_PERCENT, String.valueOf(Math.round(weightDropRatio * 100)));
+        d.put(SettingKey.HEALTH_WEIGHT_RECENT_HOURS, String.valueOf(weightRecentWindow.toHours()));
+        d.put(SettingKey.HEALTH_WEIGHT_BASELINE_DAYS, String.valueOf(weightBaselineWindow.toDays()));
+        d.put(SettingKey.HEALTH_WEIGHT_MIN_READINGS, String.valueOf(weightMinReadings));
+        return d;
+    }
+
+    private static String plain(double value) {
+        return BigDecimal.valueOf(value).stripTrailingZeros().toPlainString();
     }
 }

@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.adapter.in.web;
 
+import com.cuymonitor.backend.domain.model.settings.SettingView;
 import com.cuymonitor.backend.domain.model.AccountActivity;
 import com.cuymonitor.backend.domain.model.AiLogEntry;
 import com.cuymonitor.backend.domain.model.user.User;
@@ -76,6 +77,23 @@ public class AdminController {
                 .map(user -> AdminUserResponse.from(user,
                         activity.getOrDefault(user.getId(), AccountActivity.none(user.getId()))))
                 .toList();
+    }
+
+    /** "Reglas y mensajes": every setting with its value, default and range. */
+    @GetMapping("/settings")
+    public List<SettingView> settings(Principal principal) {
+        return admin.settings(Requester.idOf(principal));
+    }
+
+    /** Changes the settings sent ({"health.observedToAlertMinutes": "20"}); the rest stay. */
+    @PutMapping("/settings")
+    public List<SettingView> updateSettings(Principal principal, @RequestBody Map<String, String> changes) {
+        return admin.updateSettings(Requester.idOf(principal), changes);
+    }
+
+    @DeleteMapping("/settings")
+    public List<SettingView> resetSettings(Principal principal) {
+        return admin.resetSettings(Requester.idOf(principal));
     }
 
     /** What the AI did lately (windows analysed, sounds classified, notes on alerts), newest first. */

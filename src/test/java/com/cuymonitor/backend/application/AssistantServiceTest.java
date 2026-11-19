@@ -1,5 +1,9 @@
 package com.cuymonitor.backend.application;
 
+import java.util.Map;
+import java.util.EnumMap;
+import com.cuymonitor.backend.domain.model.settings.Settings;
+import com.cuymonitor.backend.domain.model.settings.SettingKey;
 import com.cuymonitor.backend.application.fake.MutableClock;
 import com.cuymonitor.backend.domain.access.CageOperations;
 import com.cuymonitor.backend.domain.exception.AssistantUnavailableException;
@@ -134,6 +138,29 @@ class AssistantServiceTest {
 
         clock.advance(Duration.ofMinutes(10));
         assertThat(service.ask(ask("ya puedo")).text()).isNotBlank();
+    }
+
+    @Test
+    void withoutALimitAnAccountCanKeepAsking() {
+        AssistantService unlimited = new AssistantService(model, cages, clock, 0, Duration.ofMinutes(10));
+
+        for (int i = 0; i < 50; i++) {
+            unlimited.ask(ask("pregunta " + i));
+        }
+    }
+
+    @Test
+    void theLimitTheAdminSetsAppliesAtOnce() {
+        AssistantService assistant = new AssistantService(model, cages, clock, 0, Duration.ofMinutes(10));
+        Map<SettingKey, String> settings = new EnumMap<>(SettingsServiceTest.defaults());
+        settings.put(SettingKey.ASSISTANT_MAX_QUESTIONS, "2");
+        settings.put(SettingKey.ASSISTANT_WINDOW_MINUTES, "5");
+
+        assistant.onSettings(Settings.resolve(settings, Map.of()));
+
+        assistant.ask(ask("una"));
+        assistant.ask(ask("dos"));
+        assertThatThrownBy(() -> assistant.ask(ask("tres"))).isInstanceOf(TooManyAssistantQuestionsException.class);
     }
 
     @Test

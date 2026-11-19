@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.config;
 
+import com.cuymonitor.backend.application.SettingsService;
 import com.cuymonitor.backend.domain.port.out.AdminReportRepository;
 import com.cuymonitor.backend.application.AdminService;
 import com.cuymonitor.backend.domain.access.AdminAccessProxy;
@@ -21,8 +22,8 @@ public class AdminAccessConfig {
 
     @Bean
     public AdminOperations adminOperations(CatalogOptionRepository catalog, UserRepository users, Clock clock,
-                                           AdminReportRepository reports) {
-        AdminOperations realSubject = new AdminService(catalog, users, clock, reports);
+                                           AdminReportRepository reports, SettingsService settings) {
+        AdminOperations realSubject = new AdminService(catalog, users, clock, reports, settings);
         return new AdminAccessProxy(realSubject, users);
     }
 }
