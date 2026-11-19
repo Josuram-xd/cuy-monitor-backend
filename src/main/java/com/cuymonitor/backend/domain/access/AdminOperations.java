@@ -2,6 +2,7 @@ package com.cuymonitor.backend.domain.access;
 
 import com.cuymonitor.backend.domain.model.settings.SettingView;
 import com.cuymonitor.backend.domain.model.AccountActivity;
+import com.cuymonitor.backend.domain.model.AdminAction;
 import com.cuymonitor.backend.domain.model.AiLogEntry;
 import com.cuymonitor.backend.domain.model.CatalogKind;
 import com.cuymonitor.backend.domain.model.CatalogOption;
@@ -50,4 +51,7 @@ public interface AdminOperations {
 
     /** Back to the defaults. */
     List<SettingView> resetSettings(UUID requesterId);
+
+    /** The admin changes that went through since the last restart, newest first (Command pattern history). */
+    List<AdminAction> actions(UUID requesterId);
 }

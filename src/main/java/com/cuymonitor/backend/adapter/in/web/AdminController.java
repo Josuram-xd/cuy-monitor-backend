@@ -2,6 +2,7 @@ package com.cuymonitor.backend.adapter.in.web;
 
 import com.cuymonitor.backend.domain.model.settings.SettingView;
 import com.cuymonitor.backend.domain.model.AccountActivity;
+import com.cuymonitor.backend.domain.model.AdminAction;
 import com.cuymonitor.backend.domain.model.AiLogEntry;
 import com.cuymonitor.backend.domain.model.user.User;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -94,6 +95,12 @@ public class AdminController {
     @DeleteMapping("/settings")
     public List<SettingView> resetSettings(Principal principal) {
         return admin.resetSettings(Requester.idOf(principal));
+    }
+
+    /** The admin changes that went through since the last restart, newest first: who, when and what. */
+    @GetMapping("/actions")
+    public List<AdminAction> actions(Principal principal) {
+        return admin.actions(Requester.idOf(principal));
     }
 
     /** What the AI did lately (windows analysed, sounds classified, notes on alerts), newest first. */

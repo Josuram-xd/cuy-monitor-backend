@@ -139,6 +139,8 @@ These classes carry no `@Component`, no `@Autowired` and no AOP. Spring is told 
 | **Chain of Responsibility** | `domain.health.chain` | `ValidationHandler → IdentificationHandler → BehaviorThresholdHandler → SustainedAnomalyHandler` |
 | **State** | `domain.health.state` | Per-guinea-pig lifecycle: `NormalState`, `ObservedState`, `AlertState`, `CriticalState` |
 | **Composite** | `domain.health.composite` | `CageHealth` aggregates `GuineaPigHealth`, `CageAudioHealth` and `CageWeightHealth` |
+| **Template Method** | `adapter.in.ingestion.adapter` | `PayloadAdapterTemplate.adapt` fixes the 4 steps every source goes through; each adapter only fills in its type, fields and signal |
+| **Command** | `application.admin` | Every admin change is an `AdminCommand` object run by `AdminCommandInvoker`, which keeps who did what |
 | **Observer** | `domain.notification` + `adapter.out.notification` + `application` | `AlertPublisher` fans out to `DatabaseAlertObserver`, `WebSocketAlertObserver`, `AlertNoteService`, `LogAlertObserver` through the `AlertObserver` port |
 | **Proxy** (protection) | `domain.access` + `application` | `CageAccessProxy` and `CageOperationsService` implement `CageOperations`; the proxy checks that the account owns the cage before forwarding to the real service |
 
@@ -170,12 +172,73 @@ AlertPublisher ◄────────────────────�
 >                                 └─ CageOperationsService            (403 if the cage is someone else's)
 > ```
 
+### Behavioral patterns
+
+Six of the patterns are behavioral (how objects share the work and talk to each other). All of them are plain
+classes and interfaces you can open and step through: no annotation, no AOP, no lambda standing in for a role.
+
+| Pattern | Roles in the code | What problem it solves here |
+|---|---|---|
+| **Chain of Responsibility** | `EventHandler` (handler), `ValidationHandler → IdentificationHandler → BehaviorThresholdHandler → SustainedAnomalyHandler → SustainedRecoveryHandler`, linked with `setNext` by `HandlerChainBuilder` | Each health rule is one handler; adding a rule is adding a link, not editing an `if` cascade |
+| **State** | `HealthState` (state), `NormalState`, `ObservedState`, `AlertState`, `CriticalState`, `GuineaPigHealthContext` (context) | Each state decides the next one, so the escalation rules live with the state they belong to |
+| **Observer** | `AlertPublisher` (subject), `AlertObserver` (observer port), database, WebSocket, AI-note and log observers; `SettingsService` → `SettingsListener` | The core announces an alert (or new settings) without knowing who listens |
+| **Strategy** | `OtpSender` (email / log), `AssistantModel` (Bedrock / disabled) | The algorithm is picked when the objects are wired, the caller never changes |
+| **Template Method** | `PayloadAdapterTemplate` (abstract class), `CameraBehaviorAdapter`, `AudioClassificationAdapter`, `WeightReadingAdapter` (concrete classes) | Every source goes through the same steps in the same order; a new source only says what is different |
+| **Command** | `AdminCommand` (command), 6 concrete commands, `AdminCommandInvoker` (invoker), `AdminService` (client), the ports and `SettingsService` (receivers) | Every admin change is an object, so one place runs it and remembers who did what |
+
+#### Template Method: the ingestion adapters
+
+`PayloadAdapterTemplate.adapt` is the template method. It is `final`, so no adapter can skip a step or change the
+order; the subclasses only answer three questions (the *primitive operations*):
+
+```
+PayloadAdapterTemplate.adapt(event)            ◄── final: the skeleton
+  1. checkType(event)            uses supportedType()   ◄── abstract
+  2. checkRequiredFields(event)  uses requiredFields()  ◄── abstract
+  3. readSignal(event)           uses signalType()      ◄── abstract
+  4. new HealthEvent(…, signal)
+
+CameraBehaviorAdapter        BEHAVIOR  color, windowSeconds, …   BehaviorSignal
+AudioClassificationAdapter   AUDIO     label, probability, …     AudioSignal
+WeightReadingAdapter         WEIGHT    grams, stable             WeightSignal
+```
+
+It works together with the Factory Method (which adapter to build) and the Adapter (the translation itself).
+`EventSourceAdapterTest.theTemplateMethodIsFinalAndEveryAdapterFollowsIt` keeps the skeleton `final`.
+
+#### Command: the admin changes
+
+Every change from the admin panel (catalog options, roles, enabling accounts, settings) is a command object in
+`application.admin`. `AdminService` builds it and hands it to `AdminCommandInvoker`, which runs it and writes down
+when, which admin and what it did. The reads (lists, reports) are not commands.
+
+```
+AdminController ─► AdminAccessProxy (is it an admin?) ─► AdminService  (Client)
+                                                            │ new ChangeUserRoleCommand(users, clock, …)
+                                                            ▼
+                                                   AdminCommandInvoker.run(adminId, command)   (Invoker)
+                                                            │ command.execute()  ─► UserRepository   (Receiver)
+                                                            └ history.add(AdminAction)  ─► GET /api/v1/admin/actions
+```
+
+| Concrete command | Receiver | What it does |
+|---|---|---|
+| `SaveCatalogOptionCommand` | `CatalogOptionRepository` | Adds or overwrites a breed or mark color |
+| `SetCatalogOptionActiveCommand` | `CatalogOptionRepository` | Switches an option on or off |
+| `ChangeUserRoleCommand` | `UserRepository` | Gives an account another role (never your own, never the last admin) |
+| `SetUserEnabledCommand` | `UserRepository` | Switches an account off or back on |
+| `UpdateSettingsCommand` | `SettingsService` | Changes health rules or alert texts; one bad value changes nothing |
+| `ResetSettingsCommand` | `SettingsService` | Puts every setting back to its default |
+
+A command a rule refused changed nothing, so it is not written down. The history is kept in memory (the last 100)
+and a restart empties it.
+
 ### Also written by hand
 
 | Pattern | Where | Note |
 |---|---|---|
 | **Builder** | `HandlerChainBuilder` | Assembles the handler chain in order; plain Java |
-| **Command** | `domain.port.in` | `LoginCommand`, `CreateCageCommand`… one immutable `record` per use case |
+| **Parameter Object** | `domain.port.in` | `LoginCommand`, `CreateCageCommand`… one immutable `record` per use case. They are called *Command* but only carry data; the GoF Command is the admin one above |
 | **Ports & Adapters** | `domain.port.in` (21 use cases), `domain.port.out` (12 ports) | The ports are interfaces with no framework import |
 
 ### Where a framework does the work

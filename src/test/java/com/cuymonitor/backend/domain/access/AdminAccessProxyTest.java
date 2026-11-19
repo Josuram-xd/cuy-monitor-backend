@@ -89,6 +89,7 @@ class AdminAccessProxyTest {
                 .isInstanceOf(AdminAccessDeniedException.class);
         assertThatThrownBy(() -> proxy.setUserEnabled(BREEDER, ADMIN, false))
                 .isInstanceOf(AdminAccessDeniedException.class);
+        assertThatThrownBy(() -> proxy.actions(BREEDER)).isInstanceOf(AdminAccessDeniedException.class);
 
         verifyNoInteractions(real);
     }

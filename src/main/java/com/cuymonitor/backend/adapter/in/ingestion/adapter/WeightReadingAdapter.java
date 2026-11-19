@@ -1,23 +1,31 @@
 package com.cuymonitor.backend.adapter.in.ingestion.adapter;
 
-import com.cuymonitor.backend.adapter.in.ingestion.dto.IngestionEvent;
 import com.cuymonitor.backend.domain.model.EventType;
-import com.cuymonitor.backend.domain.model.HealthEvent;
+import com.cuymonitor.backend.domain.model.HealthSignal;
 import com.cuymonitor.backend.domain.model.WeightSignal;
 import tools.jackson.databind.ObjectMapper;
 
-public class WeightReadingAdapter implements EventSourceAdapter {
+import java.util.List;
 
-    private final IngestionPayloadMapper payloadMapper;
+/** Template Method — ConcreteClass for the scale: only says what a WEIGHT payload looks like. */
+public class WeightReadingAdapter extends PayloadAdapterTemplate {
 
     public WeightReadingAdapter(ObjectMapper objectMapper) {
-        this.payloadMapper = new IngestionPayloadMapper(objectMapper);
+        super(objectMapper);
     }
 
     @Override
-    public HealthEvent adapt(IngestionEvent event) {
-        WeightSignal signal = payloadMapper.toPayload(
-                event, EventType.WEIGHT, WeightSignal.class, "grams", "stable");
-        return new HealthEvent(event.eventId(), event.cageId(), event.timestamp(), event.source(), signal);
+    protected EventType supportedType() {
+        return EventType.WEIGHT;
+    }
+
+    @Override
+    protected List<String> requiredFields() {
+        return List.of("grams", "stable");
+    }
+
+    @Override
+    protected Class<? extends HealthSignal> signalType() {
+        return WeightSignal.class;
     }
 }

@@ -6,6 +6,7 @@ import java.util.List;
 import com.cuymonitor.backend.domain.port.out.AdminReportRepository;
 import com.cuymonitor.backend.domain.model.AiLogEntry;
 import com.cuymonitor.backend.domain.model.AccountActivity;
+import com.cuymonitor.backend.domain.model.AdminAction;
 import com.cuymonitor.backend.application.fake.FakeCatalogOptionRepository;
 import com.cuymonitor.backend.application.fake.InMemoryUserRepository;
 import com.cuymonitor.backend.application.fake.MutableClock;
@@ -195,6 +196,38 @@ class AdminServiceTest {
         service.setUserEnabled(admin, breeder, false);
 
         assertThat(users.findById(breeder).orElseThrow().getStatus()).isEqualTo(UserStatus.DISABLED);
+    }
+
+    // --- Command pattern: every change goes through the invoker, which remembers it ---
+
+    @Test
+    void theHistoryKeepsEveryChangeThatWentThroughNewestFirst() {
+        service.setUserEnabled(admin, breeder, false);
+        clock.advance(java.time.Duration.ofMinutes(1));
+        service.setCatalogOptionActive(admin, CatalogKind.BREED, "teddy", false);
+
+        assertThat(service.actions(admin))
+                .extracting(AdminAction::description)
+                .containsExactly("switch off BREED TEDDY", "disable account " + breeder);
+        assertThat(service.actions(admin).get(0).adminId()).isEqualTo(admin);
+        assertThat(service.actions(admin).get(0).at()).isEqualTo(NOW.plusSeconds(60));
+    }
+
+    @Test
+    void aRefusedChangeIsNotHistory() {
+        assertThatThrownBy(() -> service.setUserEnabled(admin, admin, false))
+                .isInstanceOf(InvalidAdminActionException.class);
+
+        assertThat(service.actions(admin)).isEmpty();
+    }
+
+    @Test
+    void readsAreNotCommands() {
+        service.listUsers(admin);
+        service.listCatalog(admin);
+        service.settings(admin);
+
+        assertThat(service.actions(admin)).isEmpty();
     }
 
     @Test

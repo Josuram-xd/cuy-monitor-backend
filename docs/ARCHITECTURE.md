@@ -120,6 +120,8 @@ Processing is synchronous inside the HTTP request. The load is tiny (a few event
 | Composite | `domain.health.composite` | `HealthComponent`, `GuineaPigHealth` / `CageAudioHealth` / `CageWeightHealth` (leaves), `CageHealth` (composite) | Core |
 | Observer | `domain.notification` + `domain.port.out` + `adapter.out.notification` | `AlertPublisher` (subject, core), `AlertObserver` (output port), 3 concrete observers (output adapters) | Core + output port + output adapters |
 | Proxy (protection) | `domain.access` + `application` | `CageOperations` (subject), `CageAccessProxy` (proxy), `CageOperationsService` (real subject) | Core, between the input adapters and the use cases |
+| Template Method | `adapter.in.ingestion.adapter` | `PayloadAdapterTemplate` (abstract class, `final adapt`), `CameraBehaviorAdapter` / `AudioClassificationAdapter` / `WeightReadingAdapter` (concrete classes) | Input adapter (the same 4 steps for every source) |
+| Command | `application.admin` + `domain.model` | `AdminCommand` (command), 6 concrete commands, `AdminCommandInvoker` (invoker + history), `AdminService` (client), `AdminAction` (history entry) | Application, behind `AdminAccessProxy` |
 
 The Adapter pattern and the Observer are also the clearest examples of the hexagonal idea: the first converts the outside format into the core's language, the second lets the core notify the outside world through a port without knowing who listens.
 

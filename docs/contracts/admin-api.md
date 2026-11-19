@@ -116,6 +116,18 @@ setting back to its default.
 
 The texts are what every alert says. The advice under an alert (`aiNote`) is written by the AI and is not here.
 
+### `GET /api/v1/admin/actions`
+
+The admin changes that went through (catalog, accounts, settings), newest first, at most 100. A change a rule
+refused is not listed. Kept in memory: a restart of the backend empties it.
+
+```json
+[
+  { "at": "2026-11-19T15:04:00Z", "adminId": "3f1c2a5e-…", "description": "disable account 9b2e…" },
+  { "at": "2026-11-19T15:01:30Z", "adminId": "3f1c2a5e-…", "description": "switch off BREED TEDDY" }
+]
+```
+
 ### `GET /api/v1/admin/ai-log?limit=100`
 
 What the AI did lately, newest first: windows the AI service analysed (`BEHAVIOR`), sounds it classified (`AUDIO`)

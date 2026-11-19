@@ -91,6 +91,16 @@ class EventSourceAdapterTest {
     }
 
     @Test
+    void theTemplateMethodIsFinalAndEveryAdapterFollowsIt() throws NoSuchMethodException {
+        // Template Method: a subclass may fill in the steps, never change their order
+        assertThat(java.lang.reflect.Modifier.isFinal(
+                PayloadAdapterTemplate.class.getMethod("adapt", IngestionEvent.class).getModifiers())).isTrue();
+        assertThat(new CameraBehaviorAdapter(OBJECT_MAPPER)).isInstanceOf(PayloadAdapterTemplate.class);
+        assertThat(new AudioClassificationAdapter(OBJECT_MAPPER)).isInstanceOf(PayloadAdapterTemplate.class);
+        assertThat(new WeightReadingAdapter(OBJECT_MAPPER)).isInstanceOf(PayloadAdapterTemplate.class);
+    }
+
+    @Test
     void factorySelectorUsesAConcreteFactoryForEachEventType() {
         AdapterFactorySelector selector = new AdapterFactorySelector(
                 new CameraAdapterFactory(OBJECT_MAPPER),

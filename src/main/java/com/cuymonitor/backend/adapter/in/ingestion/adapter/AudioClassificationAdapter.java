@@ -1,23 +1,31 @@
 package com.cuymonitor.backend.adapter.in.ingestion.adapter;
 
-import com.cuymonitor.backend.adapter.in.ingestion.dto.IngestionEvent;
 import com.cuymonitor.backend.domain.model.AudioSignal;
 import com.cuymonitor.backend.domain.model.EventType;
-import com.cuymonitor.backend.domain.model.HealthEvent;
+import com.cuymonitor.backend.domain.model.HealthSignal;
 import tools.jackson.databind.ObjectMapper;
 
-public class AudioClassificationAdapter implements EventSourceAdapter {
+import java.util.List;
 
-    private final IngestionPayloadMapper payloadMapper;
+/** Template Method — ConcreteClass for the microphone: only says what an AUDIO payload looks like. */
+public class AudioClassificationAdapter extends PayloadAdapterTemplate {
 
     public AudioClassificationAdapter(ObjectMapper objectMapper) {
-        this.payloadMapper = new IngestionPayloadMapper(objectMapper);
+        super(objectMapper);
     }
 
     @Override
-    public HealthEvent adapt(IngestionEvent event) {
-        AudioSignal signal = payloadMapper.toPayload(
-                event, EventType.AUDIO, AudioSignal.class, "label", "probability", "durationMs");
-        return new HealthEvent(event.eventId(), event.cageId(), event.timestamp(), event.source(), signal);
+    protected EventType supportedType() {
+        return EventType.AUDIO;
+    }
+
+    @Override
+    protected List<String> requiredFields() {
+        return List.of("label", "probability", "durationMs");
+    }
+
+    @Override
+    protected Class<? extends HealthSignal> signalType() {
+        return AudioSignal.class;
     }
 }

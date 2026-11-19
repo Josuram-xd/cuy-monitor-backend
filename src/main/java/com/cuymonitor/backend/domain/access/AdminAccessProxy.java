@@ -2,6 +2,7 @@ package com.cuymonitor.backend.domain.access;
 
 import com.cuymonitor.backend.domain.model.settings.SettingView;
 import com.cuymonitor.backend.domain.model.AccountActivity;
+import com.cuymonitor.backend.domain.model.AdminAction;
 import com.cuymonitor.backend.domain.model.AiLogEntry;
 import java.util.Map;
 import com.cuymonitor.backend.domain.exception.AdminAccessDeniedException;
@@ -88,6 +89,12 @@ public final class AdminAccessProxy implements AdminOperations {
     public List<SettingView> resetSettings(UUID requesterId) {
         requireAdmin(requesterId);
         return real.resetSettings(requesterId);
+    }
+
+    @Override
+    public List<AdminAction> actions(UUID requesterId) {
+        requireAdmin(requesterId);
+        return real.actions(requesterId);
     }
 
     @Override
