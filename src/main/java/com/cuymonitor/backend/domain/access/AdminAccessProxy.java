@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.domain.access;
 
+import com.cuymonitor.backend.domain.model.settings.SettingView;
 import com.cuymonitor.backend.domain.model.AccountActivity;
 import com.cuymonitor.backend.domain.model.AiLogEntry;
 import java.util.Map;
@@ -69,6 +70,24 @@ public final class AdminAccessProxy implements AdminOperations {
     public Map<UUID, AccountActivity> accountActivity(UUID requesterId) {
         requireAdmin(requesterId);
         return real.accountActivity(requesterId);
+    }
+
+    @Override
+    public List<SettingView> settings(UUID requesterId) {
+        requireAdmin(requesterId);
+        return real.settings(requesterId);
+    }
+
+    @Override
+    public List<SettingView> updateSettings(UUID requesterId, Map<String, String> changes) {
+        requireAdmin(requesterId);
+        return real.updateSettings(requesterId, changes);
+    }
+
+    @Override
+    public List<SettingView> resetSettings(UUID requesterId) {
+        requireAdmin(requesterId);
+        return real.resetSettings(requesterId);
     }
 
     @Override

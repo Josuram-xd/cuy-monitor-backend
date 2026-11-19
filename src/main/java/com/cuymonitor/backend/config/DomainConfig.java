@@ -1,5 +1,12 @@
 package com.cuymonitor.backend.config;
 
+import java.util.function.Function;
+import java.util.Map;
+import com.cuymonitor.backend.domain.port.in.ProcessEventUseCase;
+import com.cuymonitor.backend.domain.model.settings.Settings;
+import com.cuymonitor.backend.domain.model.settings.SettingKey;
+import com.cuymonitor.backend.domain.model.AlertMessages;
+import com.cuymonitor.backend.application.ConfigurableEventProcessor;
 import com.cuymonitor.backend.application.BaselineLearner;
 import com.cuymonitor.backend.application.CageWeightEvaluator;
 import com.cuymonitor.backend.application.EventProcessingService;
@@ -33,41 +40,38 @@ import java.time.Clock;
 @EnableConfigurationProperties(HealthProperties.class)
 public class DomainConfig {
 
+    /**
+     * The health engine, built from the settings and built again when an admin changes them. The chain of handlers
+     * is still wired here by hand (setNext), one engine per set of rules.
+     */
     @Bean
-    public EventHandler healthEventChain(Clock clock, HealthProperties health, GuineaPigRepository guineaPigs,
-                                         BaselineProfileRepository baselines, EventRepository events) {
-        return new HandlerChainBuilder(
-                new ValidationHandler(clock, health.maxEventAge(), health.minDetectionConfidence()),
-                new IdentificationHandler(guineaPigs),
-                new BehaviorThresholdHandler(baselines, health.anomalyThresholds(), health.baselineMinSamples()),
-                new SustainedAnomalyHandler(events, health.consecutiveAnomalyWindows(), health.anomalyThresholds()),
-                new SustainedRecoveryHandler(events, health.recoveryWindows(), health.anomalyThresholds())
-        ).build();
-    }
-
-    // the only ProcessEventUseCase: what IngestionController calls for every event
-    /** Task 11.1: learns each guinea pig's normal behavior from its healthy windows. */
-    @Bean
-    public BaselineLearner baselineLearner(BaselineProfileRepository baselines, HealthProperties health) {
-        return new BaselineLearner(baselines, health.anomalyThresholds(), health.baselineWarmupSamples());
-    }
-
-    @Bean
-    public EventProcessingService eventProcessingService(RecordEventUseCase recorder, EventHandler healthEventChain,
-                                                         GuineaPigRepository guineaPigs,
-                                                         StateTransitionRepository transitions,
-                                                         AlertPublisher alertPublisher, Clock clock,
-                                                         HealthProperties health, BaselineLearner baselineLearner,
-                                                         CageWeightEvaluator cageWeightEvaluator) {
-        return new EventProcessingService(recorder, healthEventChain, guineaPigs, transitions, alertPublisher, clock,
-                health.distressProbability(), new EscalationPolicy(health.observedToAlert(), health.alertToCritical()),
-                baselineLearner, cageWeightEvaluator);
-    }
-
-    /** Task 12.2: opens a WEIGHT alert of the cage when its stable readings go down. */
-    @Bean
-    public CageWeightEvaluator cageWeightEvaluator(WeightReadingRepository weights, AlertRepository alerts,
-                                                   AlertPublisher alertPublisher, HealthProperties health) {
-        return new CageWeightEvaluator(weights, alerts, alertPublisher, health.weightTrendPolicy());
+    public ConfigurableEventProcessor eventProcessor(RecordEventUseCase recorder, GuineaPigRepository guineaPigs,
+                                                     BaselineProfileRepository baselines, EventRepository events,
+                                                     StateTransitionRepository transitions,
+                                                     WeightReadingRepository weights, AlertRepository alerts,
+                                                     AlertPublisher alertPublisher, Clock clock,
+                                                     Map<SettingKey, String> settingDefaults) {
+        Function<Settings, ProcessEventUseCase> engineFor = settings -> {
+            HealthProperties health = HealthProperties.from(settings);
+            EventHandler chain = new HandlerChainBuilder(
+                    new ValidationHandler(clock, health.maxEventAge(), health.minDetectionConfidence()),
+                    new IdentificationHandler(guineaPigs),
+                    new BehaviorThresholdHandler(baselines, health.anomalyThresholds(), health.baselineMinSamples()),
+                    new SustainedAnomalyHandler(events, health.consecutiveAnomalyWindows(),
+                            health.anomalyThresholds()),
+                    new SustainedRecoveryHandler(events, health.recoveryWindows(), health.anomalyThresholds())
+            ).build();
+            BaselineLearner learner = new BaselineLearner(baselines, health.anomalyThresholds(),
+                    health.baselineWarmupSamples());
+            CageWeightEvaluator weightEvaluator = new CageWeightEvaluator(weights, alerts, alertPublisher,
+                    health.weightTrendPolicy(), settings.text(SettingKey.MESSAGE_WEIGHT_DROP));
+            AlertMessages messages = new AlertMessages(settings.text(SettingKey.MESSAGE_ALERT),
+                    settings.text(SettingKey.MESSAGE_CRITICAL), settings.text(SettingKey.MESSAGE_DISTRESS));
+            return new EventProcessingService(recorder, chain, guineaPigs, transitions, alertPublisher, clock,
+                    health.distressProbability(),
+                    new EscalationPolicy(health.observedToAlert(), health.alertToCritical()),
+                    learner, weightEvaluator, messages);
+        };
+        return new ConfigurableEventProcessor(engineFor, Settings.resolve(settingDefaults, Map.of()));
     }
 }

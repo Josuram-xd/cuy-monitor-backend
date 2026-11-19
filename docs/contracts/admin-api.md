@@ -89,6 +89,33 @@ its active cages, their active guinea pigs, their open alerts, and when the last
 
 The `PATCH` below answers with the same shape.
 
+### `GET /api/v1/admin/settings` · `PUT` · `DELETE`
+
+**Reglas y mensajes**: the health rules, the texts of the alerts and the assistant's question limit. `GET` lists every
+setting with its current value, the default it goes back to and its range (`min`/`max`; for `TEXT` they are the
+length). The defaults come from `application.yml` (texts from the code); only the admin's changes are stored
+(table `app_setting`, V18). Changes apply **at once, without a restart**: the next event is evaluated with them.
+
+```json
+[
+  { "key": "health.observedToAlertMinutes", "kind": "INTEGER", "value": "20", "defaultValue": "30", "min": 1, "max": 240 },
+  { "key": "message.alert", "kind": "TEXT", "value": "Comportamiento fuera de lo normal de forma sostenida", "defaultValue": "…", "min": 1, "max": 500 },
+  { "key": "assistant.maxQuestions", "kind": "INTEGER", "value": "0", "defaultValue": "0", "min": 0, "max": 1000 }
+]
+```
+
+`PUT` takes only what changes, `{ "health.observedToAlertMinutes": "20", "message.alert": "Revisa a tu cuy" }`, and
+answers with the full list. One unknown key or one value out of range: `400` and nothing changes. `DELETE` puts every
+setting back to its default.
+
+| Group | Keys |
+|---|---|
+| Health rules | `health.maxEventAgeMinutes`, `minDetectionConfidence`, `consecutiveAnomalyWindows`, `distressProbability`, `observedToAlertMinutes`, `alertToCriticalMinutes`, `recoveryWindows`, `classifierThreshold`, `stillFactor`, `groupDistanceFactor`, `baselineMinSamples`, `baselineWarmupSamples`, `weightDropPercent`, `weightRecentHours`, `weightBaselineDays`, `weightMinReadings` |
+| Alert texts | `message.alert`, `message.critical`, `message.distress`, `message.weightDrop` (`{porcentaje}` is replaced by the drop) |
+| Assistant | `assistant.maxQuestions` (**0 = no limit**, the default), `assistant.windowMinutes` |
+
+The texts are what every alert says. The advice under an alert (`aiNote`) is written by the AI and is not here.
+
 ### `GET /api/v1/admin/ai-log?limit=100`
 
 What the AI did lately, newest first: windows the AI service analysed (`BEHAVIOR`), sounds it classified (`AUDIO`)

@@ -1,5 +1,8 @@
 package com.cuymonitor.backend.application;
 
+import com.cuymonitor.backend.domain.port.out.SettingsListener;
+import com.cuymonitor.backend.domain.model.settings.Settings;
+import com.cuymonitor.backend.domain.model.settings.SettingKey;
 import com.cuymonitor.backend.domain.access.CageOperations;
 import com.cuymonitor.backend.domain.exception.AssistantUnavailableException;
 import com.cuymonitor.backend.domain.exception.TooManyAssistantQuestionsException;
@@ -30,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * cages, read through the cage access proxy, so it never sees another account's cages) plus a guide of the app.
  * It does not decide or change anything: health is still decided only by the State and the Chain.
  */
-public class AssistantService implements AskAssistantUseCase {
+public class AssistantService implements AskAssistantUseCase, SettingsListener {
 
     /** At most this many cages go into the context; more would only make the call slower and dearer. */
     static final int MAX_CAGES_IN_CONTEXT = 5;
@@ -39,8 +42,9 @@ public class AssistantService implements AskAssistantUseCase {
     private final AssistantModel model;
     private final CageOperations cages;
     private final Clock clock;
-    private final int maxQuestions;
-    private final Duration questionWindow;
+    // 0 = no limit; an admin can set one at any time ("Reglas y mensajes")
+    private volatile int maxQuestions;
+    private volatile Duration questionWindow;
     private final Map<UUID, Deque<Instant>> recentQuestions = new ConcurrentHashMap<>();
 
     public AssistantService(AssistantModel model, CageOperations cages, Clock clock, int maxQuestions,
@@ -48,11 +52,17 @@ public class AssistantService implements AskAssistantUseCase {
         this.model = Objects.requireNonNull(model, "model");
         this.cages = Objects.requireNonNull(cages, "cages");
         this.clock = Objects.requireNonNull(clock, "clock");
-        if (maxQuestions < 1) {
-            throw new IllegalArgumentException("maxQuestions must be at least 1");
+        if (maxQuestions < 0) {
+            throw new IllegalArgumentException("maxQuestions can not be negative");
         }
         this.maxQuestions = maxQuestions;
         this.questionWindow = Objects.requireNonNull(questionWindow, "questionWindow");
+    }
+
+    @Override
+    public void onSettings(Settings settings) {
+        questionWindow = settings.minutes(SettingKey.ASSISTANT_WINDOW_MINUTES);
+        maxQuestions = settings.integer(SettingKey.ASSISTANT_MAX_QUESTIONS);
     }
 
     @Override
@@ -69,13 +79,17 @@ public class AssistantService implements AskAssistantUseCase {
 
     // a sliding window per account: every question is a paid model call
     private void countQuestion(UUID requesterId) {
+        int limit = maxQuestions;
+        if (limit == 0) {
+            return;
+        }
         Instant now = clock.instant();
         Deque<Instant> asked = recentQuestions.computeIfAbsent(requesterId, id -> new ArrayDeque<>());
         synchronized (asked) {
             while (!asked.isEmpty() && !asked.peekFirst().isAfter(now.minus(questionWindow))) {
                 asked.pollFirst();
             }
-            if (asked.size() >= maxQuestions) {
+            if (asked.size() >= limit) {
                 throw new TooManyAssistantQuestionsException();
             }
             asked.addLast(now);

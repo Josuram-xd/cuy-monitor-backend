@@ -39,6 +39,7 @@ public class AssistantConfig {
     @Bean
     public AssistantService assistantService(AssistantModel assistantModel, CageOperations cageOperations,
                                              Clock clock, AssistantProperties properties) {
+        // the admin's limit, if any, arrives from SettingsService (it listens to the settings)
         return new AssistantService(assistantModel, cageOperations, clock, properties.maxQuestions(),
                 properties.questionWindow());
     }

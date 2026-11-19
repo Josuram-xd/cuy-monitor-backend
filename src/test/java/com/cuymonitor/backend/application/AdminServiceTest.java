@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.application;
 
+import com.cuymonitor.backend.domain.port.out.SettingRepository;
 import java.util.Map;
 import java.util.List;
 import com.cuymonitor.backend.domain.port.out.AdminReportRepository;
@@ -42,7 +43,25 @@ class AdminServiceTest {
             return List.of(new AiLogEntry(NOW, "cage-1", AiLogEntry.Kind.NOTE, "nota"));
         }
     };
-    private final AdminService service = new AdminService(catalog, users, clock, reports);
+    private final AdminService service = new AdminService(catalog, users, clock, reports,
+            new SettingsService(SettingsServiceTest.defaults(), new SettingRepository() {
+                @Override
+                public Map<String, String> findAll() {
+                    return Map.of();
+                }
+
+                @Override
+                public void replaceAll(Map<String, String> changes, UUID changedBy) {
+                }
+            }, List.of()));
+
+    @Test
+    void aBadSettingIsABadRequestForTheAdmin() {
+        assertThatThrownBy(() -> service.updateSettings(admin, Map.of("health.recoveryWindows", "0")))
+                .isInstanceOf(InvalidAdminActionException.class);
+        assertThat(service.updateSettings(admin, Map.of("health.recoveryWindows", "4")))
+                .anySatisfy(v -> assertThat(v.value()).isEqualTo("4"));
+    }
 
     @Test
     void theAiLogShowsBetweenOneAndTwoHundredLines() {

@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.application;
 
+import com.cuymonitor.backend.domain.model.AlertMessages;
 import com.cuymonitor.backend.domain.health.chain.EventHandler;
 import com.cuymonitor.backend.domain.health.chain.EventHandlerContext;
 import com.cuymonitor.backend.domain.health.state.EscalationPolicy;
@@ -47,9 +48,6 @@ public class EventProcessingService implements ProcessEventUseCase {
     private static final Logger log = LoggerFactory.getLogger(EventProcessingService.class);
 
     // the breeder reads these in the dashboard, so they are in Spanish like the rest of the interface
-    private static final String ALERT_MESSAGE = "Comportamiento fuera de lo normal de forma sostenida";
-    private static final String CRITICAL_MESSAGE = "El comportamiento fuera de lo normal empeoró y sigue";
-    private static final String DISTRESS_MESSAGE = "Se escucharon chillidos de angustia en la jaula";
 
     private final RecordEventUseCase recorder;
     private final EventHandler chain;
@@ -61,11 +59,21 @@ public class EventProcessingService implements ProcessEventUseCase {
     private final EscalationPolicy escalation;
     private final BaselineLearner baselineLearner;
     private final CageWeightEvaluator weightEvaluator;
+    private final AlertMessages messages;
 
     public EventProcessingService(RecordEventUseCase recorder, EventHandler chain, GuineaPigRepository guineaPigs,
                                   StateTransitionRepository transitions, AlertPublisher alertPublisher, Clock clock,
                                   double distressProbability, EscalationPolicy escalation,
                                   BaselineLearner baselineLearner, CageWeightEvaluator weightEvaluator) {
+        this(recorder, chain, guineaPigs, transitions, alertPublisher, clock, distressProbability, escalation,
+                baselineLearner, weightEvaluator, AlertMessages.DEFAULTS);
+    }
+
+    public EventProcessingService(RecordEventUseCase recorder, EventHandler chain, GuineaPigRepository guineaPigs,
+                                  StateTransitionRepository transitions, AlertPublisher alertPublisher, Clock clock,
+                                  double distressProbability, EscalationPolicy escalation,
+                                  BaselineLearner baselineLearner, CageWeightEvaluator weightEvaluator,
+                                  AlertMessages messages) {
         this.recorder = Objects.requireNonNull(recorder, "recorder");
         this.chain = Objects.requireNonNull(chain, "chain");
         this.guineaPigs = Objects.requireNonNull(guineaPigs, "guineaPigs");
@@ -76,6 +84,7 @@ public class EventProcessingService implements ProcessEventUseCase {
         this.escalation = Objects.requireNonNull(escalation, "escalation");
         this.baselineLearner = Objects.requireNonNull(baselineLearner, "baselineLearner");
         this.weightEvaluator = Objects.requireNonNull(weightEvaluator, "weightEvaluator");
+        this.messages = Objects.requireNonNull(messages, "messages");
     }
 
     @Override
@@ -132,11 +141,11 @@ public class EventProcessingService implements ProcessEventUseCase {
     private void evaluateAudio(HealthEvent event, AudioSignal audio, Instant now) {
         if (audio.label() == AudioLabel.DISTRESS && audio.probability() >= distressProbability) {
             alertPublisher.publish(
-                    Alert.forCage(event.cageId(), EventType.AUDIO, HealthStatus.ALERT, DISTRESS_MESSAGE, now));
+                    Alert.forCage(event.cageId(), EventType.AUDIO, HealthStatus.ALERT, messages.distress(), now));
         }
     }
 
-    private static String messageFor(HealthStatus status) {
-        return status == HealthStatus.CRITICAL ? CRITICAL_MESSAGE : ALERT_MESSAGE;
+    private String messageFor(HealthStatus status) {
+        return status == HealthStatus.CRITICAL ? messages.critical() : messages.alert();
     }
 }

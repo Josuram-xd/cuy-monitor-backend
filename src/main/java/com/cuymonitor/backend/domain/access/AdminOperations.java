@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.domain.access;
 
+import com.cuymonitor.backend.domain.model.settings.SettingView;
 import com.cuymonitor.backend.domain.model.AccountActivity;
 import com.cuymonitor.backend.domain.model.AiLogEntry;
 import com.cuymonitor.backend.domain.model.CatalogKind;
@@ -40,4 +41,13 @@ public interface AdminOperations {
 
     /** What the AI did lately, newest first, at most limit lines. */
     List<AiLogEntry> aiLog(UUID requesterId, int limit);
+
+    /** The health rules, alert texts and assistant limit: their values, defaults and ranges. */
+    List<SettingView> settings(UUID requesterId);
+
+    /** Changes some of them; one value out of range changes nothing. Applied at once, no restart. */
+    List<SettingView> updateSettings(UUID requesterId, Map<String, String> changes);
+
+    /** Back to the defaults. */
+    List<SettingView> resetSettings(UUID requesterId);
 }

@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.application;
 
+import com.cuymonitor.backend.domain.model.settings.SettingView;
 import com.cuymonitor.backend.domain.model.AccountActivity;
 import com.cuymonitor.backend.domain.model.AiLogEntry;
 import com.cuymonitor.backend.domain.port.out.AdminReportRepository;
@@ -36,9 +37,11 @@ public class AdminService implements AdminOperations {
     private final UserRepository users;
     private final Clock clock;
     private final AdminReportRepository reports;
+    private final SettingsService settings;
 
     public AdminService(CatalogOptionRepository catalog, UserRepository users, Clock clock,
-                        AdminReportRepository reports) {
+                        AdminReportRepository reports, SettingsService settings) {
+        this.settings = Objects.requireNonNull(settings, "settings");
         this.catalog = Objects.requireNonNull(catalog, "catalog");
         this.users = Objects.requireNonNull(users, "users");
         this.clock = Objects.requireNonNull(clock, "clock");
@@ -48,6 +51,25 @@ public class AdminService implements AdminOperations {
     @Override
     public Map<UUID, AccountActivity> accountActivity(UUID requesterId) {
         return reports.activityByAccount();
+    }
+
+    @Override
+    public List<SettingView> settings(UUID requesterId) {
+        return settings.view();
+    }
+
+    @Override
+    public List<SettingView> updateSettings(UUID requesterId, Map<String, String> changes) {
+        try {
+            return settings.update(changes, requesterId);
+        } catch (IllegalArgumentException e) {
+            throw new InvalidAdminActionException(e.getMessage());
+        }
+    }
+
+    @Override
+    public List<SettingView> resetSettings(UUID requesterId) {
+        return settings.reset(requesterId);
     }
 
     @Override
