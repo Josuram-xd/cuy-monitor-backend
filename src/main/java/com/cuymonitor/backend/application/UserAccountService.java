@@ -1,6 +1,7 @@
 package com.cuymonitor.backend.application;
 
 import com.cuymonitor.backend.domain.exception.AccountDisabledException;
+import com.cuymonitor.backend.domain.exception.DemoAccountReadOnlyException;
 import com.cuymonitor.backend.domain.exception.InvalidCredentialsException;
 import com.cuymonitor.backend.domain.exception.UserNotFoundException;
 import com.cuymonitor.backend.domain.model.user.PasswordPolicy;
@@ -27,11 +28,19 @@ public class UserAccountService implements GetCurrentUserUseCase, UpdateProfileU
     private final UserRepository userRepository;
     private final PasswordHasher passwordHasher;
     private final Clock clock;
+    // the public demo account (app.demo.username): usable by anyone, so nobody may change it
+    private final String demoUsername;
 
     public UserAccountService(UserRepository userRepository, PasswordHasher passwordHasher, Clock clock) {
+        this(userRepository, passwordHasher, clock, "");
+    }
+
+    public UserAccountService(UserRepository userRepository, PasswordHasher passwordHasher, Clock clock,
+                              String demoUsername) {
         this.userRepository = userRepository;
         this.passwordHasher = passwordHasher;
         this.clock = clock;
+        this.demoUsername = demoUsername == null ? "" : demoUsername.trim();
     }
 
     @Override
@@ -43,7 +52,7 @@ public class UserAccountService implements GetCurrentUserUseCase, UpdateProfileU
     @Override
     @Transactional
     public User updateProfile(UpdateProfileCommand command) {
-        User user = loadActiveUser(command.userId());
+        User user = loadEditableUser(command.userId());
         user.updateProfile(command.fullName(), clock.instant());
         user.changeNickname(command.nickname(), clock.instant());
         return userRepository.save(user);
@@ -59,7 +68,7 @@ public class UserAccountService implements GetCurrentUserUseCase, UpdateProfileU
     @Override
     @Transactional
     public void setPhoto(UUID userId, ProfilePhoto photo) {
-        User user = loadActiveUser(userId);
+        User user = loadEditableUser(userId);
         userRepository.savePhoto(userId, photo);
         // the account itself only remembers that it has one, so hasPhoto is right in the next answer
         user.attachPhoto(photo.contentType(), clock.instant());
@@ -69,7 +78,7 @@ public class UserAccountService implements GetCurrentUserUseCase, UpdateProfileU
     @Override
     @Transactional
     public void removePhoto(UUID userId) {
-        User user = loadActiveUser(userId);
+        User user = loadEditableUser(userId);
         userRepository.deletePhoto(userId);
         user.attachPhoto(null, clock.instant());
         userRepository.save(user);
@@ -78,7 +87,7 @@ public class UserAccountService implements GetCurrentUserUseCase, UpdateProfileU
     @Override
     @Transactional
     public void changePassword(ChangePasswordCommand command) {
-        User user = loadActiveUser(command.userId());
+        User user = loadEditableUser(command.userId());
         checkCurrentPassword(user, command.currentPassword());
         PasswordPolicy.validate(command.newPassword(), user.getUsername(), user.getEmail());
 
@@ -89,11 +98,19 @@ public class UserAccountService implements GetCurrentUserUseCase, UpdateProfileU
     @Override
     @Transactional
     public void deactivate(DeactivateAccountCommand command) {
-        User user = loadActiveUser(command.userId());
+        User user = loadEditableUser(command.userId());
         checkCurrentPassword(user, command.currentPassword());
 
         user.deactivate(clock.instant());
         userRepository.save(user);
+    }
+
+    private User loadEditableUser(UUID userId) {
+        User user = loadActiveUser(userId);
+        if (!demoUsername.isEmpty() && demoUsername.equals(user.getUsername())) {
+            throw new DemoAccountReadOnlyException();
+        }
+        return user;
     }
 
     // the JWT stays valid for up to 30 min after deactivation, so every request re-checks the account

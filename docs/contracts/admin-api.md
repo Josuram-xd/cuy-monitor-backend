@@ -75,12 +75,31 @@ keep it, they just can't be picked any more. `PUT` with `"active": true` brings 
 
 ### `GET /api/v1/admin/users`
 
-Every account, newest first. No password hash and no Google subject.
+Every account, newest first. No password hash and no Google subject. Each one carries a **summary** of its use:
+its active cages, their active guinea pigs, their open alerts, and when the last event arrived for any of them
+(`null` if never). The admin sees counts, never what is inside someone else's cages.
 
 ```json
 [
   { "id": "…", "username": "dev", "fullName": "Dev", "email": "dev@cuymonitor.local",
-    "status": "ACTIVE", "role": "ADMIN", "createdAt": "2026-11-12T10:00:00Z" }
+    "status": "ACTIVE", "role": "ADMIN", "createdAt": "2026-11-12T10:00:00Z",
+    "cages": 2, "guineaPigs": 7, "openAlerts": 1, "lastActivityAt": "2026-11-18T14:02:11Z" }
+]
+```
+
+The `PATCH` below answers with the same shape.
+
+### `GET /api/v1/admin/ai-log?limit=100`
+
+What the AI did lately, newest first: windows the AI service analysed (`BEHAVIOR`), sounds it classified (`AUDIO`)
+and what the assistant wrote about an alert (`NOTE`). `limit` is 1–200 (default 100); outside that, `400`.
+`detail` is already written in Spanish.
+
+```json
+[
+  { "at": "2026-11-18T14:02:11Z", "cageCode": "cage-1", "kind": "NOTE", "detail": "Rojo lleva casi una hora…" },
+  { "at": "2026-11-18T14:01:05Z", "cageCode": "cage-1", "kind": "BEHAVIOR",
+    "detail": "RED: quieto 55.0 s de 60 s, comedero 0, bebedero 0, anomalía 0.3" }
 ]
 ```
 

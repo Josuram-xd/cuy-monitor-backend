@@ -1,5 +1,8 @@
 package com.cuymonitor.backend.domain.access;
 
+import com.cuymonitor.backend.domain.model.AccountActivity;
+import com.cuymonitor.backend.domain.model.AiLogEntry;
+import java.util.Map;
 import com.cuymonitor.backend.domain.exception.AdminAccessDeniedException;
 import com.cuymonitor.backend.domain.model.CatalogKind;
 import com.cuymonitor.backend.domain.model.CatalogOption;
@@ -60,6 +63,18 @@ public final class AdminAccessProxy implements AdminOperations {
     public User changeUserRole(UUID requesterId, UUID targetUserId, UserRole role) {
         requireAdmin(requesterId);
         return real.changeUserRole(requesterId, targetUserId, role);
+    }
+
+    @Override
+    public Map<UUID, AccountActivity> accountActivity(UUID requesterId) {
+        requireAdmin(requesterId);
+        return real.accountActivity(requesterId);
+    }
+
+    @Override
+    public List<AiLogEntry> aiLog(UUID requesterId, int limit) {
+        requireAdmin(requesterId);
+        return real.aiLog(requesterId, limit);
     }
 
     @Override

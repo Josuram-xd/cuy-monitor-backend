@@ -1,5 +1,10 @@
 package com.cuymonitor.backend.application;
 
+import java.util.Map;
+import java.util.List;
+import com.cuymonitor.backend.domain.port.out.AdminReportRepository;
+import com.cuymonitor.backend.domain.model.AiLogEntry;
+import com.cuymonitor.backend.domain.model.AccountActivity;
 import com.cuymonitor.backend.application.fake.FakeCatalogOptionRepository;
 import com.cuymonitor.backend.application.fake.InMemoryUserRepository;
 import com.cuymonitor.backend.application.fake.MutableClock;
@@ -26,7 +31,25 @@ class AdminServiceTest {
     private final FakeCatalogOptionRepository catalog = new FakeCatalogOptionRepository();
     private final InMemoryUserRepository users = new InMemoryUserRepository();
     private final MutableClock clock = new MutableClock(NOW);
-    private final AdminService service = new AdminService(catalog, users, clock);
+    private final AdminReportRepository reports = new AdminReportRepository() {
+        @Override
+        public Map<UUID, AccountActivity> activityByAccount() {
+            return Map.of();
+        }
+
+        @Override
+        public List<AiLogEntry> latestAiLog(int limit) {
+            return List.of(new AiLogEntry(NOW, "cage-1", AiLogEntry.Kind.NOTE, "nota"));
+        }
+    };
+    private final AdminService service = new AdminService(catalog, users, clock, reports);
+
+    @Test
+    void theAiLogShowsBetweenOneAndTwoHundredLines() {
+        assertThat(service.aiLog(admin, 50)).hasSize(1);
+        assertThatThrownBy(() -> service.aiLog(admin, 0)).isInstanceOf(InvalidAdminActionException.class);
+        assertThatThrownBy(() -> service.aiLog(admin, 201)).isInstanceOf(InvalidAdminActionException.class);
+    }
 
     private UUID admin;
     private UUID breeder;

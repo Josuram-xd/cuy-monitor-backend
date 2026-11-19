@@ -9,6 +9,7 @@ import com.cuymonitor.backend.domain.exception.InvalidCredentialsException;
 import com.cuymonitor.backend.domain.exception.InvalidOtpException;
 import com.cuymonitor.backend.domain.model.auth.TokenClaims;
 import com.cuymonitor.backend.domain.model.auth.AuthSession;
+import com.cuymonitor.backend.domain.port.in.DemoSignInUseCase;
 import com.cuymonitor.backend.domain.port.in.GoogleSignInUseCase;
 import com.cuymonitor.backend.domain.port.in.LoginCommand;
 import com.cuymonitor.backend.domain.port.in.LoginUseCase;
@@ -46,6 +47,7 @@ public class AuthController {
     private final RefreshSessionUseCase refreshSessionUseCase;
     private final LogoutUseCase logoutUseCase;
     private final GoogleSignInUseCase googleSignInUseCase;
+    private final DemoSignInUseCase demoSignInUseCase;
     private final AuthCookies cookies;
     private final JwtDecoder jwtDecoder;
     private final FailedAttemptLimiter limiter;
@@ -53,6 +55,7 @@ public class AuthController {
     public AuthController(RegisterUserUseCase registerUserUseCase, LoginUseCase loginUseCase,
                           VerifyOtpUseCase verifyOtpUseCase, RefreshSessionUseCase refreshSessionUseCase,
                           LogoutUseCase logoutUseCase, GoogleSignInUseCase googleSignInUseCase,
+                          DemoSignInUseCase demoSignInUseCase,
                           AuthCookies cookies, JwtDecoder jwtDecoder, FailedAttemptLimiter limiter) {
         this.registerUserUseCase = registerUserUseCase;
         this.loginUseCase = loginUseCase;
@@ -60,6 +63,7 @@ public class AuthController {
         this.refreshSessionUseCase = refreshSessionUseCase;
         this.logoutUseCase = logoutUseCase;
         this.googleSignInUseCase = googleSignInUseCase;
+        this.demoSignInUseCase = demoSignInUseCase;
         this.cookies = cookies;
         this.jwtDecoder = jwtDecoder;
         this.limiter = limiter;
@@ -106,6 +110,13 @@ public class AuthController {
     @PostMapping("/google")
     public ResponseEntity<Void> google(@Valid @RequestBody GoogleLoginRequest request) {
         AuthSession session = googleSignInUseCase.signIn(request.idToken());
+        return ResponseEntity.noContent().headers(cookies.issue(session)).build();
+    }
+
+    /** "Iniciar como usuario normal": the public demo account, no password or code. 404 when it is off. */
+    @PostMapping("/demo")
+    public ResponseEntity<Void> demo() {
+        AuthSession session = demoSignInUseCase.signIn();
         return ResponseEntity.noContent().headers(cookies.issue(session)).build();
     }
 

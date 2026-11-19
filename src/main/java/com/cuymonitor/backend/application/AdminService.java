@@ -1,5 +1,9 @@
 package com.cuymonitor.backend.application;
 
+import com.cuymonitor.backend.domain.model.AccountActivity;
+import com.cuymonitor.backend.domain.model.AiLogEntry;
+import com.cuymonitor.backend.domain.port.out.AdminReportRepository;
+import java.util.Map;
 import com.cuymonitor.backend.domain.access.AdminOperations;
 import com.cuymonitor.backend.domain.exception.InvalidAdminActionException;
 import com.cuymonitor.backend.domain.exception.UserNotFoundException;
@@ -26,14 +30,32 @@ import java.util.UUID;
  */
 public class AdminService implements AdminOperations {
 
+    public static final int MAX_AI_LOG = 200;
+
     private final CatalogOptionRepository catalog;
     private final UserRepository users;
     private final Clock clock;
+    private final AdminReportRepository reports;
 
-    public AdminService(CatalogOptionRepository catalog, UserRepository users, Clock clock) {
+    public AdminService(CatalogOptionRepository catalog, UserRepository users, Clock clock,
+                        AdminReportRepository reports) {
         this.catalog = Objects.requireNonNull(catalog, "catalog");
         this.users = Objects.requireNonNull(users, "users");
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.reports = Objects.requireNonNull(reports, "reports");
+    }
+
+    @Override
+    public Map<UUID, AccountActivity> accountActivity(UUID requesterId) {
+        return reports.activityByAccount();
+    }
+
+    @Override
+    public List<AiLogEntry> aiLog(UUID requesterId, int limit) {
+        if (limit < 1 || limit > MAX_AI_LOG) {
+            throw new InvalidAdminActionException("the log shows between 1 and " + MAX_AI_LOG + " lines");
+        }
+        return reports.latestAiLog(limit);
     }
 
     @Override
