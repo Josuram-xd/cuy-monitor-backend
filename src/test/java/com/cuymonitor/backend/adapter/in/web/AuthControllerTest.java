@@ -1,5 +1,7 @@
 package com.cuymonitor.backend.adapter.in.web;
 
+import com.cuymonitor.backend.domain.exception.DemoSignInDisabledException;
+import com.cuymonitor.backend.domain.port.in.DemoSignInUseCase;
 import com.cuymonitor.backend.config.JwtConfig;
 import com.cuymonitor.backend.config.SecurityConfig;
 import com.cuymonitor.backend.domain.exception.InvalidCredentialsException;
@@ -94,6 +96,8 @@ class AuthControllerTest {
     private LogoutUseCase logoutUseCase;
     @MockitoBean
     private GoogleSignInUseCase googleSignInUseCase;
+    @MockitoBean
+    private DemoSignInUseCase demoSignInUseCase;
     @MockitoBean
     private RevokedTokenRepository revokedTokenRepository;
 
@@ -238,6 +242,25 @@ class AuthControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("unauthorized"))
                 .andExpect(jsonPath("$.message").value("invalid google token"));
+    }
+
+    @Test
+    void theDemoButtonSetsTheSameCookiesWithoutPasswordOrCode() throws Exception {
+        given(demoSignInUseCase.signIn()).willReturn(session("jwt-token", "refresh-raw"));
+
+        mvc.perform(post("/api/v1/auth/demo"))
+                .andExpect(status().isNoContent())
+                .andExpect(cookie().value("access_token", "jwt-token"))
+                .andExpect(cookie().httpOnly("access_token", true));
+    }
+
+    @Test
+    void theDemoButtonIsNotFoundWhenItIsOff() throws Exception {
+        given(demoSignInUseCase.signIn()).willThrow(new DemoSignInDisabledException());
+
+        mvc.perform(post("/api/v1/auth/demo"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("not_found"));
     }
 
     @Test

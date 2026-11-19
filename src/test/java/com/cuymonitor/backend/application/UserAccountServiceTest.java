@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.application;
 
+import com.cuymonitor.backend.domain.exception.DemoAccountReadOnlyException;
 import com.cuymonitor.backend.application.fake.FakePasswordHasher;
 import com.cuymonitor.backend.application.fake.InMemoryUserRepository;
 import com.cuymonitor.backend.application.fake.MutableClock;
@@ -250,6 +251,20 @@ class UserAccountServiceTest {
                 .isInstanceOf(AccountDisabledException.class);
         assertThatThrownBy(() -> service.deactivate(new DeactivateAccountCommand(disabledId, "Secret-pass-1")))
                 .isInstanceOf(AccountDisabledException.class);
+    }
+
+    @Test
+    void theDemoAccountCanBeReadButNotChanged() {
+        UserAccountService demo = new UserAccountService(users, new FakePasswordHasher(), clock, "juan");
+
+        assertThat(demo.getCurrentUser(userId).getUsername()).isEqualTo("juan");
+        assertThatThrownBy(() -> demo.updateProfile(new UpdateProfileCommand(userId, "Otro", null)))
+                .isInstanceOf(DemoAccountReadOnlyException.class);
+        assertThatThrownBy(() -> demo.changePassword(new ChangePasswordCommand(userId, "Secret-pass-1", "New-pass-22")))
+                .isInstanceOf(DemoAccountReadOnlyException.class);
+        assertThatThrownBy(() -> demo.deactivate(new DeactivateAccountCommand(userId, "Secret-pass-1")))
+                .isInstanceOf(DemoAccountReadOnlyException.class);
+        assertThatThrownBy(() -> demo.removePhoto(userId)).isInstanceOf(DemoAccountReadOnlyException.class);
     }
 
     private UUID saveUser(UserStatus status) {

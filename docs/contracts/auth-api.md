@@ -108,6 +108,14 @@ An account with no password cannot use `/auth/login`; it answers `invalid creden
 
 `401 unauthorized` / `invalid google token`: bad signature, expired, other client id, other issuer, or unverified email. `401` / `account disabled` for a `DISABLED` account. `404 not_found` if the server has no `GOOGLE_CLIENT_ID` (feature off).
 
+### `POST /api/v1/auth/demo`
+
+**Iniciar como usuario normal**: opens a session in the public demo account, with no body, password or code; the
+same cookies as `/otp/verify`, `204`. The account is named by `APP_DEMO_USERNAME` (`DEMO_USERNAME` in the infra
+`.env`); it must be an active breeder, never an admin. Not configured, missing, disabled or an admin: `404 not_found`.
+Anyone on the login page can open it, so its profile, photo and password can not be changed and it can not be
+deleted: those calls answer `403 forbidden`.
+
 ### `POST /api/v1/auth/refresh`
 
 No body. Reads the `refresh_token` cookie (the browser only sends it to `/api/v1/auth`).

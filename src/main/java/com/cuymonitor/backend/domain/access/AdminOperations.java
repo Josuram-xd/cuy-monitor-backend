@@ -1,11 +1,14 @@
 package com.cuymonitor.backend.domain.access;
 
+import com.cuymonitor.backend.domain.model.AccountActivity;
+import com.cuymonitor.backend.domain.model.AiLogEntry;
 import com.cuymonitor.backend.domain.model.CatalogKind;
 import com.cuymonitor.backend.domain.model.CatalogOption;
 import com.cuymonitor.backend.domain.model.user.User;
 import com.cuymonitor.backend.domain.model.user.UserRole;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -31,4 +34,10 @@ public interface AdminOperations {
     User changeUserRole(UUID requesterId, UUID targetUserId, UserRole role);
 
     User setUserEnabled(UUID requesterId, UUID targetUserId, boolean enabled);
+
+    /** A summary per account (cages, guinea pigs, open alerts, last data): never what is inside the cages. */
+    Map<UUID, AccountActivity> accountActivity(UUID requesterId);
+
+    /** What the AI did lately, newest first, at most limit lines. */
+    List<AiLogEntry> aiLog(UUID requesterId, int limit);
 }

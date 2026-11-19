@@ -1,5 +1,10 @@
 package com.cuymonitor.backend.adapter.in.web;
 
+import com.cuymonitor.backend.domain.model.AccountActivity;
+import com.cuymonitor.backend.domain.model.AiLogEntry;
+import com.cuymonitor.backend.domain.model.user.User;
+import org.springframework.web.bind.annotation.RequestParam;
+import java.util.Map;
 import com.cuymonitor.backend.adapter.in.web.dto.AdminCatalogOptionRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.AdminCatalogOptionResponse;
 import com.cuymonitor.backend.adapter.in.web.dto.AdminUserResponse;
@@ -65,19 +70,29 @@ public class AdminController {
 
     @GetMapping("/users")
     public List<AdminUserResponse> users(Principal principal) {
-        return admin.listUsers(Requester.idOf(principal)).stream()
-                .map(AdminUserResponse::from)
+        UUID requesterId = Requester.idOf(principal);
+        Map<UUID, AccountActivity> activity = admin.accountActivity(requesterId);
+        return admin.listUsers(requesterId).stream()
+                .map(user -> AdminUserResponse.from(user,
+                        activity.getOrDefault(user.getId(), AccountActivity.none(user.getId()))))
                 .toList();
+    }
+
+    /** What the AI did lately (windows analysed, sounds classified, notes on alerts), newest first. */
+    @GetMapping("/ai-log")
+    public List<AiLogEntry> aiLog(Principal principal, @RequestParam(defaultValue = "100") int limit) {
+        return admin.aiLog(Requester.idOf(principal), limit);
     }
 
     @PatchMapping("/users/{id}")
     public AdminUserResponse updateUser(Principal principal, @PathVariable UUID id,
                                         @Valid @RequestBody AdminUserUpdateRequest request) {
         UUID requesterId = Requester.idOf(principal);
-        if (request.role() != null) {
-            return AdminUserResponse.from(admin.changeUserRole(requesterId, id, request.role()));
-        }
-        return AdminUserResponse.from(admin.setUserEnabled(requesterId, id, request.isEnabled()));
+        User changed = request.role() != null
+                ? admin.changeUserRole(requesterId, id, request.role())
+                : admin.setUserEnabled(requesterId, id, request.isEnabled());
+        return AdminUserResponse.from(changed,
+                admin.accountActivity(requesterId).getOrDefault(id, AccountActivity.none(id)));
     }
 
     /** Either a new role or whether the account is switched on; sending neither is a bad request. */

@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.config;
 
+import com.cuymonitor.backend.domain.port.out.AdminReportRepository;
 import com.cuymonitor.backend.application.AdminService;
 import com.cuymonitor.backend.domain.access.AdminAccessProxy;
 import com.cuymonitor.backend.domain.access.AdminOperations;
@@ -19,8 +20,9 @@ import java.time.Clock;
 public class AdminAccessConfig {
 
     @Bean
-    public AdminOperations adminOperations(CatalogOptionRepository catalog, UserRepository users, Clock clock) {
-        AdminOperations realSubject = new AdminService(catalog, users, clock);
+    public AdminOperations adminOperations(CatalogOptionRepository catalog, UserRepository users, Clock clock,
+                                           AdminReportRepository reports) {
+        AdminOperations realSubject = new AdminService(catalog, users, clock, reports);
         return new AdminAccessProxy(realSubject, users);
     }
 }

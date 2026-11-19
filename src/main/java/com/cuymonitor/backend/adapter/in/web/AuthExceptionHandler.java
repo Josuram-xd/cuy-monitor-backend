@@ -1,6 +1,8 @@
 package com.cuymonitor.backend.adapter.in.web;
 
 import com.cuymonitor.backend.domain.exception.AccountDisabledException;
+import com.cuymonitor.backend.domain.exception.DemoAccountReadOnlyException;
+import com.cuymonitor.backend.domain.exception.DemoSignInDisabledException;
 import com.cuymonitor.backend.domain.exception.GoogleSignInDisabledException;
 import com.cuymonitor.backend.domain.exception.InvalidCredentialsException;
 import com.cuymonitor.backend.domain.exception.InvalidGoogleTokenException;
@@ -55,6 +57,16 @@ public class AuthExceptionHandler {
             InvalidRefreshTokenException.class, InvalidGoogleTokenException.class})
     public ResponseEntity<Map<String, Object>> handleUnauthorized(RuntimeException ex) {
         return error(HttpStatus.UNAUTHORIZED, ApiError.UNAUTHORIZED, ex.getMessage());
+    }
+
+    @ExceptionHandler(DemoSignInDisabledException.class)
+    public ResponseEntity<Map<String, Object>> handleDemoDisabled(DemoSignInDisabledException ex) {
+        return error(HttpStatus.NOT_FOUND, ApiError.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(DemoAccountReadOnlyException.class)
+    public ResponseEntity<Map<String, Object>> handleDemoReadOnly(DemoAccountReadOnlyException ex) {
+        return error(HttpStatus.FORBIDDEN, ApiError.FORBIDDEN, ex.getMessage());
     }
 
     @ExceptionHandler(GoogleSignInDisabledException.class)

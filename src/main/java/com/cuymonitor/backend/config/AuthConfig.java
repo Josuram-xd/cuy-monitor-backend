@@ -4,6 +4,7 @@ import com.cuymonitor.backend.adapter.in.web.FailedAttemptLimiter;
 import com.cuymonitor.backend.adapter.out.security.JwtTokenIssuer;
 import com.cuymonitor.backend.adapter.out.security.GoogleIdTokenVerifierAdapter;
 import com.cuymonitor.backend.application.AuthenticationService;
+import com.cuymonitor.backend.application.DemoSignInService;
 import com.cuymonitor.backend.application.GoogleSignInService;
 import com.cuymonitor.backend.application.SessionService;
 import com.cuymonitor.backend.application.UserAccountService;
@@ -15,6 +16,7 @@ import com.cuymonitor.backend.domain.port.out.RefreshTokenRepository;
 import com.cuymonitor.backend.domain.port.out.RevokedTokenRepository;
 import com.cuymonitor.backend.domain.port.out.TokenIssuer;
 import com.cuymonitor.backend.domain.port.out.UserRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
@@ -56,6 +58,12 @@ public class AuthConfig {
     }
 
     @Bean
+    public DemoSignInService demoSignInService(UserRepository userRepository, SessionService sessionService,
+                                               @Value("${app.demo.username:}") String demoUsername) {
+        return new DemoSignInService(userRepository, sessionService, demoUsername);
+    }
+
+    @Bean
     public GoogleSignInService googleSignInService(UserRepository userRepository, GoogleIdTokenVerifier verifier,
                                                    SessionService sessionService, Clock clock) {
         return new GoogleSignInService(userRepository, verifier, sessionService, clock);
@@ -80,7 +88,7 @@ public class AuthConfig {
 
     @Bean
     public UserAccountService userAccountService(UserRepository userRepository, PasswordHasher passwordHasher,
-                                                 Clock clock) {
-        return new UserAccountService(userRepository, passwordHasher, clock);
+                                                 Clock clock, @Value("${app.demo.username:}") String demoUsername) {
+        return new UserAccountService(userRepository, passwordHasher, clock, demoUsername);
     }
 }
