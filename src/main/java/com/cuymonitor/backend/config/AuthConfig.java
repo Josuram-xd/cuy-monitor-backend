@@ -59,8 +59,9 @@ public class AuthConfig {
 
     @Bean
     public DemoSignInService demoSignInService(UserRepository userRepository, SessionService sessionService,
-                                               @Value("${app.demo.username:}") String demoUsername) {
-        return new DemoSignInService(userRepository, sessionService, demoUsername);
+                                               @Value("${app.demo.username:}") String demoUsername,
+                                               @Value("${app.demo.admin-username:}") String adminUsername) {
+        return new DemoSignInService(userRepository, sessionService, demoUsername, adminUsername);
     }
 
     @Bean

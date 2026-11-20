@@ -55,6 +55,19 @@ class DemoSignInServiceTest {
     }
 
     @Test
+    void theAdminButtonOpensOnlyAnActiveAdmin() {
+        save("boss", UserRole.ADMIN, UserStatus.ACTIVE);
+        save("demo", UserRole.BREEDER, UserStatus.ACTIVE);
+
+        assertThat(new DemoSignInService(users, sessions, "demo", "boss").signInAsAdmin().refreshToken())
+                .isNotBlank();
+        assertThatThrownBy(() -> new DemoSignInService(users, sessions, "demo", "demo").signInAsAdmin())
+                .isInstanceOf(DemoSignInDisabledException.class);
+        assertThatThrownBy(() -> new DemoSignInService(users, sessions, "demo", "").signInAsAdmin())
+                .isInstanceOf(DemoSignInDisabledException.class);
+    }
+
+    @Test
     void isOffForAMissingOrDisabledAccount() {
         save("gone", UserRole.BREEDER, UserStatus.DISABLED);
 

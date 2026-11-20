@@ -116,6 +116,13 @@ same cookies as `/otp/verify`, `204`. The account is named by `APP_DEMO_USERNAME
 Anyone on the login page can open it, so its profile, photo and password can not be changed and it can not be
 deleted: those calls answer `403 forbidden`.
 
+### `POST /api/v1/auth/demo-admin`
+
+**Entrar como admin**: same as `/auth/demo` but opens the admin account named by `APP_DEMO_ADMIN_USERNAME`
+(`DEMO_ADMIN_USERNAME` in the infra `.env`), for the professor's review. It must be an active admin. Not configured,
+missing, disabled or not an admin: `404 not_found`. Anyone on the login page can use it, so leave it empty when the
+review is over.
+
 ### `POST /api/v1/auth/refresh`
 
 No body. Reads the `refresh_token` cookie (the browser only sends it to `/api/v1/auth`).

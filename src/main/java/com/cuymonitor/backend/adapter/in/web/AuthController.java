@@ -120,6 +120,13 @@ public class AuthController {
         return ResponseEntity.noContent().headers(cookies.issue(session)).build();
     }
 
+    /** "Entrar como admin": the configured admin account, no password or code. 404 when it is off. */
+    @PostMapping("/demo-admin")
+    public ResponseEntity<Void> demoAdmin() {
+        AuthSession session = demoSignInUseCase.signInAsAdmin();
+        return ResponseEntity.noContent().headers(cookies.issue(session)).build();
+    }
+
     @PostMapping("/refresh")
     public ResponseEntity<Void> refresh(
             @CookieValue(name = AuthCookies.REFRESH, required = false) String refreshToken) {

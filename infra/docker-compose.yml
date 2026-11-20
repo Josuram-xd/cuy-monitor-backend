@@ -42,6 +42,8 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       # username of the public demo account behind "Iniciar como usuario normal"; empty = button off
       APP_DEMO_USERNAME: ${DEMO_USERNAME:-}
+      # username of the admin account behind "Entrar como admin" (no password or code); empty = button off
+      APP_DEMO_ADMIN_USERNAME: ${DEMO_ADMIN_USERNAME:-}
       MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME}
