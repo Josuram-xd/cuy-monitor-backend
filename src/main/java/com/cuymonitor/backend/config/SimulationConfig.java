@@ -4,14 +4,17 @@ import com.cuymonitor.backend.domain.port.out.HardwareStation;
 import com.cuymonitor.backend.adapter.out.simulation.AiServiceSimulationRunner;
 import com.cuymonitor.backend.application.HardwareStationService;
 import com.cuymonitor.backend.application.SimulationService;
+import com.cuymonitor.backend.application.StationCameraService;
 import com.cuymonitor.backend.domain.access.CageOperations;
 import com.cuymonitor.backend.domain.port.out.SimulationRunner;
+import com.cuymonitor.backend.domain.port.out.StationCameraRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
+import java.time.Clock;
 import java.time.Duration;
 
 /** Wires the "Simulación" button: the backend asks the AI service, which it reaches inside the Compose network. */
@@ -36,5 +39,10 @@ public class SimulationConfig {
     @Bean
     public HardwareStationService hardwareStationService(HardwareStation station) {
         return new HardwareStationService(station);
+    }
+
+    @Bean
+    public StationCameraService stationCameraService(StationCameraRepository cameras, HardwareStation station, Clock clock) {
+        return new StationCameraService(cameras, station, clock);
     }
 }
