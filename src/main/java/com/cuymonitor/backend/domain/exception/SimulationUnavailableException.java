@@ -19,6 +19,11 @@ public class SimulationUnavailableException extends RuntimeException {
         return new SimulationUnavailableException("the AI service is not available right now", false, cause);
     }
 
+    /** The AI service has no video clip to play (its models or the clip were not fetched when it was built). */
+    public static SimulationUnavailableException noClip() {
+        return new SimulationUnavailableException("the simulation video is not available right now", false, null);
+    }
+
     public boolean isNoGuineaPigs() {
         return noGuineaPigs;
     }
