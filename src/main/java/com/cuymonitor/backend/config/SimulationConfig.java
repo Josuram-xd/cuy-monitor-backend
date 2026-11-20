@@ -3,11 +3,16 @@ package com.cuymonitor.backend.config;
 import com.cuymonitor.backend.domain.port.out.HardwareStation;
 import com.cuymonitor.backend.adapter.out.simulation.AiServiceSimulationRunner;
 import com.cuymonitor.backend.application.HardwareStationService;
+import com.cuymonitor.backend.application.SimulationCageService;
 import com.cuymonitor.backend.application.SimulationService;
 import com.cuymonitor.backend.application.StationCameraService;
 import com.cuymonitor.backend.domain.access.CageOperations;
+import com.cuymonitor.backend.domain.port.in.GetOrCreateSimulationCageUseCase;
+import com.cuymonitor.backend.domain.port.out.CageCodeGenerator;
+import com.cuymonitor.backend.domain.port.out.CageRepository;
 import com.cuymonitor.backend.domain.port.out.SimulationRunner;
 import com.cuymonitor.backend.domain.port.out.StationCameraRepository;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,6 +39,14 @@ public class SimulationConfig {
     @Bean
     public SimulationService simulationService(CageOperations cageOperations, SimulationRunner simulationRunner, HardwareStation station) {
         return new SimulationService(cageOperations, simulationRunner, station::connectedTo);
+    }
+
+    @Bean
+    public GetOrCreateSimulationCageUseCase simulationCageService(CageRepository cages,
+                                                                  @Qualifier("simulationCageCodes") CageCodeGenerator codes,
+                                                                  SimulationRunner simulationRunner,
+                                                                  CageOperations cageOperations, Clock clock) {
+        return new SimulationCageService(cages, codes, simulationRunner, cageOperations, clock);
     }
 
     @Bean

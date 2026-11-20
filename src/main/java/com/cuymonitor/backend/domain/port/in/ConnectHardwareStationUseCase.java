@@ -7,4 +7,7 @@ public interface ConnectHardwareStationUseCase {
     boolean connect(String cageCode);
 
     void disconnect(String cageCode);
+
+    /** true when the kit is connected to this cage right now: the cage is "monitored" by the real equipment. */
+    boolean connectedTo(String cageCode);
 }

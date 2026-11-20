@@ -99,10 +99,16 @@ A farmer can have several cages. Each one belongs to the account that created it
 
 ```json
 [
-  { "cageId": "cage-1", "name": "Jaula piloto", "location": "Galpón", "createdAt": "2026-09-20T10:00:00Z" },
-  { "cageId": "cage-0a1b2c3d", "name": "Jaula del patio", "location": null, "createdAt": "2026-11-02T14:00:00Z" }
+  { "cageId": "cage-1", "name": "Jaula piloto", "location": "Galpón", "createdAt": "2026-09-20T10:00:00Z",
+    "simulated": false, "monitored": true },
+  { "cageId": "cage-0a1b2c3d", "name": "Jaula del patio", "location": null, "createdAt": "2026-11-02T14:00:00Z",
+    "simulated": false, "monitored": false }
 ]
 ```
+
+`simulated` is `true` for the account's simulation cage (its `cageId` starts with `sim-`, chosen by the backend, see
+3.11b). `monitored` is `true` while the shared physical kit is connected to that cage (see section 3.1 and 3.12). A
+simulation cage is never monitored. The dashboard reads a missing flag as `false`.
 
 `POST /api/v1/cages` and `PUT /api/v1/cages/{cageId}` take `{ "name": "Jaula del patio", "location": "Patio" }`:
 `name` 1–100 characters (trimmed), `location` optional, up to 200 (blank removes it). The backend picks the code of a
@@ -404,7 +410,37 @@ classifier, so a cage alert (AUDIO) arrives at once. Pressing it again while it 
 | `202` | — | Started |
 | `400` | `bad_request` | The cage has no guinea pigs to draw |
 | `403` / `404` | `forbidden` / `not_found` | Not the account's cage / no such cage |
+| `409` | `conflict` | A simulation cage's video: the AI service already runs as many videos as it allows (two) |
+| `503` | `service_unavailable` | The AI service did not answer, or it has no video clip |
+
+### 3.11a `GET` and `DELETE /api/v1/cages/{cageId}/simulation`
+
+The video simulation of a simulation cage (3.11b) while it runs. Only the owner of the cage. `GET` → `200` with the
+AI service's own JSON, passed on as it is: `{ "running": true, "startedAt": "2026-11-20T12:00:00Z", "framesSent": 42,
+"frameCount": 150, "credit": { "title": "…", "author": "…", "license": "CC BY 4.0", "licenseUrl": "…",
+"sourceUrl": "…" } }` (`credit` is `null` without a clip). `DELETE` → `204`, stops the run (nothing happens if it is not
+running).
+
+| Status | `error` | When |
+|---|---|---|
+| `403` / `404` | `forbidden` / `not_found` | Not the account's cage / no such cage |
 | `503` | `service_unavailable` | The AI service did not answer |
+
+### 3.11b `POST /api/v1/simulation-cage`
+
+The dashboard's **Jaula de simulación** button: the account's simulation cage, one per account. No body. The first call
+creates it (name "Simulación", no location) with one guinea pig per mark color of the video clip, and the backend
+picks its code: `sim-` + 8 hex characters, which the farmer cannot choose. Later calls give back the same cage. The
+clip is the video of the AI service (`GET /ai/v1/simulation/clip`); if it is not there, nothing is created.
+
+`200` with the cage (section 3.0 shape, `simulated: true`, `monitored: false`). Start the video with
+`POST /api/v1/cages/{cageId}/simulation` (3.11) and follow it with 3.11a. Its events reach the usual rules with
+`source` `simulation` (`events.md`).
+
+| Status | `error` | When |
+|---|---|---|
+| `401` | `unauthorized` | No session |
+| `503` | `service_unavailable` | The AI service did not answer, or it has no video clip |
 
 ### 3.12 `GET` and `PUT /api/v1/cages/{cageId}/equipment/camera`
 
@@ -439,6 +475,17 @@ edge agent on the farm laptop reads it (section 2). The password is accepted on 
 | `400` | `bad_request` | Invalid host, port, username, stream or missing password |
 | `403` / `404` | `forbidden` / `not_found` | Not the account's cage / no such cage |
 | `409` | `conflict` | The kit is not connected to this cage |
+
+### 3.12b `GET /api/v1/cages/{cageId}/camera/latest`
+
+The live picture of a cage, for an `img` tag like the guinea pig photos (3.3c): the JPEG bytes of the last frame the
+AI service received. A simulation cage shows its video; the cage the shared kit is connected to shows the kit's camera
+(the edge agent sends it as the kit's cage, `farm-station`). Any other cage has no picture. The picture is refreshed
+every few seconds, so the dashboard asks again. Response headers: `Content-Type: image/jpeg`,
+`Cache-Control: private, no-store`, `X-Content-Type-Options: nosniff`.
+
+`404` if the cage has no picture yet or shows no camera. `403` if the cage is another account's, `404` if it does not
+exist. `401` without a session.
 
 ## 4. WebSocket (STOMP)
 
