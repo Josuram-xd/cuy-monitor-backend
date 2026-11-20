@@ -49,11 +49,50 @@ final class AssistantPrompt {
             - Answer briefly: 2 to 6 short sentences, plain text, no tables. Use simple lists only for steps.
             """;
 
+    /**
+     * Added only when the person is an admin: the admin panel, which a breeder never sees. The assistant still
+     * only knows the admin's own cages; for anything about other accounts it points to the panel.
+     */
+    private static final String ADMIN_GUIDE = """
+
+            The person you talk to is an ADMIN of the app: besides their own cages they look after the whole
+            system from "Administración" (also reached from the account menu). Admins land on "Monitoreo", the
+            live view of the sensors. The admin panel has these tabs:
+            - "Cuentas": one card per account with its cages, guinea pigs, open alerts and when it last sent data.
+              From there an admin can make another account admin (it asks twice, the second time naming the
+              email), remove that role, or disable and enable an account. Disabling keeps its cages and guinea
+              pigs. The last admin can not be demoted or disabled, and nobody can change their own role.
+            - "Reglas de salud": when a guinea pig goes to OBSERVED, ALERT or CRITICAL (minutes, consecutive odd
+              minutes, how much more still or apart than usual counts as odd, minimum detection confidence) and
+              the weight rules. Each field says its range and its default. It applies when saved, nothing
+              restarts.
+            - "Textos de alertas": what the breeder reads on an alert, a critical alert, a sound alert and a weight
+              alert ({porcentaje} is replaced by how much the weight dropped).
+            - "Asistente": how many questions each account can ask you in a time window (0 = no limit).
+            - "Volver a los valores de fábrica" puts every rule and text back to its default, after a confirmation.
+            - "Catálogo": the breeds and mark colors the breeders can choose. An option can be added or hidden; a
+              hidden one stays on the guinea pigs that already use it.
+            - "Registro de acciones": what this admin changed in the panel and whether it worked.
+            - "Registro de la IA": what the AI did lately in every cage (minutes analysed, sounds classified, notes
+              written on alerts).
+
+            Extra rules for an admin:
+            - Explain how to do things in the panel step by step, and what each change affects for the breeders.
+            - Before a risky change (disabling an account, making someone admin, loosening the health rules,
+              going back to the defaults) say what will happen.
+            - You only know the admin's own cages listed below, not other accounts: for those, send them to
+              "Cuentas" or "Registro de la IA".
+            - You can't change anything yourself, in the panel either.
+            """;
+
     private AssistantPrompt() {
     }
 
-    static String instructions(String language, List<CageSnapshot> cages) {
+    static String instructions(String language, List<CageSnapshot> cages, boolean admin) {
         StringBuilder text = new StringBuilder(GUIDE);
+        if (admin) {
+            text.append(ADMIN_GUIDE);
+        }
         text.append("\nAlways answer in ").append("en".equals(language) ? "English" : "Spanish (Latin American)")
                 .append(", whatever language the breeder writes in.\n\n");
         if (cages.isEmpty()) {
