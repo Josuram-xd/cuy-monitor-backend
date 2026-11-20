@@ -1,7 +1,6 @@
 package com.cuymonitor.backend.application;
 
-import com.cuymonitor.backend.domain.model.BehaviorSignal;
-import com.cuymonitor.backend.domain.model.AudioSignal;
+import com.cuymonitor.backend.domain.model.SignalDuration;
 import com.cuymonitor.backend.domain.port.out.HardwareStation;
 import com.cuymonitor.backend.domain.model.HealthEvent;
 import com.cuymonitor.backend.domain.model.settings.Settings;
@@ -44,12 +43,7 @@ public class ConfigurableEventProcessor implements ProcessEventUseCase, Settings
             if (HardwareStation.DEVICE_CODE.equals(event.cageId())) {
                 if (binding.isEmpty()) return;
                 var target = binding.get();
-                var start = event.occurredAt();
-                if (event.signal() instanceof BehaviorSignal behavior) {
-                    start = start.minusSeconds(behavior.windowSeconds());
-                } else if (event.signal() instanceof AudioSignal audio) {
-                    start = start.minusMillis(audio.durationMs());
-                }
+                var start = event.occurredAt().minus(event.signal().accept(SignalDuration.INSTANCE));
                 if (start.isBefore(target.since())) return;
                 event = new HealthEvent(event.eventId(), target.cageCode(), event.occurredAt(),
                         "farm-station", event.signal());
