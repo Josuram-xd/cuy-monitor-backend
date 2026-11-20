@@ -49,6 +49,29 @@ Header `X-API-Key`. Body is the event envelope. Full field rules, payloads and r
 | `400` | invalid envelope (do not retry) |
 | `401` | wrong or missing API key (do not retry) |
 
+### `GET /api/v1/ingestion/cages/{cageCode}/guinea-pigs`
+
+Header `X-API-Key`. The ai-service reads the active guinea pigs of a cage with their registered photo, to recognize
+them by their coat when the mark is not visible. Active guinea pigs only, oldest first. The photo is the stored
+bytes in base64, `null` for a guinea pig registered without one. The response carries an `ETag`: send it back in
+`If-None-Match` and an unchanged list answers `304` with no body. Cache-Control is `no-cache`.
+
+```json
+[
+  {
+    "id": 1, "markColor": "RED", "coatColor": "BROWN", "breed": "PERUVIAN",
+    "photoContentType": "image/jpeg", "photo": "/9j/4AAQSkZJRgABAQ..."
+  }
+]
+```
+
+| Status | Body |
+|---|---|
+| `200` | the list above |
+| `304` | `If-None-Match` equals the current `ETag`: the list did not change |
+| `401` | wrong or missing API key (checked before the cage is looked up) |
+| `404` | no cage with that code |
+
 ### `GET /api/v1/ingestion/station/camera` and `POST /api/v1/ingestion/station/camera/status`
 
 Header `X-API-Key`, same as events. The edge agent polls the first one to learn the camera set in the dashboard
