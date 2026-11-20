@@ -2,19 +2,20 @@
 # Run once on the Windows laptop that stays beside the cage.
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][uri]$PhoneUrl,
+    # optional: without it the camera is taken from the cage panel (the phone can be set up there too)
+    [uri]$PhoneUrl,
     [Parameter(Mandatory)][ValidatePattern('^COM[0-9]+$')][string]$SerialPort,
     [uri]$ServerUrl = 'https://cuymonitor.duckdns.org'
 )
 $ErrorActionPreference = 'Stop'
-if ($ServerUrl.Scheme -ne 'https' -or $PhoneUrl.Scheme -notin 'http','https') {
+if ($ServerUrl.Scheme -ne 'https' -or ($PhoneUrl -and $PhoneUrl.Scheme -notin 'http','https')) {
     throw 'Use HTTPS for the server and the IP Webcam address for the phone.'
 }
 $repos = Split-Path (Split-Path $PSScriptRoot)
 $bridge = Join-Path $repos 'cuy-monitor-arduino\serial_bridge'
 $ai = Join-Path $repos 'cuy-monitor-ai-service'
 $server = $ServerUrl.AbsoluteUri.TrimEnd('/')
-$phone = $PhoneUrl.AbsoluteUri.TrimEnd('/')
+$phone = if ($PhoneUrl) { $PhoneUrl.AbsoluteUri.TrimEnd('/') } else { '' }
 $health = Invoke-RestMethod "$server/ai/health" -TimeoutSec 15
 if ($health.status -ne 'UP' -or $health.mockMode -ne $false) { throw 'Real AI service required.' }
 if ((Invoke-RestMethod "$server/actuator/health" -TimeoutSec 15).status -ne 'UP') { throw 'Backend is offline.' }
@@ -52,6 +53,16 @@ function Set-MonitorConfig($file, $entries) {
 }
 Set-MonitorConfig (Join-Path $bridge '.env') @{SERIAL_PORT=$SerialPort; BACKEND_URL=$server; API_KEY=$quotedKey; CAGE_ID='farm-station'}
 Set-MonitorConfig (Join-Path $ai 'edge_agent\.env') @{A12_URL=$phone; AI_URL=$server; API_KEY=$quotedKey; CAGE_ID='farm-station'; FPS='1'; AUDIO_ENABLED='true'}
+
+# the RTSP camera needs ffmpeg on the laptop; without it the agent reports FFMPEG_MISSING instead of failing silently
+if (!(Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
+    try {
+        & winget install --id Gyan.FFmpeg -e --accept-source-agreements --accept-package-agreements | Out-Host
+        if ($LASTEXITCODE) { throw "winget exit code $LASTEXITCODE" }
+    } catch {
+        Write-Warning "Could not install ffmpeg ($($_.Exception.Message)). Install it by hand for the Tapo camera; the phone still works."
+    }
+}
 
 $trigger = New-ScheduledTaskTrigger -AtStartup
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew
