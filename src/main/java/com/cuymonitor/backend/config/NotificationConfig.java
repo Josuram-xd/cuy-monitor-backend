@@ -8,6 +8,8 @@ import com.cuymonitor.backend.domain.notification.AlertPublisher;
 import com.cuymonitor.backend.domain.notification.AsyncAlertObserver;
 import com.cuymonitor.backend.domain.port.out.AlertRepository;
 import com.cuymonitor.backend.domain.port.out.AssistantModel;
+import com.cuymonitor.backend.domain.port.out.BaselineProfileRepository;
+import com.cuymonitor.backend.domain.port.out.EventRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -74,8 +76,10 @@ public class NotificationConfig {
     @Bean
     public AlertNoteService alertNoteService(AssistantModel model, AlertRepository alerts,
                                             WebSocketAlertObserver webSocket, Clock clock,
-                                            @Value("${app.assistant.alert-note-language:es}") String language) {
-        return new AlertNoteService(model, alerts, webSocket, clock, language);
+                                            @Value("${app.assistant.alert-note-language:es}") String language,
+                                            EventRepository events, BaselineProfileRepository baselines,
+                                            CurrentAnomalyThresholds thresholds) {
+        return new AlertNoteService(model, alerts, webSocket, clock, language, events, baselines, thresholds);
     }
 
     /**

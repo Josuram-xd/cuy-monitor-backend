@@ -1,6 +1,8 @@
 package com.cuymonitor.backend.domain.model;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -75,6 +77,27 @@ public record BaselineProfile(long guineaPigId, double avgStillSeconds, double a
             return "se alejó del grupo";
         }
         return null;
+    }
+
+    /**
+     * Everything that stands out in the window, with the same thresholds as {@link #anomalyReason}; empty when it
+     * looks normal. Not eating only counts for a guinea pig that usually goes to the feeder in a window.
+     */
+    public List<BehaviorSymptom> symptoms(BehaviorSignal window, AnomalyThresholds thresholds) {
+        List<BehaviorSymptom> found = new ArrayList<>();
+        if (window.probAnomaly() >= thresholds.classifierThreshold()) {
+            found.add(BehaviorSymptom.UNUSUAL);
+        }
+        if (window.stillSeconds() > avgStillSeconds * thresholds.stillFactor()) {
+            found.add(BehaviorSymptom.VERY_STILL);
+        }
+        if (window.feederVisits() == 0 && avgFeederVisits >= 0.5) {
+            found.add(BehaviorSymptom.NOT_EATING);
+        }
+        if (window.avgGroupDistance() > avgGroupDistance * thresholds.groupDistanceFactor()) {
+            found.add(BehaviorSymptom.APART);
+        }
+        return List.copyOf(found);
     }
 
     public String anomalyReason(BehaviorSignal window) {

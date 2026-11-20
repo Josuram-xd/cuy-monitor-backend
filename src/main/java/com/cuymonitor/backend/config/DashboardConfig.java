@@ -61,12 +61,21 @@ public class DashboardConfig {
         return new AlertHistoryService(alerts);
     }
 
+    /** The thresholds an admin set last, for the live symptoms and the alert notes (a SettingsListener). */
+    @Bean
+    public CurrentAnomalyThresholds currentAnomalyThresholds() {
+        return new CurrentAnomalyThresholds();
+    }
+
     @Bean
     public CageHealthService cageHealthService(CageRepository cages, GuineaPigRepository guineaPigs,
                                                AlertRepository alerts, EventRepository events,
-                                               WeightReadingRepository weights, Clock clock, HardwareStation station) {
+                                               WeightReadingRepository weights, Clock clock, HardwareStation station,
+                                               BaselineProfileRepository baselines,
+                                               CurrentAnomalyThresholds thresholds) {
         return new CageHealthService(cages, guineaPigs, alerts, events, weights, clock,
-                code -> station.current().filter(binding -> binding.cageCode().equals(code)).map(HardwareStation.Binding::since));
+                code -> station.current().filter(binding -> binding.cageCode().equals(code)).map(HardwareStation.Binding::since),
+                baselines, thresholds);
     }
 
     @Bean

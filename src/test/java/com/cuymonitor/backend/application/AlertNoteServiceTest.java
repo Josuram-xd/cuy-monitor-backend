@@ -107,6 +107,25 @@ class AlertNoteServiceTest {
     }
 
     @Test
+    void theNoteGetsTheMeasurementsOfTheGuineaPigComparedWithItsNormal() {
+        var usual = new com.cuymonitor.backend.domain.model.BaselineProfile(3, 20, 2, 0.2, NOW, 40);
+        var windows = List.of(
+                new com.cuymonitor.backend.domain.model.BehaviorSignal("RED", 60, 55, 0, 1, 0.8, 0.2, 0.9),
+                new com.cuymonitor.backend.domain.model.BehaviorSignal("RED", 60, 50, 0, 0, 0.7, 0.2, 0.9));
+
+        String text = AlertNotePrompt.measurements(windows, usual,
+                com.cuymonitor.backend.domain.model.AnomalyThresholds.defaults());
+
+        assertThat(text).contains("last 2 one-minute windows").contains("55 of 60 s, 50 of 60 s")
+                .contains("usual for it: about 20 s").contains("feeder: 0 in total")
+                .contains("water bottle: 1 in total").contains("learned from 40 normal minutes")
+                .contains("stays still much longer than usual").contains("did not go to the feeder");
+        assertThat(AlertNotePrompt.question(storedAlert(HealthStatus.ALERT), text)).contains(text);
+        assertThat(AlertNotePrompt.measurements(List.of(), usual,
+                com.cuymonitor.backend.domain.model.AnomalyThresholds.defaults())).isEmpty();
+    }
+
+    @Test
     void theNoteIsAskedForInTheConfiguredLanguage() {
         assertThat(AlertNotePrompt.instructions("es")).contains("Spanish (Latin American)");
         assertThat(AlertNotePrompt.instructions("en")).contains("English");
