@@ -1,6 +1,7 @@
 package com.cuymonitor.backend.adapter.in.web;
 
 import com.cuymonitor.backend.domain.access.CageOperations;
+import com.cuymonitor.backend.domain.model.Cage;
 import com.cuymonitor.backend.domain.port.in.ConnectHardwareStationUseCase;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +25,9 @@ public class HardwareStationController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Transactional
     public void connect(Principal principal, @PathVariable String cageId) {
-        cages.getCage(Requester.idOf(principal), cageId);
+        Cage cage = cages.getCage(Requester.idOf(principal), cageId);
+        // the simulation cage has no sensors: the real kit is never bound to it
+        if (cage.simulated()) throw new ResponseStatusException(HttpStatus.CONFLICT, "A simulation cage has no equipment");
         if (!station.connect(cageId)) throw new ResponseStatusException(HttpStatus.CONFLICT, "Equipment in use");
     }
 
