@@ -1,9 +1,5 @@
 package com.cuymonitor.backend.domain.health.chain;
 
-import com.cuymonitor.backend.domain.model.AudioSignal;
-import com.cuymonitor.backend.domain.model.BehaviorSignal;
-import com.cuymonitor.backend.domain.model.WeightSignal;
-
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Objects;
@@ -12,7 +8,7 @@ public final class ValidationHandler extends EventHandler {
 
     private final Clock clock;
     private final Duration maximumEventAge;
-    private final double minimumDetectionConfidence;
+    private final MeasurementCheck measurements;
 
     public ValidationHandler(Clock clock, Duration maximumEventAge, double minimumDetectionConfidence) {
         this.clock = Objects.requireNonNull(clock, "clock");
@@ -25,7 +21,7 @@ public final class ValidationHandler extends EventHandler {
                 || minimumDetectionConfidence > 1) {
             throw new IllegalArgumentException("minimumDetectionConfidence must be between 0 and 1");
         }
-        this.minimumDetectionConfidence = minimumDetectionConfidence;
+        this.measurements = new MeasurementCheck(minimumDetectionConfidence);
     }
 
     @Override
@@ -46,25 +42,6 @@ public final class ValidationHandler extends EventHandler {
             return;
         }
 
-        if (event.signal() instanceof BehaviorSignal behavior
-                && (!hasFiniteMeasurements(behavior)
-                || behavior.detectionConfidence() < minimumDetectionConfidence)) {
-            context.reject("Behavior event has invalid measurements or low detection confidence");
-            return;
-        }
-        if (event.signal() instanceof AudioSignal audio && !Double.isFinite(audio.probability())) {
-            context.reject("Audio event has invalid measurements");
-            return;
-        }
-        if (event.signal() instanceof WeightSignal weight && !Double.isFinite(weight.grams())) {
-            context.reject("Weight event has invalid measurements");
-        }
-    }
-
-    private static boolean hasFiniteMeasurements(BehaviorSignal behavior) {
-        return Double.isFinite(behavior.stillSeconds())
-                && Double.isFinite(behavior.avgGroupDistance())
-                && Double.isFinite(behavior.probAnomaly())
-                && Double.isFinite(behavior.detectionConfidence());
+        event.signal().accept(measurements).ifPresent(context::reject);
     }
 }
