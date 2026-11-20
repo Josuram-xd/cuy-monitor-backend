@@ -35,7 +35,7 @@ Ingestion does **not** use JWT: producers are not users.
 | `type` | string | yes | One of `BEHAVIOR`, `AUDIO`, `WEIGHT`. Selects the payload shape and the adapter. |
 | `cageId` | string | yes | The cage's public **code** (`"cage-1"`), not its numeric primary key. Max 50 characters. |
 | `timestamp` | string (ISO-8601 UTC) | yes | When the event **happened** (end of the window for `BEHAVIOR`), not when it was sent. Always UTC, with `Z`. |
-| `source` | string | yes | Who sent it: `ai-service` or `arduino`. Max 30 characters. |
+| `source` | string | yes | Who sent it: `ai-service`, `arduino` or `simulation` (events of a simulation cage, see the table below). Max 30 characters. |
 | `schemaVersion` | integer | yes | `1` for this document. Bumped only for breaking changes (section 6). |
 | `payload` | object | yes | Shape depends on `type` (section 2). |
 
@@ -48,6 +48,10 @@ Unknown extra fields in the envelope or in a payload are ignored.
 | `BEHAVIOR` | `ai-service` | `ai-service` | internal Docker network (`http://backend:8080`) | one guinea pig |
 | `AUDIO` | `ai-service` | `ai-service` | internal Docker network | whole cage |
 | `WEIGHT` | `serial_bridge` (arduino repo) | `arduino` | HTTPS through Caddy (`https://cuymonitor.duckdns.org`) | whole cage |
+| `WEIGHT` | `ai-service` (simulation cages only, `sim-` codes) | `simulation` | internal Docker network | whole cage |
+
+The video simulation (`sim-` cages) sends `BEHAVIOR`, `AUDIO` and `WEIGHT` with `source` `simulation` instead of
+`ai-service`, so its data can be told apart from the real kit's. The format of every payload does not change.
 
 `AUDIO` and `WEIGHT` are cage-level: they carry no guinea pig and are stored with `guinea_pig_id = NULL`.
 
