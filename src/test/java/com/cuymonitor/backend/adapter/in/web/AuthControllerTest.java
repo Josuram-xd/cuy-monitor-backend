@@ -255,6 +255,15 @@ class AuthControllerTest {
     }
 
     @Test
+    void theAdminButtonSetsTheSameCookiesWithoutPasswordOrCode() throws Exception {
+        given(demoSignInUseCase.signInAsAdmin()).willReturn(session("jwt-token", "refresh-raw"));
+
+        mvc.perform(post("/api/v1/auth/demo-admin"))
+                .andExpect(status().isNoContent())
+                .andExpect(cookie().value("access_token", "jwt-token"));
+    }
+
+    @Test
     void theDemoButtonIsNotFoundWhenItIsOff() throws Exception {
         given(demoSignInUseCase.signIn()).willThrow(new DemoSignInDisabledException());
 
