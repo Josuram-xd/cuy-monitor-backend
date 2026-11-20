@@ -72,6 +72,10 @@ services:
     profiles: ["ai"]
     build:
       context: ../../cuy-monitor-ai-service
+      args:
+        # the simulation video (a zip on a GitHub Release); empty = the video simulation answers "not available"
+        SIM_CLIP_URL: ${SIM_CLIP_URL:-}
+        SIM_CLIP_SHA256: ${SIM_CLIP_SHA256:-}
     image: cuy-monitor-ai-service:local
     restart: unless-stopped
     depends_on:
