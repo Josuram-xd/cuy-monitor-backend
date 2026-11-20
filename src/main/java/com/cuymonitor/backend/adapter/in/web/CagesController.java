@@ -3,6 +3,8 @@ package com.cuymonitor.backend.adapter.in.web;
 import com.cuymonitor.backend.adapter.in.web.dto.CageRequest;
 import com.cuymonitor.backend.adapter.in.web.dto.CageResponse;
 import com.cuymonitor.backend.domain.access.CageOperations;
+import com.cuymonitor.backend.domain.model.Cage;
+import com.cuymonitor.backend.domain.port.in.ConnectHardwareStationUseCase;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -24,32 +26,37 @@ import java.util.List;
 public class CagesController {
 
     private final CageOperations cageOperations;
+    private final ConnectHardwareStationUseCase station;
 
-    public CagesController(CageOperations cageOperations) {
+    public CagesController(CageOperations cageOperations, ConnectHardwareStationUseCase station) {
         this.cageOperations = cageOperations;
+        this.station = station;
     }
 
     @GetMapping
     public List<CageResponse> list(Principal principal) {
-        return cageOperations.listCages(Requester.idOf(principal)).stream().map(CageResponse::from).toList();
+        return cageOperations.listCages(Requester.idOf(principal)).stream().map(this::view).toList();
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public CageResponse create(Principal principal, @Valid @RequestBody CageRequest request) {
-        return CageResponse.from(cageOperations.createCage(Requester.idOf(principal), request.name(), request.location()));
+        return view(cageOperations.createCage(Requester.idOf(principal), request.name(), request.location()));
     }
 
     @GetMapping("/{cageId}")
     public CageResponse get(Principal principal, @PathVariable String cageId) {
-        return CageResponse.from(cageOperations.getCage(Requester.idOf(principal), cageId));
+        return view(cageOperations.getCage(Requester.idOf(principal), cageId));
     }
 
     @PutMapping("/{cageId}")
     public CageResponse update(Principal principal, @PathVariable String cageId,
                                @Valid @RequestBody CageRequest request) {
-        return CageResponse.from(cageOperations.updateCage(Requester.idOf(principal), cageId, request.name(),
-                request.location()));
+        return view(cageOperations.updateCage(Requester.idOf(principal), cageId, request.name(), request.location()));
+    }
+
+    private CageResponse view(Cage cage) {
+        return CageResponse.from(cage, station.connectedTo(cage.code()));
     }
 
     /** Soft delete: its guinea pigs, alerts and history are kept. */

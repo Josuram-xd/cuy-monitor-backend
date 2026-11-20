@@ -22,4 +22,9 @@ public final class HardwareStationService implements ConnectHardwareStationUseCa
     public void disconnect(String cageCode) {
         station.disconnect(cageCode);
     }
+
+    @Override
+    public boolean connectedTo(String cageCode) {
+        return station.connectedTo(cageCode);
+    }
 }

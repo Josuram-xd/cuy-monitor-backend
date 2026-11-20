@@ -15,6 +15,9 @@ public record Cage(Long id, String code, String name, String location, UUID owne
     public static final int MAX_NAME_LENGTH = 100;
     public static final int MAX_LOCATION_LENGTH = 200;
 
+    /** The code of a cage made by the video simulation; the backend picks it, the farmer cannot choose it. */
+    public static final String SIMULATION_PREFIX = "sim-";
+
     public Cage {
         Objects.requireNonNull(code, "code");
         Objects.requireNonNull(name, "name");
@@ -29,6 +32,14 @@ public record Cage(Long id, String code, String name, String location, UUID owne
     public static Cage create(String code, String name, String location, UUID ownerId, Instant now) {
         Objects.requireNonNull(ownerId, "ownerId");
         return new Cage(null, code, cleanName(name), cleanLocation(location), ownerId, true, now);
+    }
+
+    public static boolean isSimulationCode(String code) {
+        return code.startsWith(SIMULATION_PREFIX);
+    }
+
+    public boolean simulated() {
+        return isSimulationCode(code);
     }
 
     public boolean isOwnedBy(UUID accountId) {

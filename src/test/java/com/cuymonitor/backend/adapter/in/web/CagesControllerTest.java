@@ -6,6 +6,7 @@ import com.cuymonitor.backend.domain.exception.CageAccessDeniedException;
 import com.cuymonitor.backend.config.SecurityConfig;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
 import com.cuymonitor.backend.domain.model.Cage;
+import com.cuymonitor.backend.domain.port.in.ConnectHardwareStationUseCase;
 import com.cuymonitor.backend.domain.port.out.RevokedTokenRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +47,8 @@ class CagesControllerTest {
     @MockitoBean
     private CageOperations cageOperations;
     @MockitoBean
+    private ConnectHardwareStationUseCase station;
+    @MockitoBean
     private RevokedTokenRepository revokedTokenRepository;
 
     @Test
@@ -67,6 +70,20 @@ class CagesControllerTest {
                 .andExpect(jsonPath("$[0].name").value("Jaula piloto"))
                 .andExpect(jsonPath("$[0].location").value("Galpón"))
                 .andExpect(jsonPath("$[0].createdAt").value("2026-11-02T14:00:00Z"));
+    }
+
+    @Test
+    void tellsWhichCageIsSimulatedAndWhichHasTheKit() throws Exception {
+        given(cageOperations.listCages(ACCOUNT)).willReturn(List.of(cage("cage-1", "Piloto", null),
+                cage("sim-0a1b2c3d", "Simulación", null)));
+        given(station.connectedTo("cage-1")).willReturn(true);
+
+        mvc.perform(get("/api/v1/cages").with(token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].simulated").value(false))
+                .andExpect(jsonPath("$[0].monitored").value(true))
+                .andExpect(jsonPath("$[1].simulated").value(true))
+                .andExpect(jsonPath("$[1].monitored").value(false));
     }
 
     @Test
