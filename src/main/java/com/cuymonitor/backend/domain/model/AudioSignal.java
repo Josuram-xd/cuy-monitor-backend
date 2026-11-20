@@ -16,4 +16,9 @@ public record AudioSignal(AudioLabel label, double probability, int durationMs) 
     public EventType type() {
         return EventType.AUDIO;
     }
+
+    @Override
+    public <R> R accept(HealthSignalVisitor<R> visitor) {
+        return visitor.visitAudio(this);
+    }
 }

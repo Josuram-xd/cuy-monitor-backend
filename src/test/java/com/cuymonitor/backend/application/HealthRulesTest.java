@@ -54,12 +54,13 @@ class HealthRulesTest {
         guineaPigs = new InMemoryGuineaPigRepository();
         alerts = new InMemoryAlertRepository();
         var events = new InMemoryEventRepository();
-        var chain = new HandlerChainBuilder(
-                new ValidationHandler(clock, Duration.ofMinutes(10), 0.5),
-                new IdentificationHandler(guineaPigs),
-                new BehaviorThresholdHandler(new InMemoryBaselineProfileRepository()),
-                new SustainedAnomalyHandler(events, 3),
-                new SustainedRecoveryHandler(events, 5)).build();
+        var chain = new HandlerChainBuilder()
+                .then(new ValidationHandler(clock, Duration.ofMinutes(10), 0.5))
+                .then(new IdentificationHandler(guineaPigs))
+                .then(new BehaviorThresholdHandler(new InMemoryBaselineProfileRepository()))
+                .then(new SustainedAnomalyHandler(events, 3))
+                .then(new SustainedRecoveryHandler(events, 5))
+                .build();
         var weights = new InMemoryWeightReadingRepository();
         var recorder = new EventIngestionService(new InMemoryCageRepository(), guineaPigs, events, weights);
         var publisher = new AlertPublisher(List.of(new DatabaseAlertObserver(alerts)));

@@ -6,7 +6,7 @@ import java.time.Duration;
 
 /**
  * <b>State pattern — concrete state</b> ALERT: goes to CRITICAL when the anomaly is still confirmed after
- * alertToCritical.
+ * alertToCritical. Stateless: shared through {@link HealthStates} (Flyweight).
  */
 public final class AlertState implements HealthState {
 
@@ -18,7 +18,7 @@ public final class AlertState implements HealthState {
     @Override
     public HealthState onAnomaly(Duration timeInState, EscalationPolicy policy) {
         // the anomaly has to last alertToCritical at this level before it goes up
-        return timeInState.compareTo(policy.alertToCritical()) >= 0 ? new CriticalState() : this;
+        return timeInState.compareTo(policy.alertToCritical()) >= 0 ? HealthStates.of(HealthStatus.CRITICAL) : this;
     }
 
     @Override

@@ -15,7 +15,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.Executor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,11 +32,9 @@ class AlertNoteServiceTest {
     private final AlertRepository alerts = mock(AlertRepository.class);
     private final RecordingObserver dashboard = new RecordingObserver();
     private final MutableClock clock = new MutableClock(NOW);
-    // runs the task right here, so the test sees the result without waiting on a pool
-    private final Executor sameThread = Runnable::run;
 
     private AlertNoteService serviceWith(AssistantModel model) {
-        return new AlertNoteService(model, alerts, dashboard, clock, sameThread, "es");
+        return new AlertNoteService(model, alerts, dashboard, clock, "es");
     }
 
     private static Alert storedAlert(HealthStatus level) {

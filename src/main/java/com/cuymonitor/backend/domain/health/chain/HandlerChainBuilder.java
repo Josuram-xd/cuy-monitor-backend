@@ -1,37 +1,29 @@
 package com.cuymonitor.backend.domain.health.chain;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
+/**
+ * <b>Builder.</b> Links the handlers in the order of the {@link #then} calls, which the caller writes out, never
+ * injected lists or {@code @Order}. The first handler added is the entry point of the chain.
+ */
 public final class HandlerChainBuilder {
 
-    private final ValidationHandler validationHandler;
-    private final IdentificationHandler identificationHandler;
-    private final BehaviorThresholdHandler behaviorThresholdHandler;
-    private final SustainedAnomalyHandler sustainedAnomalyHandler;
-    private final SustainedRecoveryHandler sustainedRecoveryHandler;
+    private final List<EventHandler> handlers = new ArrayList<>();
 
-    public HandlerChainBuilder(
-            ValidationHandler validationHandler,
-            IdentificationHandler identificationHandler,
-            BehaviorThresholdHandler behaviorThresholdHandler,
-            SustainedAnomalyHandler sustainedAnomalyHandler,
-            SustainedRecoveryHandler sustainedRecoveryHandler
-    ) {
-        this.validationHandler = Objects.requireNonNull(validationHandler, "validationHandler");
-        this.identificationHandler = Objects.requireNonNull(identificationHandler, "identificationHandler");
-        this.behaviorThresholdHandler =
-                Objects.requireNonNull(behaviorThresholdHandler, "behaviorThresholdHandler");
-        this.sustainedAnomalyHandler =
-                Objects.requireNonNull(sustainedAnomalyHandler, "sustainedAnomalyHandler");
-        this.sustainedRecoveryHandler =
-                Objects.requireNonNull(sustainedRecoveryHandler, "sustainedRecoveryHandler");
+    public HandlerChainBuilder then(EventHandler handler) {
+        handlers.add(Objects.requireNonNull(handler, "handler"));
+        return this;
     }
 
     public EventHandler build() {
-        validationHandler.setNext(identificationHandler);
-        identificationHandler.setNext(behaviorThresholdHandler);
-        behaviorThresholdHandler.setNext(sustainedAnomalyHandler);
-        sustainedAnomalyHandler.setNext(sustainedRecoveryHandler);
-        return validationHandler;
+        if (handlers.isEmpty()) {
+            throw new IllegalStateException("a chain needs at least one handler");
+        }
+        for (int i = 0; i < handlers.size() - 1; i++) {
+            handlers.get(i).setNext(handlers.get(i + 1));
+        }
+        return handlers.get(0);
     }
 }

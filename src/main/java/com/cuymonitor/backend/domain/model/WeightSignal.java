@@ -12,4 +12,9 @@ public record WeightSignal(double grams, boolean stable) implements HealthSignal
     public EventType type() {
         return EventType.WEIGHT;
     }
+
+    @Override
+    public <R> R accept(HealthSignalVisitor<R> visitor) {
+        return visitor.visitWeight(this);
+    }
 }

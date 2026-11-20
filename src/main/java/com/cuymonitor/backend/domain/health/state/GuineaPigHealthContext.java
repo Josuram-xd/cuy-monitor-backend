@@ -30,6 +30,25 @@ public final class GuineaPigHealthContext {
         this.stateSince = Objects.requireNonNull(stateSince, "stateSince");
     }
 
+    /** <b>Memento.</b> What has to survive between two events to rebuild this context: the level and since when. */
+    public record Snapshot(HealthStatus status, Instant since) {
+
+        public Snapshot {
+            Objects.requireNonNull(status, "status");
+            Objects.requireNonNull(since, "since");
+        }
+    }
+
+    /** <b>Memento — originator saves.</b> */
+    public Snapshot snapshot() {
+        return new Snapshot(state.status(), stateSince);
+    }
+
+    /** <b>Memento — originator restores.</b> */
+    public static GuineaPigHealthContext restore(long guineaPigId, Snapshot snapshot) {
+        return new GuineaPigHealthContext(guineaPigId, HealthStates.of(snapshot.status()), snapshot.since());
+    }
+
     public long guineaPigId() {
         return guineaPigId;
     }

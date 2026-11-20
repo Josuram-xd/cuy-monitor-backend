@@ -29,6 +29,11 @@ public record BehaviorSignal(String color, int windowSeconds, double stillSecond
         return EventType.BEHAVIOR;
     }
 
+    @Override
+    public <R> R accept(HealthSignalVisitor<R> visitor) {
+        return visitor.visitBehavior(this);
+    }
+
     static void requireRatio(double value, String name) {
         if (value < 0 || value > 1) {
             throw new IllegalArgumentException(name + " must be between 0 and 1");

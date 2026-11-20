@@ -75,12 +75,13 @@ class EventProcessingServiceTest {
         events = new InMemoryEventRepository();
         alerts = new InMemoryAlertRepository();
         var cages = new InMemoryCageRepository();
-        var chain = new HandlerChainBuilder(
-                new ValidationHandler(clock, Duration.ofMinutes(10), 0.5),
-                new IdentificationHandler(guineaPigs),
-                new BehaviorThresholdHandler(new InMemoryBaselineProfileRepository()),
-                new SustainedAnomalyHandler(events, 2),
-                new SustainedRecoveryHandler(events, 2)).build();
+        var chain = new HandlerChainBuilder()
+                .then(new ValidationHandler(clock, Duration.ofMinutes(10), 0.5))
+                .then(new IdentificationHandler(guineaPigs))
+                .then(new BehaviorThresholdHandler(new InMemoryBaselineProfileRepository()))
+                .then(new SustainedAnomalyHandler(events, 2))
+                .then(new SustainedRecoveryHandler(events, 2))
+                .build();
         weights = new InMemoryWeightReadingRepository();
         var recorder = new EventIngestionService(cages, guineaPigs, events, weights);
         StateTransitionRepository recordTransitions = new StateTransitionRepository() {

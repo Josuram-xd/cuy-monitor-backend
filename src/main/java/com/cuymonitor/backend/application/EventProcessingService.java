@@ -5,7 +5,6 @@ import com.cuymonitor.backend.domain.health.chain.EventHandler;
 import com.cuymonitor.backend.domain.health.chain.EventHandlerContext;
 import com.cuymonitor.backend.domain.health.state.EscalationPolicy;
 import com.cuymonitor.backend.domain.health.state.GuineaPigHealthContext;
-import com.cuymonitor.backend.domain.health.state.HealthStates;
 import com.cuymonitor.backend.domain.model.Alert;
 import com.cuymonitor.backend.domain.model.AudioLabel;
 import com.cuymonitor.backend.domain.model.AudioSignal;
@@ -121,14 +120,17 @@ public class EventProcessingService implements ProcessEventUseCase {
 
     // State pattern: the current state of the guinea pig decides the next one
     private void evaluateGuineaPig(GuineaPig pig, EventHandlerContext context, Instant now) {
-        var health = new GuineaPigHealthContext(pig.getId(), HealthStates.of(pig.getStatus()), pig.getStatusSince());
+        var health = GuineaPigHealthContext.restore(pig.getId(),
+                new GuineaPigHealthContext.Snapshot(pig.getStatus(), pig.getStatusSince()));
         // an anomaly goes up only after the escalation time (Task 10.1); a recovery needs M normal windows (10.2)
         Optional<StateTransition> transition = context.anomalyReason()
                 .map(reason -> health.anomalyConfirmed(reason, now, escalation))
                 .orElseGet(() -> context.recoveryConfirmed() ? health.recovered(now) : Optional.empty());
         transition.ifPresent(moved -> {
             transitions.save(moved);
-            pig.changeStatus(moved.toStatus(), now);
+            // the memento is what the guinea pig keeps: its level and since when
+            var saved = health.snapshot();
+            pig.changeStatus(saved.status(), saved.since());
             guineaPigs.save(pig);
             // the state decides: only a move up into ALERT or CRITICAL warns the breeder, a recovery does not
             if (context.earlyWarning() && moved.fromStatus() == HealthStatus.NORMAL

@@ -120,6 +120,12 @@ Processing is synchronous inside the HTTP request. The load is tiny (a few event
 | Composite | `domain.health.composite` | `HealthComponent`, `GuineaPigHealth` / `CageAudioHealth` / `CageWeightHealth` (leaves), `CageHealth` (composite) | Core |
 | Observer | `domain.notification` + `domain.port.out` + `adapter.out.notification` | `AlertPublisher` (subject, core), `AlertObserver` (output port), 3 concrete observers (output adapters) | Core + output port + output adapters |
 | Proxy (protection) | `domain.access` + `application` | `CageOperations` (subject), `CageAccessProxy` (proxy), `CageOperationsService` (real subject) | Core, between the input adapters and the use cases |
+| Flyweight | `domain.health.state` | `HealthStates` (factory of shared instances), the stateless `HealthState` objects | Core |
+| Memento | `domain.health.state` + `application` | `GuineaPigHealthContext.Snapshot` (memento), `EventProcessingService` (caretaker, writes it back to the `GuineaPig`) | Core + application |
+| Decorator | `domain.notification` | `AsyncAlertObserver` (decorator) around the `AlertNoteService` subscriber | Core |
+| Visitor | `domain.model` + `domain.health.chain` | `HealthSignalVisitor`, `MeasurementCheck` and `SignalDuration` (visitors over the three signal types) | Core |
+| Template Method | `domain.health.chain` | `EventHandler` (`final handle()` calls the abstract `handleCurrent()` of each handler) | Core |
+| Strategy | `domain.port.out` | `OtpSender` (email or log), `AssistantModel` (Bedrock or disabled), `CageCodeGenerator` | Output port with interchangeable adapters |
 
 The Adapter pattern and the Observer are also the clearest examples of the hexagonal idea: the first converts the outside format into the core's language, the second lets the core notify the outside world through a port without knowing who listens.
 

@@ -16,6 +16,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -23,6 +24,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class HandlerChainBuilderTest {
@@ -94,17 +97,44 @@ class HandlerChainBuilderTest {
             EventRepository eventRepository,
             int requiredConsecutiveWindows
     ) {
-        return new HandlerChainBuilder(
-                new ValidationHandler(
+        return new HandlerChainBuilder()
+                .then(new ValidationHandler(
                         Clock.fixed(NOW, ZoneOffset.UTC),
                         Duration.ofMinutes(5),
                         0.5
-                ),
-                new IdentificationHandler(guineaPigRepository),
-                new BehaviorThresholdHandler(baselineProfileRepository),
-                new SustainedAnomalyHandler(eventRepository, requiredConsecutiveWindows),
-                new SustainedRecoveryHandler(eventRepository, 1)
-        ).build();
+                ))
+                .then(new IdentificationHandler(guineaPigRepository))
+                .then(new BehaviorThresholdHandler(baselineProfileRepository))
+                .then(new SustainedAnomalyHandler(eventRepository, requiredConsecutiveWindows))
+                .then(new SustainedRecoveryHandler(eventRepository, 1))
+                .build();
+    }
+
+    @Test
+    void buildRejectsAnEmptyChain() {
+        assertThrows(IllegalStateException.class, () -> new HandlerChainBuilder().build());
+    }
+
+    @Test
+    void handlersRunInTheOrderOfTheThenCalls() {
+        var order = new ArrayList<String>();
+        var first = recording("first", order);
+        var second = recording("second", order);
+
+        var entry = new HandlerChainBuilder().then(first).then(second).build();
+        entry.handle(new EventHandlerContext(event(new BehaviorSignal("RED", 60, 10, 1, 0, 0.2, 0.1, 0.9))));
+
+        assertSame(first, entry);
+        assertEquals(List.of("first", "second"), order);
+    }
+
+    private static EventHandler recording(String name, List<String> order) {
+        return new EventHandler() {
+            @Override
+            protected void handleCurrent(EventHandlerContext context) {
+                order.add(name);
+            }
+        };
     }
 
     private static HealthEvent event(BehaviorSignal signal) {

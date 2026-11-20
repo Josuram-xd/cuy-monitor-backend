@@ -4,7 +4,10 @@ import com.cuymonitor.backend.domain.model.HealthStatus;
 
 import java.time.Duration;
 
-/** <b>State pattern — concrete state</b> CRITICAL: the worst level: another anomaly keeps it here. */
+/**
+ * <b>State pattern — concrete state</b> CRITICAL: the worst level: another anomaly keeps it here.
+ * Stateless: shared through {@link HealthStates} (Flyweight).
+ */
 public final class CriticalState implements HealthState {
 
     @Override
