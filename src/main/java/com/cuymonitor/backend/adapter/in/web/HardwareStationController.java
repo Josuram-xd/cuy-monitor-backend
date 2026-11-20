@@ -1,7 +1,7 @@
 package com.cuymonitor.backend.adapter.in.web;
 
 import com.cuymonitor.backend.domain.access.CageOperations;
-import com.cuymonitor.backend.domain.port.out.HardwareStation;
+import com.cuymonitor.backend.domain.port.in.ConnectHardwareStationUseCase;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -13,9 +13,9 @@ import java.security.Principal;
 @RequestMapping("/api/v1/cages/{cageId}/equipment")
 public class HardwareStationController {
     private final CageOperations cages;
-    private final HardwareStation station;
+    private final ConnectHardwareStationUseCase station;
 
-    public HardwareStationController(CageOperations cages, HardwareStation station) {
+    public HardwareStationController(CageOperations cages, ConnectHardwareStationUseCase station) {
         this.cages = cages;
         this.station = station;
     }
