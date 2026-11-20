@@ -15,6 +15,8 @@ import com.cuymonitor.backend.domain.model.assistant.ChatRole;
 import com.cuymonitor.backend.domain.port.in.AskAssistantCommand;
 import com.cuymonitor.backend.domain.port.in.AskAssistantUseCase;
 import com.cuymonitor.backend.domain.port.out.AssistantModel;
+import com.cuymonitor.backend.domain.model.user.User;
+import com.cuymonitor.backend.domain.port.out.UserRepository;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -32,6 +34,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * The help assistant. It answers with what the breeder can already see in the dashboard (the state of their own
  * cages, read through the cage access proxy, so it never sees another account's cages) plus a guide of the app.
  * It does not decide or change anything: health is still decided only by the State and the Chain.
+ *
+ * <p>An admin also gets the guide of the admin panel. The role is read from the database on every question, like
+ * {@link com.cuymonitor.backend.domain.access.AdminAccessProxy} does: someone demoted a minute ago is a breeder now.
  */
 public class AssistantService implements AskAssistantUseCase, SettingsListener {
 
@@ -41,16 +46,18 @@ public class AssistantService implements AskAssistantUseCase, SettingsListener {
 
     private final AssistantModel model;
     private final CageOperations cages;
+    private final UserRepository users;
     private final Clock clock;
     // 0 = no limit; an admin can set one at any time ("Reglas y mensajes")
     private volatile int maxQuestions;
     private volatile Duration questionWindow;
     private final Map<UUID, Deque<Instant>> recentQuestions = new ConcurrentHashMap<>();
 
-    public AssistantService(AssistantModel model, CageOperations cages, Clock clock, int maxQuestions,
-                            Duration questionWindow) {
+    public AssistantService(AssistantModel model, CageOperations cages, UserRepository users, Clock clock,
+                            int maxQuestions, Duration questionWindow) {
         this.model = Objects.requireNonNull(model, "model");
         this.cages = Objects.requireNonNull(cages, "cages");
+        this.users = Objects.requireNonNull(users, "users");
         this.clock = Objects.requireNonNull(clock, "clock");
         if (maxQuestions < 0) {
             throw new IllegalArgumentException("maxQuestions can not be negative");
@@ -68,7 +75,9 @@ public class AssistantService implements AskAssistantUseCase, SettingsListener {
     @Override
     public AssistantReply ask(AskAssistantCommand command) {
         countQuestion(command.requesterId());
-        String instructions = AssistantPrompt.instructions(command.language(), snapshot(command.requesterId()));
+        UUID requesterId = command.requesterId();
+        String instructions = AssistantPrompt.instructions(command.language(), snapshot(requesterId),
+                isAdmin(requesterId));
         String answer = model.reply(instructions, alternating(command.conversation()));
         if (answer == null || answer.isBlank()) {
             throw new AssistantUnavailableException("the assistant gave an empty answer");
@@ -94,6 +103,10 @@ public class AssistantService implements AskAssistantUseCase, SettingsListener {
             }
             asked.addLast(now);
         }
+    }
+
+    private boolean isAdmin(UUID requesterId) {
+        return users.findById(requesterId).map(User::isAdmin).orElse(false);
     }
 
     private List<CageSnapshot> snapshot(UUID requesterId) {

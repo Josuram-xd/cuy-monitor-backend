@@ -4,7 +4,11 @@ import java.util.Map;
 import java.util.EnumMap;
 import com.cuymonitor.backend.domain.model.settings.Settings;
 import com.cuymonitor.backend.domain.model.settings.SettingKey;
+import com.cuymonitor.backend.application.fake.InMemoryUserRepository;
 import com.cuymonitor.backend.application.fake.MutableClock;
+import com.cuymonitor.backend.domain.model.user.User;
+import com.cuymonitor.backend.domain.model.user.UserRole;
+import com.cuymonitor.backend.domain.model.user.UserStatus;
 import com.cuymonitor.backend.domain.access.CageOperations;
 import com.cuymonitor.backend.domain.exception.AssistantUnavailableException;
 import com.cuymonitor.backend.domain.exception.TooManyAssistantQuestionsException;
@@ -41,6 +45,7 @@ class AssistantServiceTest {
     private final CageOperations cages = mock(CageOperations.class);
     private final RecordingModel model = new RecordingModel();
     private final MutableClock clock = new MutableClock(NOW);
+    private final InMemoryUserRepository users = new InMemoryUserRepository();
     private AssistantService service;
 
     static class RecordingModel implements AssistantModel {
@@ -58,7 +63,7 @@ class AssistantServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AssistantService(model, cages, clock, 3, Duration.ofMinutes(10));
+        service = new AssistantService(model, cages, users, clock, 3, Duration.ofMinutes(10));
         Cage cage = new Cage(1L, "cage-1", "Jaula del patio", null, ACCOUNT, true, NOW);
         GuineaPig red = GuineaPig.restore(1L, "cage-1", "image/jpeg", "RED", HealthStatus.OBSERVED,
                 NOW.minus(Duration.ofHours(1)), true, NOW, new GuineaPigProfile(null, null, null, null));
@@ -86,6 +91,35 @@ class AssistantServiceTest {
                 .contains("Always answer in Spanish")
                 .contains("never diagnose");
         assertThat(model.conversation).containsExactly(ChatMessage.user("¿Cómo está Rojo?"));
+    }
+
+    @Test
+    void aBreederIsNotToldAboutTheAdminPanel() {
+        saveAccount(UserRole.BREEDER);
+
+        service.ask(ask("¿Qué puedo hacer?"));
+
+        assertThat(model.instructions).doesNotContain("is an ADMIN").doesNotContain("Reglas de salud");
+    }
+
+    @Test
+    void anAdminAlsoGetsTheGuideOfTheAdminPanel() {
+        saveAccount(UserRole.ADMIN);
+
+        service.ask(ask("¿Cómo deshabilito una cuenta?"));
+
+        assertThat(model.instructions)
+                .contains("is an ADMIN")
+                .contains("\"Cuentas\"").contains("\"Reglas de salud\"").contains("\"Textos de alertas\"")
+                .contains("\"Catálogo\"").contains("\"Registro de la IA\"")
+                .contains("You only know the admin's own cages")
+                // the breeder guide and the admin's own cages are still there
+                .contains("never diagnose").contains("Cage \"Jaula del patio\"");
+    }
+
+    private void saveAccount(UserRole role) {
+        users.save(User.restore(ACCOUNT, "ana", "Ana", "ana@example.com", "hash", null, UserStatus.ACTIVE, role,
+                NOW, NOW));
     }
 
     @Test
@@ -142,7 +176,7 @@ class AssistantServiceTest {
 
     @Test
     void withoutALimitAnAccountCanKeepAsking() {
-        AssistantService unlimited = new AssistantService(model, cages, clock, 0, Duration.ofMinutes(10));
+        AssistantService unlimited = new AssistantService(model, cages, users, clock, 0, Duration.ofMinutes(10));
 
         for (int i = 0; i < 50; i++) {
             unlimited.ask(ask("pregunta " + i));
@@ -151,7 +185,7 @@ class AssistantServiceTest {
 
     @Test
     void theLimitTheAdminSetsAppliesAtOnce() {
-        AssistantService assistant = new AssistantService(model, cages, clock, 0, Duration.ofMinutes(10));
+        AssistantService assistant = new AssistantService(model, cages, users, clock, 0, Duration.ofMinutes(10));
         Map<SettingKey, String> settings = new EnumMap<>(SettingsServiceTest.defaults());
         settings.put(SettingKey.ASSISTANT_MAX_QUESTIONS, "2");
         settings.put(SettingKey.ASSISTANT_WINDOW_MINUTES, "5");

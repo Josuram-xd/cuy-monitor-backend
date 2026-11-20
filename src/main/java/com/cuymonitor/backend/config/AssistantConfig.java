@@ -5,6 +5,7 @@ import com.cuymonitor.backend.adapter.out.assistant.DisabledAssistantModel;
 import com.cuymonitor.backend.application.AssistantService;
 import com.cuymonitor.backend.domain.access.CageOperations;
 import com.cuymonitor.backend.domain.port.out.AssistantModel;
+import com.cuymonitor.backend.domain.port.out.UserRepository;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,9 +39,10 @@ public class AssistantConfig {
 
     @Bean
     public AssistantService assistantService(AssistantModel assistantModel, CageOperations cageOperations,
-                                             Clock clock, AssistantProperties properties) {
+                                             UserRepository userRepository, Clock clock,
+                                             AssistantProperties properties) {
         // the admin's limit, if any, arrives from SettingsService (it listens to the settings)
-        return new AssistantService(assistantModel, cageOperations, clock, properties.maxQuestions(),
-                properties.questionWindow());
+        return new AssistantService(assistantModel, cageOperations, userRepository, clock,
+                properties.maxQuestions(), properties.questionWindow());
     }
 }
