@@ -5,6 +5,7 @@ import com.cuymonitor.backend.adapter.out.notification.LogAlertObserver;
 import com.cuymonitor.backend.adapter.out.notification.WebSocketAlertObserver;
 import com.cuymonitor.backend.application.AlertNoteService;
 import com.cuymonitor.backend.domain.notification.AlertPublisher;
+import com.cuymonitor.backend.domain.notification.AsyncAlertObserver;
 import com.cuymonitor.backend.domain.port.out.AlertRepository;
 import com.cuymonitor.backend.domain.port.out.AssistantModel;
 import org.springframework.beans.factory.annotation.Value;
@@ -66,21 +67,25 @@ public class NotificationConfig {
     }
 
     /**
-     * <b>Observer pattern — subscriber.</b> Asks the model to write about the alert, off the request thread. It
-     * gets the WebSocket subscriber so it can send the alert again when the note is ready; going through
-     * {@link AlertPublisher} instead would call this subscriber again, and again.
+     * <b>Observer pattern — subscriber.</b> Asks the model to write about the alert. It gets the WebSocket subscriber
+     * so it can send the alert again when the note is ready; going through {@link AlertPublisher} instead would call
+     * this subscriber again, and again.
      */
     @Bean
     public AlertNoteService alertNoteService(AssistantModel model, AlertRepository alerts,
                                             WebSocketAlertObserver webSocket, Clock clock,
-                                            Executor alertNoteExecutor,
                                             @Value("${app.assistant.alert-note-language:es}") String language) {
-        return new AlertNoteService(model, alerts, webSocket, clock, alertNoteExecutor, language);
+        return new AlertNoteService(model, alerts, webSocket, clock, language);
     }
 
+    /**
+     * <b>Decorator: AsyncAlertObserver.</b> The assistant's note is wrapped so it runs on the alert-note pool, off the
+     * request thread.
+     */
     @Bean
     public AlertPublisher alertPublisher(DatabaseAlertObserver database, WebSocketAlertObserver webSocket,
-                                         AlertNoteService note, LogAlertObserver log) {
-        return new AlertPublisher(List.of(database, webSocket, note, log));
+                                         AlertNoteService note, LogAlertObserver log,
+                                         Executor alertNoteExecutor) {
+        return new AlertPublisher(List.of(database, webSocket, new AsyncAlertObserver(note, alertNoteExecutor), log));
     }
 }

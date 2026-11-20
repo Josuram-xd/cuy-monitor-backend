@@ -13,15 +13,15 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.Executor;
 
 /**
  * <b>Observer pattern — subscriber.</b> Makes the assistant react to an alert by itself: until now it only
  * answered when the breeder typed a question, so the explanation of an alert was never there when it was needed.
  *
- * <p>Asking the model takes seconds and {@code publish} runs inside the ingestion request, so the work is handed
- * to an {@link Executor} and the note arrives a moment after the alert. The request is not slowed down and a
- * model that is off or throttled costs the alert nothing: it is stored, sent and shown without a note.
+ * <p>Asking the model takes seconds, so this subscriber runs synchronously: wrap it in
+ * {@link com.cuymonitor.backend.domain.notification.AsyncAlertObserver} to take it off the ingestion request, and the
+ * note then arrives a moment after the alert. A model that is off or throttled costs the alert nothing: it is
+ * stored, sent and shown without a note.
  */
 public final class AlertNoteService implements AlertObserver {
 
@@ -31,16 +31,14 @@ public final class AlertNoteService implements AlertObserver {
     private final AlertRepository alerts;
     private final AlertObserver dashboard;
     private final Clock clock;
-    private final Executor executor;
     private final String language;
 
     public AlertNoteService(AssistantModel model, AlertRepository alerts, AlertObserver dashboard, Clock clock,
-                            Executor executor, String language) {
+                            String language) {
         this.model = Objects.requireNonNull(model, "model");
         this.alerts = Objects.requireNonNull(alerts, "alerts");
         this.dashboard = Objects.requireNonNull(dashboard, "dashboard");
         this.clock = Objects.requireNonNull(clock, "clock");
-        this.executor = Objects.requireNonNull(executor, "executor");
         this.language = Objects.requireNonNull(language, "language");
     }
 
@@ -52,7 +50,7 @@ public final class AlertNoteService implements AlertObserver {
             log.warn("alert with no id yet: no note will be written");
             return;
         }
-        executor.execute(() -> write(id));
+        write(id);
     }
 
     /**
