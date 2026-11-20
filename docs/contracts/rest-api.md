@@ -49,6 +49,21 @@ Header `X-API-Key`. Body is the event envelope. Full field rules, payloads and r
 | `400` | invalid envelope (do not retry) |
 | `401` | wrong or missing API key (do not retry) |
 
+### `GET /api/v1/ingestion/station/camera` and `POST /api/v1/ingestion/station/camera/status`
+
+Header `X-API-Key`, same as events. The edge agent polls the first one to learn the camera set in the dashboard
+(section 3.12) and reports the result of connecting to it with the second. The URL contains the camera password:
+this endpoint is only for the agent.
+
+| Status | Body |
+|---|---|
+| `200` | `{ "version": 3, "type": "RTSP", "url": "rtsp://user:pass@192.168.1.60:554/stream2" }` |
+| `204` | no camera configured: the agent keeps its `.env` settings |
+| `401` | wrong or missing API key |
+
+`POST …/status` body `{ "version": 3, "status": "CONNECTED" }` (`CONNECTED`, `AUTH_FAILED`, `UNREACHABLE` or
+`FFMPEG_MISSING`) → `204`. A report for an older `version` is accepted and ignored; an unknown status → `400`.
+
 ---
 
 ## 3. Dashboard endpoints (JWT)
@@ -390,6 +405,40 @@ classifier, so a cage alert (AUDIO) arrives at once. Pressing it again while it 
 | `400` | `bad_request` | The cage has no guinea pigs to draw |
 | `403` / `404` | `forbidden` / `not_found` | Not the account's cage / no such cage |
 | `503` | `service_unavailable` | The AI service did not answer |
+
+### 3.12 `GET` and `PUT /api/v1/cages/{cageId}/equipment/camera`
+
+The camera of the shared kit (not of the cage): the owner of the cage the kit is connected to reads and sets it. The
+edge agent on the farm laptop reads it (section 2). The password is accepted on PUT and never returned.
+
+`PUT` body (`type` is `PHONE` for the IP Webcam app or `RTSP` for a TP-Link Tapo; `port` is optional, 8080 or 554 by default):
+
+```json
+{ "type": "RTSP", "host": "192.168.1.60", "port": null, "username": "admin", "password": "…", "stream": "stream2" }
+```
+
+- `host` must be an IPv4 address in a private range (10.x, 172.16–31.x, 192.168.x).
+- `stream` is `stream1` or `stream2` (default `stream2`). RTSP only: `username` and `password` are required, unless a
+  password is already stored, in which case a blank `password` keeps it. `PHONE` ignores them.
+- Every save bumps the configuration version and puts the status back to `PENDING` until the agent reports.
+
+`GET` response:
+
+```json
+{ "type": "RTSP", "host": "192.168.1.60", "port": 554, "username": "admin", "stream": "stream2",
+  "hasPassword": true, "status": "CONNECTED", "statusAt": "2026-11-20T12:00:00Z" }
+```
+
+`status` is `NOT_CONFIGURED` (no camera yet), `PENDING` (saved, no report yet), `CONNECTED`, `AUTH_FAILED`,
+`UNREACHABLE`, `FFMPEG_MISSING` (the last four as reported by the agent) or `OFFLINE` (the last report is older than
+60 seconds).
+
+| Status | `error` | When |
+|---|---|---|
+| `200` / `204` | — | `GET` / `PUT` done |
+| `400` | `bad_request` | Invalid host, port, username, stream or missing password |
+| `403` / `404` | `forbidden` / `not_found` | Not the account's cage / no such cage |
+| `409` | `conflict` | The kit is not connected to this cage |
 
 ## 4. WebSocket (STOMP)
 

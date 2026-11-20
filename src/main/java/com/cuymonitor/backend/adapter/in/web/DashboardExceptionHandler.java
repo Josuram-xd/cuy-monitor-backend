@@ -8,6 +8,8 @@ import com.cuymonitor.backend.domain.exception.UserNotFoundException;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
 import com.cuymonitor.backend.domain.exception.GuineaPigNotFoundException;
 import com.cuymonitor.backend.domain.exception.ColorAlreadyUsedException;
+import com.cuymonitor.backend.domain.exception.EquipmentNotConnectedException;
+import com.cuymonitor.backend.domain.exception.InvalidCameraSettingsException;
 import com.cuymonitor.backend.domain.exception.UnknownCatalogOptionException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -35,6 +37,17 @@ public class DashboardExceptionHandler {
     // an admin asked for something the system must not do, such as removing the last admin
     @ExceptionHandler(InvalidAdminActionException.class)
     public ResponseEntity<Map<String, Object>> handleInvalidAdminAction(InvalidAdminActionException ex) {
+        return error(HttpStatus.BAD_REQUEST, ApiError.BAD_REQUEST, ex.getMessage());
+    }
+
+    // the camera can only be changed from the cage the shared kit is connected to right now
+    @ExceptionHandler(EquipmentNotConnectedException.class)
+    public ResponseEntity<Map<String, Object>> handleEquipmentNotConnected(EquipmentNotConnectedException ex) {
+        return error(HttpStatus.CONFLICT, ApiError.CONFLICT, ex.getMessage());
+    }
+
+    @ExceptionHandler(InvalidCameraSettingsException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidCameraSettings(InvalidCameraSettingsException ex) {
         return error(HttpStatus.BAD_REQUEST, ApiError.BAD_REQUEST, ex.getMessage());
     }
 
