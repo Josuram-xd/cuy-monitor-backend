@@ -4,6 +4,7 @@ import java.util.function.Predicate;
 import com.cuymonitor.backend.domain.access.CageOperations;
 import com.cuymonitor.backend.domain.exception.SimulationUnavailableException;
 import com.cuymonitor.backend.domain.model.GuineaPig;
+import com.cuymonitor.backend.domain.port.in.ControlSimulationUseCase;
 import com.cuymonitor.backend.domain.port.in.StartSimulationUseCase;
 import com.cuymonitor.backend.domain.port.out.SimulationRunner;
 
@@ -12,10 +13,10 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Starts the demo on a cage. The guinea pigs are read through the {@link CageOperations} proxy, so only the owner
- * of the cage can start it, and the drawing uses the marks they really registered.
+ * Starts the demo on a cage and follows it. The guinea pigs are read through the {@link CageOperations} proxy, so
+ * only the owner of the cage can start it, and the drawing uses the marks they really registered.
  */
-public class SimulationService implements StartSimulationUseCase {
+public class SimulationService implements StartSimulationUseCase, ControlSimulationUseCase {
 
     private final CageOperations cageOperations;
     private final SimulationRunner runner;
@@ -45,5 +46,15 @@ public class SimulationService implements StartSimulationUseCase {
             throw SimulationUnavailableException.noGuineaPigs();
         }
         runner.start(cageCode, colors);
+    }
+
+    @Override
+    public void stop(String cageCode) {
+        runner.stop(cageCode);
+    }
+
+    @Override
+    public String status(String cageCode) {
+        return runner.status(cageCode);
     }
 }

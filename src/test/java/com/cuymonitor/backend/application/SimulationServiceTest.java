@@ -53,6 +53,16 @@ class SimulationServiceTest {
     }
 
     @Test
+    void stopAndStatusAreTheRunnersOfTheCage() {
+        given(runner.status("sim-0a1b2c3d")).willReturn("{\"running\":true}");
+
+        service.stop("sim-0a1b2c3d");
+
+        verify(runner).stop("sim-0a1b2c3d");
+        assertThat(service.status("sim-0a1b2c3d")).isEqualTo("{\"running\":true}");
+    }
+
+    @Test
     void physicalCageRejectsSimulation() {
         var physical = new SimulationService(cages, runner, "cage-1"::equals);
         given(cages.listGuineaPigs(OWNER, "cage-1")).willReturn(List.of(pig(1, "RED")));
