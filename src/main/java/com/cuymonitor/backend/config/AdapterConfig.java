@@ -8,12 +8,14 @@ import com.cuymonitor.backend.adapter.out.persistence.mapper.UserPersistenceMapp
 import com.cuymonitor.backend.adapter.out.persistence.repository.OtpChallengeJpaRepository;
 import com.cuymonitor.backend.adapter.out.persistence.repository.UserJpaRepository;
 import com.cuymonitor.backend.adapter.out.security.BCryptPasswordHasher;
+import com.cuymonitor.backend.domain.model.Cage;
 import com.cuymonitor.backend.domain.port.out.CageCodeGenerator;
 import com.cuymonitor.backend.domain.port.out.CageRepository;
 import com.cuymonitor.backend.domain.port.out.OtpChallengeRepository;
 import com.cuymonitor.backend.domain.port.out.PasswordHasher;
 import com.cuymonitor.backend.domain.port.out.UserRepository;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Configuration;
 
 /**
@@ -28,10 +30,17 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class AdapterConfig {
 
-    /** <b>Adapter</b> — Target: {@link CageCodeGenerator}. */
+    /** <b>Adapter</b> — Target: {@link CageCodeGenerator}. The default one picks the codes of the farmers' cages. */
+    @Primary
     @Bean
     public CageCodeGenerator cageCodeGenerator(CageRepository cages) {
         return new RandomCageCodeGenerator(cages);
+    }
+
+    /** The same adapter for the simulation cage: its codes start with "sim-", which is how the backend knows it. */
+    @Bean
+    public CageCodeGenerator simulationCageCodes(CageRepository cages) {
+        return new RandomCageCodeGenerator(cages, Cage.SIMULATION_PREFIX);
     }
 
     /** <b>Adapter</b> — Target: {@link OtpChallengeRepository}, Adaptee: {@link OtpChallengeJpaRepository}. */
