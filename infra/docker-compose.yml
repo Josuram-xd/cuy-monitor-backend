@@ -76,6 +76,13 @@ services:
         # the simulation video (a zip on a GitHub Release); empty = the video simulation answers "not available"
         SIM_CLIP_URL: ${SIM_CLIP_URL:-}
         SIM_CLIP_SHA256: ${SIM_CLIP_SHA256:-}
+        # the trained chain: without these three models the ai-service answers with Bedrock only
+        DETECTOR_URL: ${DETECTOR_URL:-}
+        DETECTOR_SHA256: ${DETECTOR_SHA256:-}
+        BEHAVIOR_MODEL_URL: ${BEHAVIOR_MODEL_URL:-}
+        BEHAVIOR_MODEL_SHA256: ${BEHAVIOR_MODEL_SHA256:-}
+        ANIMAL_DETECTOR_URL: ${ANIMAL_DETECTOR_URL:-}
+        ANIMAL_DETECTOR_SHA256: ${ANIMAL_DETECTOR_SHA256:-}
     image: cuy-monitor-ai-service:local
     restart: unless-stopped
     depends_on:

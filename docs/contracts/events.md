@@ -78,7 +78,7 @@ One event **per guinea pig per 60 s window**.
 
 | Field | Type | Rules |
 |---|---|---|
-| `color` | string | A `MARK_COLOR` code (see below): the mark on the guinea pig's back. The backend maps `(cageId, color)` to a registered guinea pig. Never guessed: if the color is unclear, lower `detectionConfidence` instead. |
+| `color` | string | A `MARK_COLOR` code (see below): the registered `markColor` of the guinea pig. The ai-service gets it from the mark on the guinea pig's back or, when that is not visible, from the resemblance to the registered photo of that guinea pig; if it is not sure, it lowers `detectionConfidence` instead (it never guesses). The backend maps `(cageId, color)` to a registered guinea pig. |
 | `windowSeconds` | integer | Length of the window. `60` today. |
 | `stillSeconds` | number | Seconds the guinea pig was still inside the window. `0 ≤ stillSeconds ≤ windowSeconds`. |
 | `feederVisits` | integer | Visits to the feeder (`feeder`) in the window. `≥ 0`. |

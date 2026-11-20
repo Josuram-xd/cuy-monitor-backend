@@ -9,8 +9,6 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -33,7 +31,7 @@ public class IngestionController {
 
     private static final Logger log = LoggerFactory.getLogger(IngestionController.class);
 
-    private final byte[] apiKey;
+    private final ApiKeyCheck apiKey;
     private final AdapterFactorySelector adapterFactorySelector;
     private final ProcessEventUseCase processEventUseCase;
     private final Validator validator;
@@ -44,12 +42,9 @@ public class IngestionController {
                                ProcessEventUseCase processEventUseCase,
                                Validator validator,
                                JsonMapper jsonMapper) {
-        if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalArgumentException("app.api-key is required (set APP_API_KEY)");
-        }
         this.validator = validator;
         this.jsonMapper = jsonMapper;
-        this.apiKey = apiKey.getBytes(StandardCharsets.UTF_8);
+        this.apiKey = new ApiKeyCheck(apiKey);
         this.adapterFactorySelector = adapterFactorySelector;
         this.processEventUseCase = processEventUseCase;
     }
@@ -59,8 +54,7 @@ public class IngestionController {
             @RequestHeader(value = "X-API-Key", required = false) String providedKey,
             @RequestBody String rawBody) {
 
-        if (providedKey == null
-                || !MessageDigest.isEqual(apiKey, providedKey.getBytes(StandardCharsets.UTF_8))) {
+        if (!apiKey.matches(providedKey)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiError.body(ApiError.UNAUTHORIZED, "invalid api key"));
         }
 
