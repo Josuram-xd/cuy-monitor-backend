@@ -2,7 +2,11 @@ package com.cuymonitor.backend.application;
 
 import java.time.Instant;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import com.cuymonitor.backend.domain.model.AudioSignal;
+import com.cuymonitor.backend.domain.model.AnomalyThresholds;
+import com.cuymonitor.backend.domain.model.BaselineProfile;
+import com.cuymonitor.backend.domain.port.out.BaselineProfileRepository;
 import com.cuymonitor.backend.domain.model.BehaviorSignal;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
 import com.cuymonitor.backend.domain.health.composite.CageAudioHealth;
@@ -46,6 +50,9 @@ public class CageHealthService implements GetCageHealthUseCase {
     private final WeightReadingRepository weights;
     private final Clock clock;
     private final Function<String, Optional<Instant>> connectedSince;
+    // null: every guinea pig is compared with the default profile
+    private final BaselineProfileRepository baselines;
+    private final Supplier<AnomalyThresholds> thresholds;
 
     public CageHealthService(CageRepository cages, GuineaPigRepository guineaPigs, AlertRepository alerts,
                              EventRepository events, WeightReadingRepository weights, Clock clock) {
@@ -55,6 +62,15 @@ public class CageHealthService implements GetCageHealthUseCase {
     public CageHealthService(CageRepository cages, GuineaPigRepository guineaPigs, AlertRepository alerts,
                              EventRepository events, WeightReadingRepository weights, Clock clock,
                              Function<String, Optional<Instant>> connectedSince) {
+        this(cages, guineaPigs, alerts, events, weights, clock, connectedSince, null, AnomalyThresholds::defaults);
+    }
+
+    public CageHealthService(CageRepository cages, GuineaPigRepository guineaPigs, AlertRepository alerts,
+                             EventRepository events, WeightReadingRepository weights, Clock clock,
+                             Function<String, Optional<Instant>> connectedSince, BaselineProfileRepository baselines,
+                             Supplier<AnomalyThresholds> thresholds) {
+        this.baselines = baselines;
+        this.thresholds = thresholds;
         this.connectedSince = connectedSince;
         this.cages = cages;
         this.guineaPigs = guineaPigs;
@@ -90,9 +106,32 @@ public class CageHealthService implements GetCageHealthUseCase {
                     .filter(event -> !event.occurredAt().isBefore(since) && "farm-station".equals(event.source()));
             return new CageHealthSummary.Monitoring(since, latest.map(HealthEvent::occurredAt).orElse(null),
                     lastAudio.map(event -> ((AudioSignal) event.signal()).label()).orElse(null),
-                    latest.map(event -> (BehaviorSignal) event.signal()).orElse(null));
+                    latest.map(event -> (BehaviorSignal) event.signal()).orElse(null),
+                    liveObservations(pigs, since));
         }).orElse(null);
         return new CageHealthSummary(cageCode, cage.status(), pigs, audio, weight, clock.instant(), monitoring);
+    }
+
+    /** The newest window the station sent for each guinea pig since it was connected, with its symptoms. */
+    private List<CageHealthSummary.LiveObservation> liveObservations(List<GuineaPig> pigs, Instant since) {
+        List<CageHealthSummary.LiveObservation> live = new ArrayList<>();
+        for (GuineaPig pig : pigs) {
+            events.findLatestBehavior(pig.getId(), 1).stream()
+                    .filter(event -> !event.occurredAt().isBefore(since) && "farm-station".equals(event.source()))
+                    .findFirst()
+                    .ifPresent(event -> {
+                        BehaviorSignal window = (BehaviorSignal) event.signal();
+                        live.add(new CageHealthSummary.LiveObservation(pig.getId(), window.color(),
+                                event.occurredAt(), window, baselineOf(pig.getId()).symptoms(window, thresholds.get())));
+                    });
+        }
+        return live;
+    }
+
+    private BaselineProfile baselineOf(long guineaPigId) {
+        Optional<BaselineProfile> learned = baselines == null ? Optional.empty()
+                : baselines.findByGuineaPigId(guineaPigId);
+        return learned.orElseGet(() -> BaselineProfile.defaultFor(guineaPigId));
     }
 
     /**

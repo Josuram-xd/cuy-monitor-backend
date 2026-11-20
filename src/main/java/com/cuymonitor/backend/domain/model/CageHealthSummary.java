@@ -8,8 +8,28 @@ import java.util.Objects;
 public record CageHealthSummary(String cageCode, HealthStatus status, List<GuineaPig> guineaPigs, Audio audio,
                                 Weight weight, Instant updatedAt, Monitoring monitoring) {
 
+    /** observation is the newest window of any guinea pig; guineaPigs has the newest one of each. */
     public record Monitoring(Instant connectedAt, Instant lastBehaviorAt, AudioLabel lastAudioLabel,
-                             BehaviorSignal observation) {}
+                             BehaviorSignal observation, List<LiveObservation> guineaPigs) {
+
+        public Monitoring(Instant connectedAt, Instant lastBehaviorAt, AudioLabel lastAudioLabel,
+                          BehaviorSignal observation) {
+            this(connectedAt, lastBehaviorAt, lastAudioLabel, observation, List.of());
+        }
+
+        public Monitoring {
+            guineaPigs = guineaPigs == null ? List.of() : List.copyOf(guineaPigs);
+        }
+    }
+
+    /** The newest window of one guinea pig since the equipment was connected, and what stands out in it. */
+    public record LiveObservation(long guineaPigId, String color, Instant at, BehaviorSignal window,
+                                  List<BehaviorSymptom> symptoms) {
+
+        public LiveObservation {
+            symptoms = List.copyOf(symptoms);
+        }
+    }
 
     public CageHealthSummary(String cageCode, HealthStatus status, List<GuineaPig> guineaPigs, Audio audio,
                              Weight weight, Instant updatedAt) {

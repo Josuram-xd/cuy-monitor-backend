@@ -10,6 +10,8 @@ import com.cuymonitor.backend.domain.exception.CageNotFoundException;
 import com.cuymonitor.backend.domain.model.Alert;
 import com.cuymonitor.backend.domain.model.AudioLabel;
 import com.cuymonitor.backend.domain.model.AudioSignal;
+import com.cuymonitor.backend.domain.model.BehaviorSignal;
+import com.cuymonitor.backend.domain.model.BehaviorSymptom;
 import com.cuymonitor.backend.domain.model.CageHealthSummary;
 import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.GuineaPig;
@@ -66,6 +68,27 @@ class CageHealthServiceTest {
         events.save(new HealthEvent(UUID.randomUUID(), CAGE, NOW, "ai-service",
                 new AudioSignal(AudioLabel.NORMAL, 0.9, 1000)), null);
         assertThat(service.getHealth(CAGE).monitoring().lastAudioLabel()).isEqualTo(AudioLabel.NORMAL);
+    }
+
+    @Test
+    void whileMonitoringEachGuineaPigShowsItsNewestWindowAndWhatStandsOut() {
+        service = new CageHealthService(new InMemoryCageRepository(), guineaPigs, alerts, events, weights,
+                new MutableClock(NOW), code -> java.util.Optional.of(NOW.minusSeconds(300)));
+        guineaPig("RED", HealthStatus.NORMAL);
+        guineaPig("BLUE", HealthStatus.NORMAL);
+        long red = guineaPigs.findActiveByCageAndColor(CAGE, "RED").orElseThrow().getId();
+        // before the station was connected: not shown
+        events.save(new HealthEvent(UUID.randomUUID(), CAGE, NOW.minusSeconds(600), "farm-station",
+                new BehaviorSignal("RED", 60, 5, 3, 1, 0.1, 0.0, 0.9)), red);
+        events.save(new HealthEvent(UUID.randomUUID(), CAGE, NOW.minusSeconds(30), "farm-station",
+                new BehaviorSignal("RED", 60, 58, 0, 0, 0.9, 0.9, 0.9)), red);
+
+        var live = service.getHealth(CAGE).monitoring().guineaPigs();
+
+        assertThat(live).hasSize(1);
+        assertThat(live.get(0).color()).isEqualTo("RED");
+        assertThat(live.get(0).symptoms()).containsExactly(BehaviorSymptom.UNUSUAL, BehaviorSymptom.VERY_STILL,
+                BehaviorSymptom.NOT_EATING, BehaviorSymptom.APART);
     }
 
     @Test

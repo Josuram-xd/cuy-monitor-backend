@@ -10,6 +10,21 @@ import static org.assertj.core.api.Assertions.within;
 
 class BaselineProfileTest {
 
+    @Test
+    void symptomsSayWhatStandsOutAgainstItsOwnNormal() {
+        // usually still 20 s, 2 visits to the feeder, close to the group
+        var usual = new BaselineProfile(1, 20, 2, 0.2, NOW, 30);
+        var thresholds = AnomalyThresholds.defaults();
+
+        assertThat(usual.symptoms(window(15, 2, 0.2, 0.1), thresholds)).isEmpty();
+        assertThat(usual.symptoms(window(55, 0, 0.9, 0.8), thresholds)).containsExactly(
+                BehaviorSymptom.UNUSUAL, BehaviorSymptom.VERY_STILL, BehaviorSymptom.NOT_EATING,
+                BehaviorSymptom.APART);
+        // one that hardly ever eats in a minute is not flagged for not eating in this one
+        assertThat(new BaselineProfile(1, 20, 0.2, 0.2, NOW, 30).symptoms(window(15, 0, 0.2, 0.1), thresholds))
+                .isEmpty();
+    }
+
     private static final Instant NOW = Instant.parse("2026-10-05T14:00:00Z");
 
     private static BehaviorSignal window(double stillSeconds, int feederVisits, double groupDistance,
