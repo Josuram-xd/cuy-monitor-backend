@@ -27,7 +27,15 @@ Probado en vivo contra producción (`https://cuymonitor.duckdns.org`):
 - **Báscula:** Arduino UNO en `COM3` con el firmware `weight_sensor` → `serial_bridge` → `POST /api/v1/ingestion/events`, respuesta `202`.
 - **Cámara Tapo C200:** `stream2` da H.264 de 1280×720 y audio G.711 de 8 kHz → `edge_agent` → `/ai/v1/frames` y `/ai/v1/audio`, respuesta `202`.
 
-## En curso: configurar la cámara desde la app (sin tocar código)
+## Configurar la cámara desde la app — programado, falta probar y mergear
+
+PRs (mergear en este orden): db #30 (V20) → backend #71 → ai-service #25 (RTSP) → ai-service #26 (va contra
+`feature/rtsp-camera`) → dashboard #65. Ninguno pasó por la revisión de un agente Sonnet; solo corrieron los tests de
+cada repo. Falta: `./mvnw test` con Docker (con la rama de db activa), desplegar y probar de punta a punta (paso 5).
+`edge_agent/.env` local ya tiene `BACKEND_URL`. Con `VITE_USE_MOCKS=true` el panel no aparece, porque el mock
+de salud no simula el equipo conectado.
+
+### Detalle del diseño
 
 El diseño está en `C:\Users\amand\Documents\cuy\CAMERA_SETUP_PLAN.md`, fuera de los repos; copiarlo si hace falta. Sus decisiones finales están al final del archivo:
 - La cámara se configura **por equipo** (fila `hardware_station`, migración `V20__add_camera_to_hardware_station.sql`).
