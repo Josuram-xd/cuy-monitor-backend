@@ -17,6 +17,9 @@ import java.time.Duration;
  * An anomaly here is one already confirmed by the chain (sustained over N windows), never a single window, and
  * a recovery is one confirmed over M normal windows in a row (Task 10.2). How long the guinea pig has been at the
  * current level decides whether it is time to go up (Task 10.1, {@link EscalationPolicy}).
+ *
+ * <p>The states hold no fields (Flyweight): the extrinsic data is passed in, so {@link HealthStates} shares one
+ * instance of each. A new field in a state would break that sharing.
  */
 public interface HealthState {
 
@@ -31,7 +34,7 @@ public interface HealthState {
 
     /** The state once the behavior is back to normal: every level goes straight back to NORMAL. */
     default HealthState onRecovery() {
-        return new NormalState();
+        return HealthStates.of(HealthStatus.NORMAL);
     }
 
     /** Whether reaching this state has to warn the breeder. */

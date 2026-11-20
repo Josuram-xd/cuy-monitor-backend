@@ -6,7 +6,7 @@ import java.time.Duration;
 
 /**
  * <b>State pattern — concrete state</b> OBSERVED: goes to ALERT when the anomaly is still confirmed after
- * observedToAlert.
+ * observedToAlert. Stateless: shared through {@link HealthStates} (Flyweight).
  */
 public final class ObservedState implements HealthState {
 
@@ -18,6 +18,6 @@ public final class ObservedState implements HealthState {
     @Override
     public HealthState onAnomaly(Duration timeInState, EscalationPolicy policy) {
         // the anomaly has to last observedToAlert at this level before it goes up
-        return timeInState.compareTo(policy.observedToAlert()) >= 0 ? new AlertState() : this;
+        return timeInState.compareTo(policy.observedToAlert()) >= 0 ? HealthStates.of(HealthStatus.ALERT) : this;
     }
 }
