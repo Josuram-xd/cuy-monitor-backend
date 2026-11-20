@@ -8,12 +8,15 @@ import com.cuymonitor.backend.domain.model.AlertStatus;
 import com.cuymonitor.backend.domain.model.EventType;
 import com.cuymonitor.backend.domain.model.HealthStatus;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.security.Principal;
@@ -68,5 +71,12 @@ public class AlertController {
             throw new InvalidRequestException("only REVIEWED is accepted");
         }
         return AlertResponse.from(cageOperations.reviewAlert(Requester.idOf(principal), id));
+    }
+
+    /** Removes the alert for good (the "Eliminar" of the alert list). Only the owner of its cage. */
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(Principal principal, @PathVariable long id) {
+        cageOperations.deleteAlert(Requester.idOf(principal), id);
     }
 }

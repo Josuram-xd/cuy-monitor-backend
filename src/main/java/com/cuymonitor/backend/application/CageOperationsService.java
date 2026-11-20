@@ -121,6 +121,11 @@ public class CageOperationsService implements CageOperations {
     }
 
     @Override
+    public void deleteAlert(UUID requesterId, long alertId) {
+        useCases.reviewAlert().delete(alertId);
+    }
+
+    @Override
     public AlertHistoryPage getAlertHistory(UUID requesterId, AlertHistoryFilter filter) {
         Set<String> readable = filter.asksForCage()
                 ? Set.of(filter.cageCode())

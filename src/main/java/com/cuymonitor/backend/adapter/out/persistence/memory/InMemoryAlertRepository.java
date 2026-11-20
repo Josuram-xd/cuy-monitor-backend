@@ -40,6 +40,11 @@ public class InMemoryAlertRepository implements AlertRepository {
     }
 
     @Override
+    public void deleteById(long id) {
+        alerts.remove(id);
+    }
+
+    @Override
     public List<Alert> findAll() {
         return alerts.values().stream().sorted(NEWEST_FIRST).map(InMemoryAlertRepository::copy).toList();
     }

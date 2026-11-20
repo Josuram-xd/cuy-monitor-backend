@@ -11,6 +11,7 @@ import java.util.Optional;
 public interface AlertRepository {
     Alert save(Alert alert);
     Optional<Alert> findById(long id);
+    void deleteById(long id);
     // newest first
     List<Alert> findAll();
     List<Alert> findByStatus(AlertStatus status);

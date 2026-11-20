@@ -57,6 +57,10 @@ class DatabaseAlertObserverTest {
         }
 
         @Override
+        public void deleteById(long id) {
+        }
+
+        @Override
         public List<Alert> findAll() {
             return List.of();
         }

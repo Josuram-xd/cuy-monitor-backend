@@ -66,6 +66,8 @@ public interface CageOperations {
 
     Alert reviewAlert(UUID requesterId, long alertId);
 
+    void deleteAlert(UUID requesterId, long alertId);
+
     // the alerts of the requester's cages, filtered and one page at a time; newest first
     AlertHistoryPage getAlertHistory(UUID requesterId, AlertHistoryFilter filter);
 }

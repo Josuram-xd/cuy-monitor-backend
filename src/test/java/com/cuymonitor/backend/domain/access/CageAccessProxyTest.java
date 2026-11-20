@@ -157,6 +157,18 @@ class CageAccessProxyTest {
     }
 
     @Test
+    void onlyTheOwnerOfTheAlertsCageCanDeleteIt() {
+        Alert ofLuis = alerts.save(Alert.forCage("cage-luis", EventType.AUDIO, HealthStatus.ALERT, "chillidos", NOW));
+
+        assertThatThrownBy(() -> proxy.deleteAlert(ANA, ofLuis.getId()))
+                .isInstanceOf(CageAccessDeniedException.class);
+        assertThat(realSubject.calls).isEmpty();
+
+        proxy.deleteAlert(LUIS, ofLuis.getId());
+        assertThat(realSubject.calls).containsExactly("deleteAlert " + ofLuis.getId());
+    }
+
+    @Test
     void theHistoryOfAGuineaPigIsOnlyForTheOwnerOfItsCage() {
         assertThatThrownBy(() -> proxy.getGuineaPigHistory(ANA, pigOfLuis, DAY))
                 .isInstanceOf(CageAccessDeniedException.class);
@@ -313,6 +325,11 @@ class CageAccessProxyTest {
         public Alert reviewAlert(UUID requesterId, long alertId) {
             calls.add("reviewAlert " + alertId);
             return null;
+        }
+
+        @Override
+        public void deleteAlert(UUID requesterId, long alertId) {
+            calls.add("deleteAlert " + alertId);
         }
 
         @Override

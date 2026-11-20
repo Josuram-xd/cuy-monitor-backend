@@ -43,4 +43,11 @@ public class AlertService implements ListAlertsUseCase, ReviewAlertUseCase {
         alert.markReviewed(clock.instant());
         return alerts.save(alert);
     }
+
+    @Override
+    @Transactional
+    public void delete(long alertId) {
+        alerts.findById(alertId).orElseThrow(AlertNotFoundException::new);
+        alerts.deleteById(alertId);
+    }
 }
