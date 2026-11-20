@@ -10,6 +10,8 @@ import com.cuymonitor.backend.domain.exception.GuineaPigNotFoundException;
 import com.cuymonitor.backend.domain.exception.ColorAlreadyUsedException;
 import com.cuymonitor.backend.domain.exception.EquipmentNotConnectedException;
 import com.cuymonitor.backend.domain.exception.InvalidCameraSettingsException;
+import com.cuymonitor.backend.domain.exception.SimulationBusyException;
+import com.cuymonitor.backend.domain.exception.SimulationUnavailableException;
 import com.cuymonitor.backend.domain.exception.UnknownCatalogOptionException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -70,6 +72,21 @@ public class DashboardExceptionHandler {
     @ExceptionHandler(AlertNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleAlertNotFound(AlertNotFoundException ex) {
         return error(HttpStatus.NOT_FOUND, ApiError.NOT_FOUND, ex.getMessage());
+    }
+
+    // the demo buttons: no guinea pigs to draw is the farmer's fault; a missing AI service or clip is not
+    @ExceptionHandler(SimulationUnavailableException.class)
+    public ResponseEntity<Map<String, Object>> handleSimulationUnavailable(SimulationUnavailableException ex) {
+        if (ex.isNoGuineaPigs()) {
+            return error(HttpStatus.BAD_REQUEST, ApiError.BAD_REQUEST, ex.getMessage());
+        }
+        return error(HttpStatus.SERVICE_UNAVAILABLE, ApiError.SERVICE_UNAVAILABLE, ex.getMessage());
+    }
+
+    // the AI service is already running as many video simulations as it allows
+    @ExceptionHandler(SimulationBusyException.class)
+    public ResponseEntity<Map<String, Object>> handleSimulationBusy(SimulationBusyException ex) {
+        return error(HttpStatus.CONFLICT, ApiError.CONFLICT, ex.getMessage());
     }
 
     @ExceptionHandler(InvalidRequestException.class)
