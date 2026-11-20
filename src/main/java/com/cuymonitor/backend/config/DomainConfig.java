@@ -56,14 +56,15 @@ public class DomainConfig {
                                                      HardwareStation station) {
         Function<Settings, ProcessEventUseCase> engineFor = settings -> {
             HealthProperties health = HealthProperties.from(settings);
-            EventHandler chain = new HandlerChainBuilder(
-                    new ValidationHandler(clock, health.maxEventAge(), health.minDetectionConfidence()),
-                    new IdentificationHandler(guineaPigs),
-                    new BehaviorThresholdHandler(baselines, health.anomalyThresholds(), health.baselineMinSamples()),
-                    new SustainedAnomalyHandler(events, health.consecutiveAnomalyWindows(),
-                            health.anomalyThresholds()),
-                    new SustainedRecoveryHandler(events, health.recoveryWindows(), health.anomalyThresholds())
-            ).build();
+            EventHandler chain = new HandlerChainBuilder()
+                    .then(new ValidationHandler(clock, health.maxEventAge(), health.minDetectionConfidence()))
+                    .then(new IdentificationHandler(guineaPigs))
+                    .then(new BehaviorThresholdHandler(baselines, health.anomalyThresholds(),
+                            health.baselineMinSamples()))
+                    .then(new SustainedAnomalyHandler(events, health.consecutiveAnomalyWindows(),
+                            health.anomalyThresholds()))
+                    .then(new SustainedRecoveryHandler(events, health.recoveryWindows(), health.anomalyThresholds()))
+                    .build();
             BaselineLearner learner = new BaselineLearner(baselines, health.anomalyThresholds(),
                     health.baselineWarmupSamples());
             CageWeightEvaluator weightEvaluator = new CageWeightEvaluator(weights, alerts, alertPublisher,
