@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.config;
 
+import com.cuymonitor.backend.domain.port.out.HardwareStation;
 import com.cuymonitor.backend.adapter.out.simulation.AiServiceSimulationRunner;
 import com.cuymonitor.backend.application.SimulationService;
 import com.cuymonitor.backend.domain.access.CageOperations;
@@ -27,7 +28,7 @@ public class SimulationConfig {
     }
 
     @Bean
-    public SimulationService simulationService(CageOperations cageOperations, SimulationRunner simulationRunner) {
-        return new SimulationService(cageOperations, simulationRunner);
+    public SimulationService simulationService(CageOperations cageOperations, SimulationRunner simulationRunner, HardwareStation station) {
+        return new SimulationService(cageOperations, simulationRunner, station::connectedTo);
     }
 }

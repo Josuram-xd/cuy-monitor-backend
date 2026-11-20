@@ -98,6 +98,10 @@ on; its guinea pigs, alerts and history are kept.
 
 ### 3.1 `GET /api/v1/cages/{cageId}/health`
 
+The owner can PUT or DELETE `/api/v1/cages/{cageId}/equipment` to connect or disconnect the shared physical kit (204). If it is assigned to another active cage, PUT returns 409. For the connected cage, `monitoring` contains `connectedAt`, `lastBehaviorAt` (UTC) and `lastAudioLabel` (NORMAL or DISTRESS). Sensor values can be null until the first result.
+The optional monitoring.observation contains the latest physical behavior signal, timestamped by lastBehaviorAt. stillSeconds is an estimate over windowSeconds.
+Other cages return null for monitoring. Physical cages reject simulation requests.
+
 Result of the Composite: the cage status and its parts.
 
 ```json

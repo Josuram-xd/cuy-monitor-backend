@@ -6,7 +6,15 @@ import java.util.Objects;
 
 /** What the dashboard shows for a cage: its overall status and the parts it comes from. */
 public record CageHealthSummary(String cageCode, HealthStatus status, List<GuineaPig> guineaPigs, Audio audio,
-                                Weight weight, Instant updatedAt) {
+                                Weight weight, Instant updatedAt, Monitoring monitoring) {
+
+    public record Monitoring(Instant connectedAt, Instant lastBehaviorAt, AudioLabel lastAudioLabel,
+                             BehaviorSignal observation) {}
+
+    public CageHealthSummary(String cageCode, HealthStatus status, List<GuineaPig> guineaPigs, Audio audio,
+                             Weight weight, Instant updatedAt) {
+        this(cageCode, status, guineaPigs, audio, weight, updatedAt, null);
+    }
 
     public CageHealthSummary {
         Objects.requireNonNull(cageCode, "cageCode");

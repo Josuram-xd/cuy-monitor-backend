@@ -59,6 +59,16 @@ class CageHealthServiceTest {
     }
 
     @Test
+    void physicalCageReportsOnlyRecordedSignals() {
+        service = new CageHealthService(new InMemoryCageRepository(), guineaPigs, alerts, events, weights,
+                new MutableClock(NOW), code -> java.util.Optional.of(NOW.minusSeconds(60)));
+        assertThat(service.getHealth(CAGE).monitoring().lastBehaviorAt()).isNull();
+        events.save(new HealthEvent(UUID.randomUUID(), CAGE, NOW, "ai-service",
+                new AudioSignal(AudioLabel.NORMAL, 0.9, 1000)), null);
+        assertThat(service.getHealth(CAGE).monitoring().lastAudioLabel()).isEqualTo(AudioLabel.NORMAL);
+    }
+
+    @Test
     void theCageIsAsBadAsItsWorstGuineaPig() {
         guineaPig("RED", HealthStatus.OBSERVED);
         guineaPig("BLUE", HealthStatus.CRITICAL);

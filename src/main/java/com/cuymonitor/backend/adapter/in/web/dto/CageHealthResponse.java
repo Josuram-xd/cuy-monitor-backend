@@ -9,7 +9,7 @@ import java.util.List;
 
 /** Shape of GET /api/v1/cages/{cageId}/health (docs/contracts/rest-api.md, 3.1). */
 public record CageHealthResponse(String cageId, HealthStatus status, List<Member> guineaPigs, Audio audio,
-                                 Weight weight, Instant updatedAt) {
+                                 Weight weight, Instant updatedAt, CageHealthSummary.Monitoring monitoring) {
 
     public record Member(long id, String photoUrl, String markColor, HealthStatus status) {
 
@@ -33,6 +33,6 @@ public record CageHealthResponse(String cageId, HealthStatus status, List<Member
                 new Audio(summary.audio().status(), summary.audio().lastEventAt()),
                 new Weight(summary.weight().status(), summary.weight().lastGrams(),
                         summary.weight().lastMeasuredAt()),
-                summary.updatedAt());
+                summary.updatedAt(), summary.monitoring());
     }
 }

@@ -53,6 +53,14 @@ class SimulationServiceTest {
     }
 
     @Test
+    void physicalCageRejectsSimulation() {
+        var physical = new SimulationService(cages, runner, "cage-1"::equals);
+        given(cages.listGuineaPigs(OWNER, "cage-1")).willReturn(List.of(pig(1, "RED")));
+        assertThatThrownBy(() -> physical.start(OWNER, "cage-1")).isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(runner);
+    }
+
+    @Test
     void onlyTheOwnerCanStartIt() {
         given(cages.listGuineaPigs(OWNER, "cage-9")).willThrow(new CageAccessDeniedException());
 

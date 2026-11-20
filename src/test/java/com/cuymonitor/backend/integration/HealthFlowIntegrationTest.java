@@ -58,6 +58,32 @@ class HealthFlowIntegrationTest extends PostgresIntegrationTest {
         clock = Instant.now().minus(5, ChronoUnit.MINUTES).truncatedTo(ChronoUnit.SECONDS);
     }
 
+    @Test
+    void equipmentFollowsOnlyItsOwnersCageAndCanBeReleased() throws Exception {
+        String endpoint = "/api/v1/cages/" + cage + "/equipment";
+        var session = jwt().jwt(token -> token.subject(owner.toString()));
+        var foreign = jwt().jwt(token -> token.subject(UUID.randomUUID().toString()));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(endpoint).with(foreign))
+                .andExpect(status().isForbidden());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(endpoint).with(session))
+                .andExpect(status().isNoContent());
+        try {
+            mvc.perform(get("/api/v1/cages/" + cage + "/health").with(session))
+                    .andExpect(jsonPath("$.monitoring.connectedAt").isString());
+            String weight = """
+                    {"eventId":"%s","type":"WEIGHT","cageId":"farm-station","timestamp":"%s","source":"arduino",
+                     "schemaVersion":1,"payload":{"grams":512,"stable":true}}
+                    """.formatted(UUID.randomUUID(), Instant.now());
+            mvc.perform(post("/api/v1/ingestion/events").header("X-API-Key", API_KEY)
+                            .contentType(MediaType.APPLICATION_JSON).content(weight)).andExpect(status().isAccepted());
+            mvc.perform(get("/api/v1/cages/" + cage + "/health").with(session))
+                    .andExpect(jsonPath("$.weight.lastGrams").value(512));
+        } finally {
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(endpoint).with(session))
+                    .andExpect(status().isNoContent());
+        }
+    }
+
     private void sendWindow(boolean sick) throws Exception {
         sendWindow(sick, API_KEY, 202);
     }
