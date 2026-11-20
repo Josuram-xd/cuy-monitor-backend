@@ -41,9 +41,12 @@ public class SettingsConfig {
     @Bean
     public SettingsService settingsService(Map<SettingKey, String> settingDefaults, SettingRepository repository,
                                            ConfigurableEventProcessor eventProcessor,
-                                           AssistantService assistantService) {
+                                           AssistantService assistantService,
+                                           CurrentAnomalyThresholds anomalyThresholds) {
+        // every listener of the settings: the health engine, the assistant's limit, and the thresholds the live
+        // symptoms and the alert notes read
         SettingsService service = new SettingsService(settingDefaults, repository,
-                List.of(eventProcessor, assistantService));
+                List.of(eventProcessor, assistantService, anomalyThresholds));
         try {
             service.applyStored();
         } catch (DataAccessException e) {
