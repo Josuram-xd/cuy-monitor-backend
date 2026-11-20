@@ -1,5 +1,9 @@
 package com.cuymonitor.backend.application;
 
+import java.time.Instant;
+import java.util.function.Function;
+import com.cuymonitor.backend.domain.model.AudioSignal;
+import com.cuymonitor.backend.domain.model.BehaviorSignal;
 import com.cuymonitor.backend.domain.exception.CageNotFoundException;
 import com.cuymonitor.backend.domain.health.composite.CageAudioHealth;
 import com.cuymonitor.backend.domain.health.composite.CageHealth;
@@ -41,9 +45,17 @@ public class CageHealthService implements GetCageHealthUseCase {
     private final EventRepository events;
     private final WeightReadingRepository weights;
     private final Clock clock;
+    private final Function<String, Optional<Instant>> connectedSince;
 
     public CageHealthService(CageRepository cages, GuineaPigRepository guineaPigs, AlertRepository alerts,
                              EventRepository events, WeightReadingRepository weights, Clock clock) {
+        this(cages, guineaPigs, alerts, events, weights, clock, code -> Optional.empty());
+    }
+
+    public CageHealthService(CageRepository cages, GuineaPigRepository guineaPigs, AlertRepository alerts,
+                             EventRepository events, WeightReadingRepository weights, Clock clock,
+                             Function<String, Optional<Instant>> connectedSince) {
+        this.connectedSince = connectedSince;
         this.cages = cages;
         this.guineaPigs = guineaPigs;
         this.alerts = alerts;
@@ -62,9 +74,10 @@ public class CageHealthService implements GetCageHealthUseCase {
                 .filter(alert -> alert.belongsTo(cageCode))
                 .toList();
 
+        var lastAudio = events.findLatest(cageCode, EventType.AUDIO);
         var audio = new CageHealthSummary.Audio(
                 worstOpenLevel(openAlerts, EventType.AUDIO),
-                events.findLatest(cageCode, EventType.AUDIO).map(HealthEvent::occurredAt).orElse(null));
+                lastAudio.map(HealthEvent::occurredAt).orElse(null));
         Optional<WeightReading> lastWeight = weights.findLatest(cageCode);
         var weight = new CageHealthSummary.Weight(
                 worstOpenLevel(openAlerts, EventType.WEIGHT),
@@ -72,7 +85,14 @@ public class CageHealthService implements GetCageHealthUseCase {
                 lastWeight.map(WeightReading::measuredAt).orElse(null));
 
         HealthComponent cage = cageHealthTree(pigs, audio.status(), weight.status());
-        return new CageHealthSummary(cageCode, cage.status(), pigs, audio, weight, clock.instant());
+        var monitoring = connectedSince.apply(cageCode).map(since -> {
+            var latest = events.findLatest(cageCode, EventType.BEHAVIOR)
+                    .filter(event -> !event.occurredAt().isBefore(since) && "farm-station".equals(event.source()));
+            return new CageHealthSummary.Monitoring(since, latest.map(HealthEvent::occurredAt).orElse(null),
+                    lastAudio.map(event -> ((AudioSignal) event.signal()).label()).orElse(null),
+                    latest.map(event -> (BehaviorSignal) event.signal()).orElse(null));
+        }).orElse(null);
+        return new CageHealthSummary(cageCode, cage.status(), pigs, audio, weight, clock.instant(), monitoring);
     }
 
     /**

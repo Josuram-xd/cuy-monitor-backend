@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.config;
 
+import com.cuymonitor.backend.domain.port.out.HardwareStation;
 import com.cuymonitor.backend.domain.port.out.BaselineProfileRepository;
 import com.cuymonitor.backend.domain.port.out.StateTransitionRepository;
 import com.cuymonitor.backend.application.CageWeightService;
@@ -63,8 +64,9 @@ public class DashboardConfig {
     @Bean
     public CageHealthService cageHealthService(CageRepository cages, GuineaPigRepository guineaPigs,
                                                AlertRepository alerts, EventRepository events,
-                                               WeightReadingRepository weights, Clock clock) {
-        return new CageHealthService(cages, guineaPigs, alerts, events, weights, clock);
+                                               WeightReadingRepository weights, Clock clock, HardwareStation station) {
+        return new CageHealthService(cages, guineaPigs, alerts, events, weights, clock,
+                code -> station.current().filter(binding -> binding.cageCode().equals(code)).map(HardwareStation.Binding::since));
     }
 
     @Bean

@@ -106,6 +106,20 @@ class EventProcessingServiceTest {
     }
 
     @Test
+    void firstPhysicalAnomalyIsPushedOnceAndLinkedToTheCuy() {
+        var raw = window(0.9);
+        var anomaly = new HealthEvent(raw.eventId(), CAGE, raw.occurredAt(), "farm-station", raw.signal());
+        service.process(window(0.1));
+        service.process(anomaly);
+        service.process(anomaly);
+        assertThat(pushed).singleElement().satisfies(alert -> {
+            assertThat(alert.getType()).isEqualTo(EventType.BEHAVIOR);
+            assertThat(alert.getGuineaPigId()).isEqualTo(canela.getId());
+            assertThat(alerts.findById(alert.getId())).isPresent();
+        });
+    }
+
+    @Test
     void onlyTheNormalWindowsOfAHealthyGuineaPigAreLearned() {
         service.process(window(0.1));
         service.process(window(0.9));

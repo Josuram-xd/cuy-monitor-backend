@@ -38,6 +38,10 @@ public final class SustainedAnomalyHandler extends EventHandler {
             context.reject("Anomaly evaluation requires an identified guinea pig and baseline");
             return;
         }
+        if ("farm-station".equals(context.event().source())) {
+            context.requestEarlyWarning();
+            return;
+        }
         if (requiredConsecutiveWindows == 1) {
             context.markAnomaly("Anomaly in 1 consecutive window");
             return;

@@ -10,6 +10,16 @@ import java.util.Optional;
 public final class EventHandlerContext {
 
     private final HealthEvent event;
+    private boolean earlyWarning;
+
+    public void requestEarlyWarning() {
+        earlyWarning = true;
+    }
+
+    public boolean earlyWarning() {
+        return earlyWarning;
+    }
+
     private GuineaPig guineaPig;
     private BaselineProfile baselineProfile;
     private String rejectionReason;

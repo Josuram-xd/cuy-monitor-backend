@@ -1,5 +1,7 @@
 package com.cuymonitor.backend.config;
 
+import com.cuymonitor.backend.domain.port.out.HardwareStation;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.Map;
 import com.cuymonitor.backend.domain.port.in.ProcessEventUseCase;
@@ -50,7 +52,8 @@ public class DomainConfig {
                                                      StateTransitionRepository transitions,
                                                      WeightReadingRepository weights, AlertRepository alerts,
                                                      AlertPublisher alertPublisher, Clock clock,
-                                                     Map<SettingKey, String> settingDefaults) {
+                                                     Map<SettingKey, String> settingDefaults,
+                                                     HardwareStation station) {
         Function<Settings, ProcessEventUseCase> engineFor = settings -> {
             HealthProperties health = HealthProperties.from(settings);
             EventHandler chain = new HandlerChainBuilder(
@@ -72,6 +75,6 @@ public class DomainConfig {
                     new EscalationPolicy(health.observedToAlert(), health.alertToCritical()),
                     learner, weightEvaluator, messages);
         };
-        return new ConfigurableEventProcessor(engineFor, Settings.resolve(settingDefaults, Map.of()));
+        return new ConfigurableEventProcessor(engineFor, Settings.resolve(settingDefaults, Map.of()), station);
     }
 }

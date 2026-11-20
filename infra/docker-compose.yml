@@ -82,6 +82,7 @@ services:
       CAGE_IDS: ${CAGE_IDS:-}
       # false = Amazon Bedrock analyses the frames and audio it receives; true = fake events.
       # No AWS key here: the container uses the EC2 instance role (see infra/aws/setup.sh).
+      HARDWARE_CAGES: farm-station
       MOCK_MODE: ${AI_MOCK_MODE:-false}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       BEDROCK_MODEL_ID: ${BEDROCK_MODEL_ID:-moonshotai.kimi-k2.5}

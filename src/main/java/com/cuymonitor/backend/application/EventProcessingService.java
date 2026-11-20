@@ -131,7 +131,11 @@ public class EventProcessingService implements ProcessEventUseCase {
             pig.changeStatus(moved.toStatus(), now);
             guineaPigs.save(pig);
             // the state decides: only a move up into ALERT or CRITICAL warns the breeder, a recovery does not
-            if (health.raisesAlert() && moved.toStatus().compareTo(moved.fromStatus()) > 0) {
+            if (context.earlyWarning() && moved.fromStatus() == HealthStatus.NORMAL
+                    && moved.toStatus() == HealthStatus.OBSERVED) {
+                alertPublisher.publish(Alert.forGuineaPig(pig, HealthStatus.ALERT,
+                        "La cámara detectó un comportamiento inusual. Revisa al cuy.", now));
+            } else if (health.raisesAlert() && moved.toStatus().compareTo(moved.fromStatus()) > 0) {
                 alertPublisher.publish(Alert.forGuineaPig(pig, moved.toStatus(), messageFor(moved.toStatus()), now));
             }
         });

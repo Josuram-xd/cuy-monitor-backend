@@ -1,5 +1,6 @@
 package com.cuymonitor.backend.application;
 
+import java.util.function.Predicate;
 import com.cuymonitor.backend.domain.access.CageOperations;
 import com.cuymonitor.backend.domain.exception.SimulationUnavailableException;
 import com.cuymonitor.backend.domain.model.GuineaPig;
@@ -19,7 +20,14 @@ public class SimulationService implements StartSimulationUseCase {
     private final CageOperations cageOperations;
     private final SimulationRunner runner;
 
+    private final Predicate<String> isMonitored;
+
     public SimulationService(CageOperations cageOperations, SimulationRunner runner) {
+        this(cageOperations, runner, code -> false);
+    }
+
+    public SimulationService(CageOperations cageOperations, SimulationRunner runner, Predicate<String> isMonitored) {
+        this.isMonitored = isMonitored;
         this.cageOperations = Objects.requireNonNull(cageOperations, "cageOperations");
         this.runner = Objects.requireNonNull(runner, "runner");
     }
@@ -30,6 +38,9 @@ public class SimulationService implements StartSimulationUseCase {
                 .map(GuineaPig::getMarkColor)
                 .distinct()
                 .toList();
+        if (isMonitored.test(cageCode)) {
+            throw new IllegalArgumentException("simulation is disabled for a monitored cage");
+        }
         if (colors.isEmpty()) {
             throw SimulationUnavailableException.noGuineaPigs();
         }
