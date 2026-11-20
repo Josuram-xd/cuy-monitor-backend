@@ -141,21 +141,29 @@ These classes carry no `@Component`, no `@Autowired` and no AOP. Spring is told 
 | **Composite** | `domain.health.composite` | `CageHealth` aggregates `GuineaPigHealth`, `CageAudioHealth` and `CageWeightHealth` |
 | **Observer** | `domain.notification` + `adapter.out.notification` + `application` | `AlertPublisher` fans out to `DatabaseAlertObserver`, `WebSocketAlertObserver`, `AlertNoteService`, `LogAlertObserver` through the `AlertObserver` port |
 | **Proxy** (protection) | `domain.access` + `application` | `CageAccessProxy` and `CageOperationsService` implement `CageOperations`; the proxy checks that the account owns the cage before forwarding to the real service |
+| **Flyweight** | `domain.health.state` | `HealthStates` hands out one shared instance of each stateless state (`NormalState`…`CriticalState`) |
+| **Memento** | `domain.health.state` + `application` | `GuineaPigHealthContext.Snapshot` (level and since when); `EventProcessingService` is the caretaker that restores it and writes it back to the guinea pig |
+| **Decorator** | `domain.notification` | `AsyncAlertObserver` wraps the `AlertNoteService` subscriber and runs it on the alert-note pool |
+| **Visitor** | `domain.model` + `domain.health.chain` | `HealthSignalVisitor` over the three signal types: `MeasurementCheck` (validation) and `SignalDuration` (how far back an event reaches) |
+| **Template Method** | `domain.health.chain` | `EventHandler.handle()` is final and runs the chain; each handler supplies only `handleCurrent()` |
+| **Facade** | `domain.access` + `application` | `CageOperationsService` gives the controllers one interface over the `CageUseCases` |
+| **Strategy** | `domain.port.out` | `OtpSender` (email in production, log in `dev`), `AssistantModel` (Bedrock or disabled), `CageCodeGenerator` |
 
 ```
 AdapterFactory ─► EventSourceAdapter ─► HealthEvent ─► EventHandler chain ─► HealthState ─► CageHealth
                                                                                                │
 AlertPublisher ◄──────────────────────── (status change / alert) ◄─────────────────────────────┘
    └─► WebSocketAlertObserver ─────────────────────────────────────────────────────► Dashboard
-   └─► AlertNoteService ─► (another thread) ─► AssistantModel ─► alert.ai_note ─► Dashboard
+   └─► AsyncAlertObserver ─► (another thread) ─► AlertNoteService ─► AssistantModel ─► alert.ai_note ─► Dashboard
 ```
 
 > **The assistant reacts to the alert by itself.** It used to answer only when the breeder typed a question, so
 > the explanation of an alert was never there when it was needed. `AlertNoteService` is a fourth subscriber: it
 > asks the model what this alert means and what to check, and stores the answer in `alert.ai_note` (V15).
 >
-> Asking the model takes seconds and `publish` runs inside the ingestion request, so the call is handed to a
-> small bounded pool (`alertNoteExecutor`, 2 threads) and the note arrives a moment after the alert — the camera
+> Asking the model takes seconds and `publish` runs inside the ingestion request, so the subscriber is wrapped in an
+> `AsyncAlertObserver` (Decorator) and handed to a small bounded pool (`alertNoteExecutor`, 2 threads); the note
+> arrives a moment after the alert — the camera
 > is never kept waiting. A model that is off or throttled costs the alert nothing: it is stored, sent and shown
 > without a note. The note is written once, so the same answer is not paid for again every time the alert is
 > opened.
@@ -174,7 +182,7 @@ AlertPublisher ◄────────────────────�
 
 | Pattern | Where | Note |
 |---|---|---|
-| **Builder** | `HandlerChainBuilder` | Assembles the handler chain in order; plain Java |
+| **Builder** | `HandlerChainBuilder` | `then(handler)` calls in order, then `build()` links them with `setNext`; plain Java |
 | **Command** | `domain.port.in` | `LoginCommand`, `CreateCageCommand`… one immutable `record` per use case |
 | **Ports & Adapters** | `domain.port.in` (21 use cases), `domain.port.out` (12 ports) | The ports are interfaces with no framework import |
 
@@ -190,6 +198,10 @@ Said plainly, so nobody claims more than the code shows:
 
 Two things this project does **not** claim: **Singleton**, because Spring beans are singletons by default and that is
 the container's doing, not ours; and **Dependency Injection**, which is the framework, not a GoF pattern.
+
+**Bridge** is arguable, so it is only documented as such: `AssistantModel` is a port with two implementations
+(`BedrockAssistantModel`, `DisabledAssistantModel`) used by two abstractions (`AssistantService`, `AlertNoteService`),
+but there is no abstraction base class that varies independently of them.
 
 ### The adapters are plain Java too
 
