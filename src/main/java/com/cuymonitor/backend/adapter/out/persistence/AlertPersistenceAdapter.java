@@ -52,6 +52,11 @@ public class AlertPersistenceAdapter implements AlertRepository {
     }
 
     @Override
+    public void deleteById(long id) {
+        alertJpaRepository.deleteById(id);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<Alert> findAll() {
         return alertJpaRepository.findAllByOrderByCreatedAtDesc().stream()

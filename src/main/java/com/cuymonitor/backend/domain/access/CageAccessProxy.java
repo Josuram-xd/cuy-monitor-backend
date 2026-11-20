@@ -169,6 +169,14 @@ public class CageAccessProxy implements CageOperations {
     }
 
     @Override
+    public void deleteAlert(UUID requesterId, long alertId) {
+        // same rule as reviewing: only the owner of the alert's cage
+        Alert alert = alerts.findById(alertId).orElseThrow(AlertNotFoundException::new);
+        checkOwner(requesterId, alert.getCageCode());
+        realSubject.deleteAlert(requesterId, alertId);
+    }
+
+    @Override
     public AlertHistoryPage getAlertHistory(UUID requesterId, AlertHistoryFilter filter) {
         // a cage or a guinea pig named in the filter has to be the requester's; the rest is limited by the real
         // subject to the requester's own cages

@@ -72,6 +72,7 @@ Summary:
 | `GET /api/v1/guinea-pigs/{id}/history?from=&to=` | State changes and behavior windows | `200` |
 | `GET /api/v1/alerts?status=` | List alerts | `200` |
 | `PATCH /api/v1/alerts/{id}` | Mark an alert as reviewed | `200` |
+| `DELETE /api/v1/alerts/{id}` | Delete an alert for good | `204` |
 | `GET /api/v1/cages/{cageId}/weight?from=&to=` | Weight readings | `200` |
 
 ### 3.0 Cages
@@ -253,6 +254,9 @@ every cage of the account (never another account's). Newest first. `403` if `cag
 ```
 
 Only `REVIEWED` is accepted. Returns `200` with the updated alert (same shape as 3.5, with `reviewedAt` set). Marking an already reviewed alert is a no-op that also returns `200`. `400` any other status · `404` unknown alert.
+
+`DELETE /api/v1/alerts/{id}` removes the alert for good, whatever its status: `204`. `403` if it is from another
+account's cage · `404` unknown alert.
 
 ### 3.7 `GET /api/v1/cages/{cageId}/weight?from=&to=`
 
