@@ -19,6 +19,8 @@ La versión de demostración desplegada en la EC2 es `equipment-20261120-v1`. El
 
 El instalador pide la contraseña de la cuenta de Windows para crear las tareas de arranque y la clave de ingesta del servidor para los dos agentes. Se introducen en el portátil. Comprueba que las tareas `CuyMonitor-Scale` y `CuyMonitor-CameraAudio` estén en ejecución. Si ya tienes los agentes instalados con NSSM, usa esos servicios y evita iniciar una segunda copia.
 
+La cámara se configura desde el panel de la jaula (**Conectar equipo** → Cámara), no en el `.env`: elige el celular o la Tapo, escribe la IP y pulsa **Guardar y probar**. El agente toma el cambio sin reiniciarse. `-PhoneUrl` es opcional en el instalador: sin él, la cámara se toma del panel.
+
 ## Prueba del profesor
 
 1. Abre la web, inicia sesión y entra en la jaula física. Pulsa **Iniciar medición**.
